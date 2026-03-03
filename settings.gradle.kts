@@ -21,4 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Tracker"
 include(":app")
- 
+include(":core")
