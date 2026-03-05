@@ -31,10 +31,29 @@ import kotlinx.coroutines.launch
 class Tracker private constructor(
     private val context: Context,
     private val requestedMetrics: Set<Metric>,
-    private val minConfidence: Float
+    private val minConfidence: Float,
+    private val lookbackDays: Int
 ) {
 
     private val habitEngine = HabitEngine(context, requestedMetrics)
+
+    /**
+     * Get the configured lookback period in days.
+     *
+     * @return Number of days used for default queries
+     */
+    fun getLookbackDays(): Int = lookbackDays
+
+    /**
+     * Query metrics asynchronously using coroutines with default lookback period.
+     *
+     * @return MetricsResult containing data from the last lookbackDays
+     */
+    suspend fun queryAsync(): MetricsResult {
+        val toMillis = System.currentTimeMillis()
+        val fromMillis = toMillis - (lookbackDays * 24 * 60 * 60 * 1000L)
+        return habitEngine.query(fromMillis, toMillis)
+    }
 
     /**
      * Query metrics asynchronously using coroutines.
@@ -45,6 +64,18 @@ class Tracker private constructor(
      */
     suspend fun queryAsync(fromMillis: Long, toMillis: Long): MetricsResult {
         return habitEngine.query(fromMillis, toMillis)
+    }
+
+    /**
+     * Query metrics using callback with default lookback period.
+     *
+     * @param callback Called when results are ready
+     */
+    fun query(callback: (MetricsResult) -> Unit) {
+        CoroutineScope(Dispatchers.Main).launch {
+            val result = queryAsync()
+            callback(result)
+        }
     }
 
     /**
@@ -84,11 +115,12 @@ class Tracker private constructor(
          * Set the default lookback period in days.
          * This is used when querying without explicit time range.
          *
-         * @param days Number of days to look back (default: 30)
+         * @param days Number of days to look back (1-365, default: 30)
          * @return This builder for chaining
+         * @throws IllegalArgumentException if days is not in valid range
          */
         fun setLookbackDays(days: Int): Builder {
-            require(days > 0) { "Lookback days must be positive" }
+            require(days in 1..365) { "Lookback days must be between 1 and 365" }
             this.lookbackDays = days
             return this
         }
@@ -115,7 +147,8 @@ class Tracker private constructor(
             return Tracker(
                 context = context.applicationContext,
                 requestedMetrics = metrics.toSet(),
-                minConfidence = minConfidence
+                minConfidence = minConfidence,
+                lookbackDays = lookbackDays
             )
         }
     }
