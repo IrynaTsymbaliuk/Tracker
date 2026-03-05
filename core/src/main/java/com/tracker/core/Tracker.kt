@@ -45,6 +45,13 @@ class Tracker private constructor(
     fun getLookbackDays(): Int = lookbackDays
 
     /**
+     * Get the configured minimum confidence threshold.
+     *
+     * @return Minimum confidence value (0.0 to 1.0)
+     */
+    fun getMinConfidence(): Float = minConfidence
+
+    /**
      * Query metrics asynchronously using coroutines with default lookback period.
      *
      * @return MetricsResult containing data from the last lookbackDays
