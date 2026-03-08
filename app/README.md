@@ -38,6 +38,10 @@ The app shows three main sections:
 - **Summary Statistics**: Total days, language learning days, average minutes
 - **Data Quality**: Reliability level, available/missing sources, recommendations
 - **Day-by-Day Results**: Detailed breakdown of each day's activity
+  - Date
+  - Duration (in minutes)
+  - Confidence score and level (HIGH/MEDIUM/LOW)
+  - Apps used (by human-readable name, e.g., "Duolingo, Anki")
 
 ## How to Run
 
@@ -83,7 +87,12 @@ MainActivity.kt
 
 ## Testing
 
-The app works best when you have language learning apps installed (e.g., Duolingo, Babbel, Memrise) and have used them in the past 30 days.
+The app works best when you have language learning apps installed and have used them in the past 30 days. Supported apps include:
+- Duolingo, Anki, LingoDeer, Drops
+- Japanese learning apps: Kanji Study, Renshuu, J5a, Hey Japan
+- And 5 more (see KnownApps.kt for the complete list)
+
+The library will automatically detect and track usage of any installed supported apps.
 
 ## Notes
 

@@ -30,21 +30,21 @@ Rather than requiring manual logging, Tracker leverages Android's UsageStats API
 ## Supported Metrics
 
 ### Language Learning
-Tracks usage of 12 popular language learning apps:
-- Duolingo
-- Anki
-- Babbel
-- LingoDeer
-- Drops
-- Busuu
-- Rosetta Stone
-- Memrise
-- HelloTalk
-- Tandem
-- Clozemaster
-- Mondly
+Tracks usage of 13 language learning apps (with focus on Japanese language learning):
+- **Duolingo** - Popular multi-language learning platform
+- **Anki** - Spaced repetition flashcard app
+- **LingoDeer** - Grammar-focused language learning
+- **Drops** - Visual vocabulary learning (2 variants)
+- **Kanji Study** - Japanese kanji learning
+- **Renshuu** - Japanese learning platform
+- **J5a** - Japanese learning app
+- **J5KjAnd** - Japanese kanji and vocabulary
+- **MyTest** - Language testing app
+- **Hey Japan** - Japanese language learning
+- **Ten Words** - Vocabulary learning
+- **JP News** - Japanese news reading
 
-Each app has configurable confidence multipliers and minimum session duration thresholds to ensure accurate habit detection.
+Each app has configurable confidence multipliers (0.75-0.85) and minimum session duration thresholds (5-10 minutes) to ensure accurate habit detection.
 
 ## Installation
 
@@ -133,7 +133,7 @@ launch {
             println("Occurred: ${learning.occurred}")
             println("Confidence: ${learning.confidence} (${learning.confidenceLevel})")
             println("Duration: ${learning.durationMinutes} minutes")
-            println("Apps used: ${learning.appPackages}")
+            println("Apps used: ${learning.apps.joinToString(", ") { it.appName }}")
         }
     }
 }
@@ -176,6 +176,64 @@ if (tracker.hasRequiredPermissions()) {
     println("Missing permissions: ${tracker.getMissingPermissions()}")
 }
 ```
+
+## Sample App
+
+A complete sample application is included in the `app/` module to demonstrate how to integrate and use the Tracker library.
+
+### Features
+
+The sample app demonstrates:
+- **Library setup** using the Builder pattern
+- **Permission handling** for PACKAGE_USAGE_STATS
+- **Querying metrics** with Kotlin coroutines
+- **Displaying results** with Material Design UI
+- **Data quality reporting** and recommendations
+
+### Screenshots
+
+### Running the Sample App
+
+1. **Build and install**:
+   ```bash
+   ./gradlew :app:assembleDebug
+   ./gradlew :app:installDebug
+   ```
+
+2. **Grant permission**:
+   - Open the app
+   - Tap "Grant Permission"
+   - Find "Tracker Demo" in the list
+   - Enable "Permit usage access"
+
+3. **View results**:
+   - Return to the app
+   - Tap "Query Last 30 Days"
+   - View language learning statistics
+
+The app displays three main sections:
+- **Summary Statistics**: Total days tracked, language learning days, average minutes per day
+- **Data Quality**: Reliability level, available/missing data sources, and recommendations
+- **Day-by-Day Results**: Detailed breakdown showing date, duration, confidence level, and apps used
+
+### What You'll See
+
+The sample app shows:
+- Which language learning apps you've used (by name, e.g., "Duolingo", "Anki")
+- How long you spent on each day
+- Confidence scores and levels (HIGH/MEDIUM/LOW)
+- Data quality and reliability information
+- Helpful recommendations if permissions are missing
+
+### Code Example
+
+See the complete implementation in [`MainActivity.kt`](app/src/main/java/com/tracker/MainActivity.kt) for a full example of:
+- Building the Tracker instance
+- Checking and requesting permissions
+- Querying metrics asynchronously
+- Displaying results in a user-friendly format
+
+For more details, see the [Sample App README](app/README.md).
 
 ## API Reference
 
@@ -238,8 +296,13 @@ data class LanguageLearningResult(
     val occurred: Boolean,                // Did the habit occur?
     val confidence: Float,                // Confidence score (0.0-1.0)
     val confidenceLevel: ConfidenceLevel, // HIGH/MEDIUM/LOW
-    val durationMinutes: Int,             // Total duration in minutes
-    val appPackages: Set<String>          // App package names used
+    val durationMinutes: Int?,            // Total duration in minutes (null if none)
+    val apps: List<AppInfo>               // Apps used (package name + display name)
+)
+
+data class AppInfo(
+    val packageName: String,              // App package identifier (e.g., "com.duolingo")
+    val appName: String                   // Human-readable name (e.g., "Duolingo")
 )
 ```
 
@@ -277,7 +340,7 @@ The `UsageStatsCollector` queries Android's UsageStatsManager to retrieve app us
 ### 2. Smart Aggregation
 The `LanguageLearningAggregator` processes evidence for each day:
 
-**Deduplication**: Overlapping sessions (>80% overlap) are deduplicated to avoid double-counting.
+**Deduplication**: Overlapping sessions from the *same app* (>80% overlap) are deduplicated to avoid double-counting. Different apps are never considered duplicates, even with overlapping times.
 
 **Confidence Combination**: Multiple pieces of evidence are combined using probability mathematics:
 ```
@@ -287,6 +350,8 @@ combined_confidence = 1 - ∏(1 - confidence_i)
 **Weak Evidence Penalty**: If all evidence has confidence < 0.50, a 0.15 penalty is applied to prevent false positives.
 
 **Duration Summation**: All session durations are summed for total daily time.
+
+**App Tracking**: Both package names and human-readable app names are preserved for display.
 
 ### 3. Threshold Application
 Results below the minimum confidence threshold (default 0.50) are filtered out and marked as non-occurrences.
