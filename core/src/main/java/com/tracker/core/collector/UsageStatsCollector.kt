@@ -1,6 +1,5 @@
 package com.tracker.core.collector
 
-import android.app.usage.UsageStats
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.pm.PackageManager

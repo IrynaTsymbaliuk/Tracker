@@ -49,10 +49,16 @@ class LanguageLearningAggregator : Aggregator<LanguageLearningResult> {
         val occurred = combinedConfidence.toOccurred()
         val confidenceLevel = combinedConfidence.toConfidenceLevel()
 
-        // Step 6: Extract app packages
-        val appPackages = deduplicated.mapNotNull {
-            it.metadata["packageName"] as? String
-        }.distinct()
+        // Step 6: Extract app information (package name + app name)
+        val apps = deduplicated.mapNotNull { evidence ->
+            val packageName = evidence.metadata["packageName"] as? String
+            val appName = evidence.metadata["appName"] as? String
+            if (packageName != null && appName != null) {
+                com.tracker.core.result.AppInfo(packageName, appName)
+            } else {
+                null
+            }
+        }.distinctBy { it.packageName }
 
         // Step 7: Determine primary source (all from USAGE_STATS for now)
         val primarySource = deduplicated.firstOrNull()?.source ?: DataSource.USAGE_STATS
@@ -63,13 +69,15 @@ class LanguageLearningAggregator : Aggregator<LanguageLearningResult> {
             confidenceLevel = confidenceLevel,
             durationMinutes = if (totalDuration > 0) totalDuration else null,
             source = primarySource,
-            appPackages = appPackages
+            apps = apps
         )
     }
 
     /**
      * Deduplicate evidence with overlapping time ranges.
-     * If two evidence overlap by more than 80% → keep the one with higher confidence.
+     * Only deduplicates evidence from the SAME app package.
+     * If two evidence from the same app overlap by more than 80% → keep the one with higher confidence.
+     * Different apps are never considered duplicates, even with overlapping times.
      */
     private fun deduplicateOverlapping(evidence: List<Evidence>): List<Evidence> {
         if (evidence.size <= 1) return evidence
@@ -78,9 +86,23 @@ class LanguageLearningAggregator : Aggregator<LanguageLearningResult> {
         val result = mutableListOf<Evidence>()
 
         for (current in sorted) {
-            val overlaps = result.any { existing ->
-                calculateOverlapPercentage(current, existing) > OVERLAP_THRESHOLD
+            var maxOverlap = 0f
+
+            val currentPackage = current.metadata["packageName"] as? String
+
+            for (existing in result) {
+                val existingPackage = existing.metadata["packageName"] as? String
+
+                // Only check overlap if both evidence are from the same app
+                if (currentPackage != null && currentPackage == existingPackage) {
+                    val overlapPct = calculateOverlapPercentage(current, existing)
+                    if (overlapPct > maxOverlap) {
+                        maxOverlap = overlapPct
+                    }
+                }
             }
+
+            val overlaps = maxOverlap > OVERLAP_THRESHOLD
 
             if (!overlaps) {
                 result.add(current)

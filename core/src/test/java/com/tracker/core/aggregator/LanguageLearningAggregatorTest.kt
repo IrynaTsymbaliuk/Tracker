@@ -63,7 +63,10 @@ class LanguageLearningAggregatorTest {
                 timestampMillis = 1000L,
                 confidence = 0.75f,
                 durationMinutes = 30,
-                metadata = mapOf("packageName" to "com.duolingo")
+                metadata = mapOf(
+                    "packageName" to "com.duolingo",
+                    "appName" to "Duolingo"
+                )
             )
         )
 
@@ -77,8 +80,9 @@ class LanguageLearningAggregatorTest {
         assertEquals(ConfidenceLevel.HIGH, result.confidenceLevel)
         assertEquals(30, result.durationMinutes)
         assertEquals(DataSource.USAGE_STATS, result.source)
-        assertEquals(1, result.appPackages.size)
-        assertEquals("com.duolingo", result.appPackages[0])
+        assertEquals(1, result.apps.size)
+        assertEquals("com.duolingo", result.apps[0].packageName)
+        assertEquals("Duolingo", result.apps[0].appName)
     }
 
     /**
@@ -169,19 +173,28 @@ class LanguageLearningAggregatorTest {
                 source = DataSource.USAGE_STATS,
                 timestampMillis = 1000L,
                 confidence = 0.80f,
-                metadata = mapOf("packageName" to "com.duolingo")
+                metadata = mapOf(
+                    "packageName" to "com.duolingo",
+                    "appName" to "Duolingo"
+                )
             ),
             Evidence(
                 source = DataSource.USAGE_STATS,
                 timestampMillis = 2000L,
                 confidence = 0.70f,
-                metadata = mapOf("packageName" to "com.babbel")
+                metadata = mapOf(
+                    "packageName" to "com.babbel",
+                    "appName" to "Babbel"
+                )
             ),
             Evidence(
                 source = DataSource.USAGE_STATS,
                 timestampMillis = 3000L,
                 confidence = 0.60f,
-                metadata = mapOf("packageName" to "com.duolingo")  // Duplicate
+                metadata = mapOf(
+                    "packageName" to "com.duolingo",
+                    "appName" to "Duolingo"
+                )  // Duplicate
             )
         )
 
@@ -190,9 +203,9 @@ class LanguageLearningAggregatorTest {
 
         // Assert
         assertNotNull(result)
-        assertEquals(2, result!!.appPackages.size)  // Distinct only
-        assertTrue(result.appPackages.contains("com.duolingo"))
-        assertTrue(result.appPackages.contains("com.babbel"))
+        assertEquals(2, result!!.apps.size)  // Distinct only
+        assertTrue(result.apps.any { it.packageName == "com.duolingo" && it.appName == "Duolingo" })
+        assertTrue(result.apps.any { it.packageName == "com.babbel" && it.appName == "Babbel" })
     }
 
     // ============================================================
@@ -216,7 +229,11 @@ class LanguageLearningAggregatorTest {
                 confidence = 0.60f,  // Lower confidence
                 durationMinutes = 30,
                 startTimeMillis = 1000L,
-                endTimeMillis = 1000L + 30 * 60 * 1000  // 30 minutes
+                endTimeMillis = 1000L + 30 * 60 * 1000,  // 30 minutes
+                metadata = mapOf(
+                    "packageName" to "com.duolingo",
+                    "appName" to "Duolingo"
+                )
             ),
             Evidence(
                 source = DataSource.USAGE_STATS,
@@ -224,7 +241,11 @@ class LanguageLearningAggregatorTest {
                 confidence = 0.80f,  // Higher confidence
                 durationMinutes = 25,
                 startTimeMillis = 1100L,  // Small offset, creates >80% overlap
-                endTimeMillis = 1100L + 25 * 60 * 1000  // 25 minutes
+                endTimeMillis = 1100L + 25 * 60 * 1000,  // 25 minutes
+                metadata = mapOf(
+                    "packageName" to "com.duolingo",  // Same app
+                    "appName" to "Duolingo"
+                )
             )
         )
 
@@ -336,7 +357,11 @@ class LanguageLearningAggregatorTest {
                 confidence = 0.90f,  // Highest - should be kept
                 durationMinutes = 30,
                 startTimeMillis = 1000L,
-                endTimeMillis = 1000L + 30 * 60 * 1000
+                endTimeMillis = 1000L + 30 * 60 * 1000,
+                metadata = mapOf(
+                    "packageName" to "com.duolingo",
+                    "appName" to "Duolingo"
+                )
             ),
             Evidence(
                 source = DataSource.USAGE_STATS,
@@ -344,7 +369,11 @@ class LanguageLearningAggregatorTest {
                 confidence = 0.70f,  // Overlaps with first - filtered
                 durationMinutes = 28,
                 startTimeMillis = 1100L,
-                endTimeMillis = 1100L + 28 * 60 * 1000
+                endTimeMillis = 1100L + 28 * 60 * 1000,
+                metadata = mapOf(
+                    "packageName" to "com.duolingo",  // Same app
+                    "appName" to "Duolingo"
+                )
             ),
             Evidence(
                 source = DataSource.USAGE_STATS,
@@ -352,7 +381,11 @@ class LanguageLearningAggregatorTest {
                 confidence = 0.60f,  // Also overlaps with first - filtered
                 durationMinutes = 25,
                 startTimeMillis = 1200L,
-                endTimeMillis = 1200L + 25 * 60 * 1000
+                endTimeMillis = 1200L + 25 * 60 * 1000,
+                metadata = mapOf(
+                    "packageName" to "com.duolingo",  // Same app
+                    "appName" to "Duolingo"
+                )
             )
         )
 
@@ -388,7 +421,11 @@ class LanguageLearningAggregatorTest {
                 confidence = 0.80f,  // Higher confidence
                 durationMinutes = 60,
                 startTimeMillis = 1000L,
-                endTimeMillis = 1000L + 60 * 60 * 1000  // 60 minutes
+                endTimeMillis = 1000L + 60 * 60 * 1000,  // 60 minutes
+                metadata = mapOf(
+                    "packageName" to "com.duolingo",
+                    "appName" to "Duolingo"
+                )
             ),
             Evidence(
                 source = DataSource.USAGE_STATS,
@@ -396,7 +433,11 @@ class LanguageLearningAggregatorTest {
                 confidence = 0.70f,  // Lower confidence
                 durationMinutes = 20,
                 startTimeMillis = 1000L,
-                endTimeMillis = 1000L + 20 * 60 * 1000  // 20 minutes, fully inside
+                endTimeMillis = 1000L + 20 * 60 * 1000,  // 20 minutes, fully inside
+                metadata = mapOf(
+                    "packageName" to "com.duolingo",  // Same app
+                    "appName" to "Duolingo"
+                )
             )
         )
 

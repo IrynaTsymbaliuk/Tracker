@@ -1,4 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!--
+        Package visibility queries for Android 11+ (API 30+)
+        Declares which apps this library needs to detect.
+        Required for getInstalledApplications() to return language learning apps.
+    -->
+    <queries>
+        <!-- Language Learning Apps -->
+        <package android:name="com.mindtwisted.kanjistudy" />
+        <package android:name="com.lulilanguages.j5a" />
+        <package android:name="com.ichi2.anki" />
+        <package android:name="com.eup.mytest" />
+        <package android:name="mobi.eup.jpnews" />
+        <package android:name="com.duolingo" />
+        <package android:name="com.eup.heyjapan" />
+        <package android:name="com.appsci.tenwords" />
+        <package android:name="com.languagedrops.drops.international" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.japanese.kanji.katakana.hiragana.romaji.words" />
+        <package android:name="com.lingodeer" />
+        <package android:name="com.lulilanguages.j5KjAnd" />
+        <package android:name="com.renshuu.renshuu_org" />
+    </queries>
+
 </manifest>
