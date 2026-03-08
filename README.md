@@ -402,21 +402,9 @@ Run tests:
 | Kotlin | 2.0.21+ |
 | Coroutines | 1.7.3+ |
 
-## License
-
-[Add your license information here]
-
-## Contributing
-
-[Add contribution guidelines here]
-
 ## Support
 
 For issues, questions, or feature requests, please [open an issue](link-to-issues) on the project repository.
-
-## Authors
-
-[Add author information here]
 
 ---
 
