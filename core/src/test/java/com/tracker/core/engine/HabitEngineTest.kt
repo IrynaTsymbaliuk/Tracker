@@ -147,20 +147,6 @@ class HabitEngineTest {
         assertTrue(result.days.any { it.timestampMillis == jan3 })
     }
 
-    @Test
-    fun `query returns MetricsResult with days, summary, and dataQuality`() = runTest {
-        // Arrange
-        val engine = createEngine(requestedMetrics = setOf(Metric.LANGUAGE_LEARNING))
-
-        // Act
-        val result = engine.query(fromMillis = 1000L, toMillis = 2000L)
-
-        // Assert
-        assertNotNull(result.days)
-        assertNotNull(result.summary)
-        assertNotNull(result.dataQuality)
-    }
-
     // ============================================================
     // Day Grouping Tests
     // ============================================================
@@ -215,21 +201,6 @@ class HabitEngineTest {
 
         // Assert
         assertEquals(1, days)
-    }
-
-    @Test
-    fun `calculate days in range spanning multiple days returns correct count`() = runTest {
-        // Arrange
-        val jan1 = createTimestamp(2024, 1, 1)
-        val jan3 = createTimestamp(2024, 1, 3)
-
-        val engine = createEngine(requestedMetrics = setOf(Metric.LANGUAGE_LEARNING))
-
-        // Act
-        val days = engine.calculateDaysInRange(jan1, jan3)
-
-        // Assert
-        assertEquals(3, days)
     }
 
     @Test

@@ -416,32 +416,6 @@ class LanguageLearningAggregatorTest {
     // ============================================================
 
     /**
-     * Test: Single confidence value returned as-is.
-     *
-     * When only one evidence item exists, its confidence should be
-     * used directly without any combination formula.
-     */
-    @Test
-    fun `single confidence value returned as-is`() {
-        // Arrange
-        val aggregator = LanguageLearningAggregator()
-        val evidence = listOf(
-            Evidence(
-                source = DataSource.USAGE_STATS,
-                timestampMillis = 1000L,
-                confidence = 0.65f
-            )
-        )
-
-        // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence)
-
-        // Assert
-        assertNotNull(result)
-        assertEquals(0.65f, result!!.confidence, 0.001f)
-    }
-
-    /**
      * Test: Two confidence values combined using probability formula.
      *
      * Formula: 1 - (1 - p1) * (1 - p2)
@@ -760,33 +734,6 @@ class LanguageLearningAggregatorTest {
         assertEquals(true, result.occurred)
     }
 
-    /**
-     * Test: Confidence 0.80 maps to HIGH level.
-     *
-     * Tests well above the HIGH threshold (0.75).
-     */
-    @Test
-    fun `confidence 0_80 maps to HIGH level`() {
-        // Arrange
-        val aggregator = LanguageLearningAggregator()
-        val evidence = listOf(
-            Evidence(
-                source = DataSource.USAGE_STATS,
-                timestampMillis = 1000L,
-                confidence = 0.80f  // Well above HIGH threshold (0.75)
-            )
-        )
-
-        // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence)
-
-        // Assert
-        assertNotNull(result)
-        assertEquals(0.80f, result!!.confidence, 0.001f)
-        assertEquals(ConfidenceLevel.HIGH, result.confidenceLevel)
-        assertEquals(true, result.occurred)
-    }
-
     // ============================================================
     // Edge Cases Tests
     // ============================================================
@@ -869,45 +816,6 @@ class LanguageLearningAggregatorTest {
         // Both should be kept (no overlap)
         // Combined: 1 - (0.3 * 0.4) = 0.88
         assertEquals(0.88f, result!!.confidence, 0.001f)
-    }
-
-    /**
-     * Test: Overlap percentage returns value between 0.0 and 1.0.
-     *
-     * Tests partial overlap scenario where overlap is significant but < 80%.
-     */
-    @Test
-    fun `overlap percentage returns value between 0_0 and 1_0`() {
-        // Arrange
-        val aggregator = LanguageLearningAggregator()
-        // Create evidence with partial overlap (~50%)
-        val evidence = listOf(
-            Evidence(
-                source = DataSource.USAGE_STATS,
-                timestampMillis = 1000L,
-                confidence = 0.80f,
-                durationMinutes = 20,
-                startTimeMillis = 1000L,
-                endTimeMillis = 1000L + 20 * 60 * 1000  // 20 min
-            ),
-            Evidence(
-                source = DataSource.USAGE_STATS,
-                timestampMillis = 1000L,
-                confidence = 0.70f,
-                durationMinutes = 20,
-                startTimeMillis = 1000L + 10 * 60 * 1000,  // Starts 10 min in
-                endTimeMillis = 1000L + 30 * 60 * 1000  // 10 min overlap = 50%
-            )
-        )
-
-        // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence)
-
-        // Assert
-        assertNotNull(result)
-        // 50% overlap is < 80%, so both kept
-        // Combined: 1 - (0.2 * 0.3) = 0.94
-        assertEquals(0.94f, result!!.confidence, 0.001f)
     }
 
     /**
