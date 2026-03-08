@@ -1,7 +1,10 @@
 package com.tracker.core.engine
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
+import com.tracker.core.aggregator.Aggregator
 import com.tracker.core.aggregator.LanguageLearningAggregator
+import com.tracker.core.collector.Collector
 import com.tracker.core.collector.UsageStatsCollector
 import com.tracker.core.model.Evidence
 import com.tracker.core.permission.Permission
@@ -25,14 +28,28 @@ import java.util.concurrent.TimeUnit
  * 4. Pass evidence to aggregators
  * 5. Build final MetricsResult with summary and data quality
  */
-class HabitEngine(
-    private val context: Context,
-    private val requestedMetrics: Set<Metric>
+class HabitEngine internal constructor(
+    private val requestedMetrics: Set<Metric>,
+    private val permissionManager: PermissionManager,
+    private val collectors: Map<Metric, Collector>,
+    private val aggregators: Map<Metric, Aggregator<out HabitResult>>
 ) {
 
-    private val permissionManager = PermissionManager(context)
-    private val languageLearningCollector = UsageStatsCollector(context, permissionManager)
-    private val languageLearningAggregator = LanguageLearningAggregator()
+    companion object {
+        /**
+         * Create a HabitEngine with default dependencies.
+         */
+        fun create(context: Context, requestedMetrics: Set<Metric>): HabitEngine {
+            val permissionManager = PermissionManager(context)
+            val collectors = mapOf(
+                Metric.LANGUAGE_LEARNING to UsageStatsCollector(context, permissionManager)
+            )
+            val aggregators = mapOf<Metric, Aggregator<out HabitResult>>(
+                Metric.LANGUAGE_LEARNING to LanguageLearningAggregator()
+            )
+            return HabitEngine(requestedMetrics, permissionManager, collectors, aggregators)
+        }
+    }
 
     /**
      * Query metrics for the specified time range.
@@ -41,22 +58,26 @@ class HabitEngine(
         // Collect evidence for requested metrics
         val allEvidence = mutableListOf<Evidence>()
 
-        if (Metric.LANGUAGE_LEARNING in requestedMetrics) {
-            val result = languageLearningCollector.collect(fromMillis, toMillis)
-            // On success, add evidence; on failure, continue with empty evidence
-            result.getOrNull()?.let { evidence ->
-                allEvidence.addAll(evidence)
+        for ((metric, collector) in collectors) {
+            if (metric in requestedMetrics) {
+                val result = collector.collect(fromMillis, toMillis)
+                // On success, add evidence; on failure, continue with empty evidence
+                result.getOrNull()?.let { evidence ->
+                    allEvidence.addAll(evidence)
+                }
             }
         }
 
-        // Group evidence by day
-        val evidenceByDay = groupEvidenceByDay(allEvidence, fromMillis, toMillis)
+        // Group evidence by day (sparse - only days with data)
+        val evidenceByDay = groupEvidenceByDay(allEvidence)
 
         // Aggregate evidence for each day
         val dayResults = evidenceByDay.map { (dayMillis, evidence) ->
             val languageLearningResult = if (Metric.LANGUAGE_LEARNING in requestedMetrics) {
                 val dayEvidence = evidence.filter { it.source == DataSource.USAGE_STATS }
-                languageLearningAggregator.aggregate(dayMillis, dayEvidence)
+                @Suppress("UNCHECKED_CAST")
+                val aggregator = aggregators[Metric.LANGUAGE_LEARNING] as? Aggregator<LanguageLearningResult>
+                aggregator?.aggregate(dayMillis, dayEvidence)
             } else {
                 null
             }
@@ -67,8 +88,9 @@ class HabitEngine(
             )
         }
 
-        // Build summary
-        val summary = buildSummary(dayResults)
+        // Build summary (needs total days in range, not just days with data)
+        val totalDaysInRange = calculateDaysInRange(fromMillis, toMillis)
+        val summary = buildSummary(dayResults, totalDaysInRange)
 
         // Build data quality
         val dataQuality = buildDataQuality()
@@ -82,46 +104,31 @@ class HabitEngine(
 
     /**
      * Group evidence by day (start of day timestamp).
+     * Returns sparse map - only days with evidence are included.
      */
-    private fun groupEvidenceByDay(
-        evidence: List<Evidence>,
-        fromMillis: Long,
-        toMillis: Long
-    ): Map<Long, List<Evidence>> {
-        // Generate all days in the range
-        val allDays = generateDayRange(fromMillis, toMillis)
-
-        // Group evidence by day
-        val grouped = evidence.groupBy { e ->
+    @VisibleForTesting
+    internal fun groupEvidenceByDay(evidence: List<Evidence>): Map<Long, List<Evidence>> {
+        return evidence.groupBy { e ->
             getStartOfDay(e.timestampMillis)
-        }
-
-        // Ensure all days are present (even with empty evidence)
-        return allDays.associateWith { day ->
-            grouped[day] ?: emptyList()
         }
     }
 
     /**
-     * Generate list of day timestamps (start of each day) in the range.
+     * Calculate the number of days in the given range (inclusive).
      */
-    private fun generateDayRange(fromMillis: Long, toMillis: Long): List<Long> {
-        val days = mutableListOf<Long>()
-        var currentDay = getStartOfDay(fromMillis)
+    @VisibleForTesting
+    internal fun calculateDaysInRange(fromMillis: Long, toMillis: Long): Int {
+        val startDay = getStartOfDay(fromMillis)
         val endDay = getStartOfDay(toMillis)
-
-        while (currentDay <= endDay) {
-            days.add(currentDay)
-            currentDay += TimeUnit.DAYS.toMillis(1)
-        }
-
-        return days
+        val diffMillis = endDay - startDay
+        return (TimeUnit.MILLISECONDS.toDays(diffMillis) + 1).toInt()
     }
 
     /**
      * Get start of day timestamp (00:00:00) for given timestamp.
      */
-    private fun getStartOfDay(timestampMillis: Long): Long {
+    @VisibleForTesting
+    internal fun getStartOfDay(timestampMillis: Long): Long {
         val calendar = Calendar.getInstance().apply {
             timeInMillis = timestampMillis
             set(Calendar.HOUR_OF_DAY, 0)
@@ -134,19 +141,22 @@ class HabitEngine(
 
     /**
      * Build summary statistics.
+     *
+     * @param dayResults Results for days with data (sparse)
+     * @param totalDaysInRange Total days in the queried range
      */
-    private fun buildSummary(dayResults: List<DayResult>): Summary {
+    private fun buildSummary(dayResults: List<DayResult>, totalDaysInRange: Int): Summary {
         val languageLearningDays = dayResults.count { it.languageLearning?.occurred == true }
 
         val totalMinutes = dayResults.mapNotNull { it.languageLearning?.durationMinutes }.sum()
-        val averageMinutes = if (languageLearningDays > 0) {
-            totalMinutes / languageLearningDays
+        val averageMinutes = if (totalDaysInRange > 0) {
+            totalMinutes / totalDaysInRange
         } else {
-            null
+            0
         }
 
         return Summary(
-            totalDays = dayResults.size,
+            totalDays = totalDaysInRange,
             languageLearningDays = if (Metric.LANGUAGE_LEARNING in requestedMetrics) languageLearningDays else null,
             averageLanguageLearningMinutes = if (Metric.LANGUAGE_LEARNING in requestedMetrics) averageMinutes else null
         )
