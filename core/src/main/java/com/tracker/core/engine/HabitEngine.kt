@@ -42,8 +42,11 @@ class HabitEngine(
         val allEvidence = mutableListOf<Evidence>()
 
         if (Metric.LANGUAGE_LEARNING in requestedMetrics) {
-            val evidence = languageLearningCollector.collect(fromMillis, toMillis)
-            allEvidence.addAll(evidence)
+            val result = languageLearningCollector.collect(fromMillis, toMillis)
+            // On success, add evidence; on failure, continue with empty evidence
+            result.getOrNull()?.let { evidence ->
+                allEvidence.addAll(evidence)
+            }
         }
 
         // Group evidence by day

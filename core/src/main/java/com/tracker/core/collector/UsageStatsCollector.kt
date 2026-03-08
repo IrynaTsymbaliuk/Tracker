@@ -35,18 +35,25 @@ class UsageStatsCollector(
         context.packageManager
     }
 
-    override suspend fun collect(fromMillis: Long, toMillis: Long): List<Evidence> {
+    override suspend fun collect(fromMillis: Long, toMillis: Long): Result<List<Evidence>> {
         // Check permission first
         if (permissionManager.checkPermission(Permission.PACKAGE_USAGE_STATS) != PermissionStatus.GRANTED) {
-            return emptyList()
+            return Result.failure(PermissionDeniedException("PACKAGE_USAGE_STATS"))
         }
 
-        val usageStatsManager = this.usageStatsManager ?: return emptyList()
+        // Check if UsageStatsManager is available
+        val usageStatsManager = this.usageStatsManager
+            ?: return Result.failure(SystemServiceUnavailableException("UsageStatsManager"))
 
         // Get installed language learning apps
-        val installedLanguageApps = getInstalledLanguageLearningApps()
+        val installedLanguageApps = try {
+            getInstalledLanguageLearningApps()
+        } catch (e: Exception) {
+            return Result.failure(PackageManagerException(e))
+        }
+
         if (installedLanguageApps.isEmpty()) {
-            return emptyList()
+            return Result.failure(NoMonitorableAppsException())
         }
 
         // Query usage stats for the time range
@@ -54,7 +61,7 @@ class UsageStatsCollector(
             UsageStatsManager.INTERVAL_DAILY,
             fromMillis,
             toMillis
-        ) ?: return emptyList()
+        ) ?: return Result.success(emptyList())
 
         // Build evidence from usage stats
         val evidenceList = mutableListOf<Evidence>()
@@ -90,7 +97,7 @@ class UsageStatsCollector(
             evidenceList.add(evidence)
         }
 
-        return evidenceList
+        return Result.success(evidenceList)
     }
 
     /**
