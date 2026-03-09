@@ -467,6 +467,10 @@ Run tests:
 | Kotlin | 2.0.21+ |
 | Coroutines | 1.7.3+ |
 
+## License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+
 ## Support
 
 For issues, questions, or feature requests, please [open an issue](link-to-issues) on the project repository.
@@ -474,3 +478,5 @@ For issues, questions, or feature requests, please [open an issue](link-to-issue
 ---
 
 **Privacy Notice**: This library accesses app usage statistics. Always inform users about data collection and respect their privacy preferences.
+
+**Copyright Notice**: Copyright 2026 Iryna Tsymbaliuk. Licensed under the Apache License, Version 2.0.
