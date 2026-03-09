@@ -48,21 +48,50 @@ Each app has configurable confidence multipliers (0.75-0.85) and minimum session
 
 ## Installation
 
-### Gradle (Kotlin DSL)
+[![](https://jitpack.io/v/IrynaTsymbaliuk/Tracker.svg)](https://jitpack.io/#IrynaTsymbaliuk/Tracker)
 
-Add the library to your app's `build.gradle.kts`:
+### Step 1: Add JitPack Repository
+
+Add the JitPack repository to your project's `settings.gradle.kts`:
 
 ```kotlin
-dependencies {
-    implementation("com.tracker:core:1.0.0")
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        maven { url = uri("https://jitpack.io") }  // Add this line
+    }
 }
 ```
 
-### Gradle (Groovy)
+Or if using the older project-level `build.gradle.kts`:
+
+```kotlin
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url = uri("https://jitpack.io") }  // Add this line
+    }
+}
+```
+
+### Step 2: Add Dependency
+
+Add the library to your app module's `build.gradle.kts`:
+
+```kotlin
+dependencies {
+    implementation("com.github.IrynaTsymbaliuk:Tracker:1.0.0")
+}
+```
+
+Or with Groovy DSL:
 
 ```groovy
 dependencies {
-    implementation 'com.tracker:core:1.0.0'
+    implementation 'com.github.IrynaTsymbaliuk:Tracker:1.0.0'
 }
 ```
 

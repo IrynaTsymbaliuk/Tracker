@@ -36,4 +36,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - License: Apache License 2.0
 - Dependencies: Kotlin Coroutines
 
-[1.0.0]: https://github.com/yourusername/tracker/releases/tag/v1.0.0
+[1.0.0]: https://github.com/IrynaTsymbaliuk/Tracker/releases/tag/v1.0.0

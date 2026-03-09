@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    id("maven-publish")
 }
 
 android {
@@ -46,4 +47,45 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+}
+
+// Maven publishing configuration for JitPack
+afterEvaluate {
+    publishing {
+        publications {
+            create<MavenPublication>("release") {
+                from(components["release"])
+
+                groupId = "com.github.IrynaTsymbaliuk"
+                artifactId = "tracker"
+                version = "1.0.0"
+
+                pom {
+                    name.set("Tracker")
+                    description.set("Android library for automatic habit tracking through device usage analysis")
+                    url.set("https://github.com/IrynaTsymbaliuk/Tracker")
+
+                    licenses {
+                        license {
+                            name.set("The Apache License, Version 2.0")
+                            url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id.set("IrynaTsymbaliuk")
+                            name.set("Iryna Tsymbaliuk")
+                        }
+                    }
+
+                    scm {
+                        connection.set("scm:git:git://github.com/IrynaTsymbaliuk/Tracker.git")
+                        developerConnection.set("scm:git:ssh://github.com/IrynaTsymbaliuk/Tracker.git")
+                        url.set("https://github.com/IrynaTsymbaliuk/Tracker")
+                    }
+                }
+            }
+        }
+    }
 }
