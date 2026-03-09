@@ -2,6 +2,39 @@
 
 An Android library for automatically detecting and tracking user habits through device usage analysis.
 
+[![](https://jitpack.io/v/IrynaTsymbaliuk/Tracker.svg)](https://jitpack.io/#IrynaTsymbaliuk/Tracker)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![API](https://img.shields.io/badge/API-21%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=21)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-purple.svg?logo=kotlin)](http://kotlinlang.org)
+[![Build Status](https://github.com/IrynaTsymbaliuk/Tracker/workflows/Build/badge.svg)](https://github.com/IrynaTsymbaliuk/Tracker/actions)
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Supported Metrics](#supported-metrics)
+- [Installation](#installation)
+- [Requirements](#requirements)
+- [Permissions](#permissions)
+- [Usage](#usage)
+  - [Basic Setup](#basic-setup)
+  - [Async Query](#async-query-coroutines)
+  - [Callback-based Query](#callback-based-query)
+  - [Checking Permissions](#checking-permissions)
+- [Sample App](#sample-app)
+- [API Reference](#api-reference)
+- [How It Works](#how-it-works)
+- [Configuration](#configuration)
+- [Error Handling](#error-handling)
+- [Best Practices](#best-practices)
+- [Example: Full Integration](#example-full-integration)
+- [Future Metrics](#future-metrics)
+- [Testing](#testing)
+- [Requirements & Compatibility](#requirements--compatibility)
+- [Changelog](#changelog)
+- [License](#license)
+- [Support](#support)
+
 ## Overview
 
 **Tracker** is a privacy-conscious Android library that passively monitors device usage to detect habit patterns. Currently focused on **language learning habit tracking**, it analyzes when users engage with known language learning apps and provides confidence-scored insights about their learning behavior.
@@ -47,8 +80,6 @@ Tracks usage of 13 language learning apps (with focus on Japanese language learn
 Each app has configurable confidence multipliers (0.75-0.85) and minimum session duration thresholds (5-10 minutes) to ensure accurate habit detection.
 
 ## Installation
-
-[![](https://jitpack.io/v/IrynaTsymbaliuk/Tracker.svg)](https://jitpack.io/#IrynaTsymbaliuk/Tracker)
 
 ### Step 1: Add JitPack Repository
 
