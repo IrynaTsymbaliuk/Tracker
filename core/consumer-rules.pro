@@ -85,14 +85,6 @@
 -keepattributes *Annotation*
 
 # ============================================================================
-# AndroidX and Material Components (if needed by consumers)
-# ============================================================================
-
-# These are usually handled by the libraries themselves, but just in case
--dontwarn androidx.**
--dontwarn com.google.android.material.**
-
-# ============================================================================
 # Optimization Settings
 # ============================================================================
 

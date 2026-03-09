@@ -1,7 +1,6 @@
 package com.tracker.core.engine
 
 import android.content.Context
-import androidx.annotation.VisibleForTesting
 import com.tracker.core.aggregator.Aggregator
 import com.tracker.core.aggregator.LanguageLearningAggregator
 import com.tracker.core.collector.Collector
@@ -106,7 +105,6 @@ class HabitEngine internal constructor(
      * Group evidence by day (start of day timestamp).
      * Returns sparse map - only days with evidence are included.
      */
-    @VisibleForTesting
     internal fun groupEvidenceByDay(evidence: List<Evidence>): Map<Long, List<Evidence>> {
         return evidence.groupBy { e ->
             getStartOfDay(e.timestampMillis)
@@ -116,7 +114,6 @@ class HabitEngine internal constructor(
     /**
      * Calculate the number of days in the given range (inclusive).
      */
-    @VisibleForTesting
     internal fun calculateDaysInRange(fromMillis: Long, toMillis: Long): Int {
         val startDay = getStartOfDay(fromMillis)
         val endDay = getStartOfDay(toMillis)
@@ -127,7 +124,6 @@ class HabitEngine internal constructor(
     /**
      * Get start of day timestamp (00:00:00) for given timestamp.
      */
-    @VisibleForTesting
     internal fun getStartOfDay(timestampMillis: Long): Long {
         val calendar = Calendar.getInstance().apply {
             timeInMillis = timestampMillis

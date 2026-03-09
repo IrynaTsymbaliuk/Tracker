@@ -26,18 +26,3 @@ This project uses the following third-party libraries:
    Copyright JetBrains s.r.o.
    Licensed under the Apache License 2.0
    https://github.com/Kotlin/kotlinx.coroutines
-
-3. AndroidX Core KTX
-   Copyright The Android Open Source Project
-   Licensed under the Apache License 2.0
-   https://developer.android.com/jetpack/androidx
-
-4. AndroidX AppCompat
-   Copyright The Android Open Source Project
-   Licensed under the Apache License 2.0
-   https://developer.android.com/jetpack/androidx
-
-5. Material Components for Android
-   Copyright The Android Open Source Project
-   Licensed under the Apache License 2.0
-   https://github.com/material-components/material-components-android

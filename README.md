@@ -467,6 +467,21 @@ Run tests:
 | Kotlin | 2.0.21+ |
 | Coroutines | 1.7.3+ |
 
+### Library Dependencies
+
+The core library has only one dependency:
+- `kotlinx-coroutines-android:1.7.3`
+
+✅ **No AndroidX dependencies!**
+✅ **No UI libraries!**
+✅ **Ultra-lightweight and focused on functionality**
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes and releases.
+
+**Current Version:** 1.0.0 (Released: March 9, 2026)
+
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
