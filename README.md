@@ -220,6 +220,7 @@ The sample app demonstrates:
 - **Data quality reporting** and recommendations
 
 ### Screenshots
+<img width=300 src="https://github.com/user-attachments/assets/39275b57-5110-440d-aa87-b204b4b52b68">
 
 ### Running the Sample App
 
