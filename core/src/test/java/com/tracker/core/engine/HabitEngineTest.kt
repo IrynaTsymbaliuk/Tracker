@@ -98,7 +98,7 @@ class HabitEngineTest {
         coEvery { mockCollector.collect(any(), any()) } returns Result.success(evidence)
 
         val mockAggregator = mockk<Aggregator<LanguageLearningResult>>()
-        every { mockAggregator.aggregate(any(), any()) } returns createLanguageLearningResult()
+        every { mockAggregator.aggregate(any(), any(), any()) } returns createLanguageLearningResult()
 
         val engine = createEngine(
             requestedMetrics = setOf(Metric.LANGUAGE_LEARNING),
@@ -110,7 +110,7 @@ class HabitEngineTest {
         engine.query(fromMillis = day1Start, toMillis = day2_10am)
 
         // Assert - Day 1 should have 2 evidences grouped together
-        verify { mockAggregator.aggregate(day1Start, match { it.size == 2 }) }
+        verify { mockAggregator.aggregate(day1Start, match { it.size == 2 }, any()) }
     }
 
     @Test
@@ -130,7 +130,7 @@ class HabitEngineTest {
         coEvery { mockCollector.collect(any(), any()) } returns Result.success(evidence)
 
         val mockAggregator = mockk<Aggregator<LanguageLearningResult>>()
-        every { mockAggregator.aggregate(any(), any()) } returns createLanguageLearningResult()
+        every { mockAggregator.aggregate(any(), any(), any()) } returns createLanguageLearningResult()
 
         val engine = createEngine(
             requestedMetrics = setOf(Metric.LANGUAGE_LEARNING),
@@ -272,13 +272,13 @@ class HabitEngineTest {
         coEvery { mockCollector.collect(any(), any()) } returns Result.success(evidence)
 
         val mockAggregator = mockk<Aggregator<LanguageLearningResult>>()
-        every { mockAggregator.aggregate(jan1, any()) } returns createLanguageLearningResult(
+        every { mockAggregator.aggregate(jan1, any(), any()) } returns createLanguageLearningResult(
             occurred = true
         )
-        every { mockAggregator.aggregate(jan2, any()) } returns createLanguageLearningResult(
+        every { mockAggregator.aggregate(jan2, any(), any()) } returns createLanguageLearningResult(
             occurred = true
         )
-        every { mockAggregator.aggregate(jan3, any()) } returns createLanguageLearningResult(
+        every { mockAggregator.aggregate(jan3, any(), any()) } returns createLanguageLearningResult(
             occurred = false
         )
 
@@ -312,10 +312,10 @@ class HabitEngineTest {
         coEvery { mockCollector.collect(any(), any()) } returns Result.success(evidence)
 
         val mockAggregator = mockk<Aggregator<LanguageLearningResult>>()
-        every { mockAggregator.aggregate(jan1, any()) } returns createLanguageLearningResult(
+        every { mockAggregator.aggregate(jan1, any(), any()) } returns createLanguageLearningResult(
             durationMinutes = 30
         )
-        every { mockAggregator.aggregate(jan3, any()) } returns createLanguageLearningResult(
+        every { mockAggregator.aggregate(jan3, any(), any()) } returns createLanguageLearningResult(
             durationMinutes = 60
         )
 
@@ -350,13 +350,13 @@ class HabitEngineTest {
         coEvery { mockCollector.collect(any(), any()) } returns Result.success(evidence)
 
         val mockAggregator = mockk<Aggregator<LanguageLearningResult>>()
-        every { mockAggregator.aggregate(jan1, any()) } returns createLanguageLearningResult(
+        every { mockAggregator.aggregate(jan1, any(), any()) } returns createLanguageLearningResult(
             durationMinutes = 20
         )
-        every { mockAggregator.aggregate(jan2, any()) } returns createLanguageLearningResult(
+        every { mockAggregator.aggregate(jan2, any(), any()) } returns createLanguageLearningResult(
             durationMinutes = 30
         )
-        every { mockAggregator.aggregate(jan3, any()) } returns createLanguageLearningResult(
+        every { mockAggregator.aggregate(jan3, any(), any()) } returns createLanguageLearningResult(
             durationMinutes = 15
         )
 
@@ -411,7 +411,7 @@ class HabitEngineTest {
         coEvery { mockCollector.collect(any(), any()) } returns Result.success(evidence)
 
         val mockAggregator = mockk<Aggregator<LanguageLearningResult>>()
-        every { mockAggregator.aggregate(any(), any()) } returns createLanguageLearningResult()
+        every { mockAggregator.aggregate(any(), any(), any()) } returns createLanguageLearningResult()
 
         val engine = createEngine(
             requestedMetrics = setOf(Metric.LANGUAGE_LEARNING),
@@ -640,6 +640,7 @@ class HabitEngineTest {
 
     private fun createEngine(
         requestedMetrics: Set<Metric>,
+        minConfidence: Float = 0.50f,
         permissionManager: PermissionManager? = null,
         collectors: Map<Metric, Collector> = emptyMap(),
         aggregators: Map<Metric, Aggregator<out com.tracker.core.result.HabitResult>> = emptyMap()
@@ -650,6 +651,7 @@ class HabitEngineTest {
 
         return HabitEngine(
             requestedMetrics = requestedMetrics,
+            minConfidence = minConfidence,
             permissionManager = mockPermissionManager,
             collectors = collectors,
             aggregators = aggregators

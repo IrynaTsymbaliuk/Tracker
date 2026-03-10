@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit
  */
 class HabitEngine internal constructor(
     private val requestedMetrics: Set<Metric>,
+    private val minConfidence: Float,
     private val permissionManager: PermissionManager,
     private val collectors: Map<Metric, Collector>,
     private val aggregators: Map<Metric, Aggregator<out HabitResult>>
@@ -38,7 +39,7 @@ class HabitEngine internal constructor(
         /**
          * Create a HabitEngine with default dependencies.
          */
-        fun create(context: Context, requestedMetrics: Set<Metric>): HabitEngine {
+        fun create(context: Context, requestedMetrics: Set<Metric>, minConfidence: Float): HabitEngine {
             val permissionManager = PermissionManager(context)
             val collectors = mapOf(
                 Metric.LANGUAGE_LEARNING to UsageStatsCollector(context, permissionManager)
@@ -46,7 +47,7 @@ class HabitEngine internal constructor(
             val aggregators = mapOf<Metric, Aggregator<out HabitResult>>(
                 Metric.LANGUAGE_LEARNING to LanguageLearningAggregator()
             )
-            return HabitEngine(requestedMetrics, permissionManager, collectors, aggregators)
+            return HabitEngine(requestedMetrics, minConfidence, permissionManager, collectors, aggregators)
         }
     }
 
@@ -76,7 +77,7 @@ class HabitEngine internal constructor(
                 val dayEvidence = evidence.filter { it.source == DataSource.USAGE_STATS }
                 @Suppress("UNCHECKED_CAST")
                 val aggregator = aggregators[Metric.LANGUAGE_LEARNING] as? Aggregator<LanguageLearningResult>
-                aggregator?.aggregate(dayMillis, dayEvidence)
+                aggregator?.aggregate(dayMillis, dayEvidence, minConfidence)
             } else {
                 null
             }

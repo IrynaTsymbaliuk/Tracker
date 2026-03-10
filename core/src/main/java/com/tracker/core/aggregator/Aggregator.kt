@@ -20,7 +20,8 @@ interface Aggregator<T : HabitResult> {
      *
      * @param dayMillis Timestamp representing the day (can be start of day)
      * @param evidence List of all evidence for this day
+     * @param minConfidence Minimum confidence threshold for determining occurrence (0.0 to 1.0)
      * @return Aggregated result, or null if no evidence available
      */
-    fun aggregate(dayMillis: Long, evidence: List<Evidence>): T?
+    fun aggregate(dayMillis: Long, evidence: List<Evidence>, minConfidence: Float): T?
 }

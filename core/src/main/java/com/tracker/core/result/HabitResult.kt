@@ -35,5 +35,7 @@ fun Float.toConfidenceLevel(): ConfidenceLevel = when {
 
 /**
  * Determines if a habit occurred based on confidence threshold.
+ *
+ * @param threshold Minimum confidence threshold (default: 0.50)
  */
-fun Float.toOccurred(): Boolean = this >= 0.50f
+fun Float.toOccurred(threshold: Float = 0.50f): Boolean = this >= threshold

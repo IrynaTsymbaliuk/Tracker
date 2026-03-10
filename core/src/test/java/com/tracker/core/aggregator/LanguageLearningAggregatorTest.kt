@@ -41,7 +41,7 @@ class LanguageLearningAggregatorTest {
         val emptyEvidence = emptyList<Evidence>()
 
         // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = emptyEvidence)
+        val result = aggregator.aggregate(dayMillis = 1000L, evidence = emptyEvidence, minConfidence = 0.50f)
 
         // Assert
         assertNull(result)
@@ -71,7 +71,7 @@ class LanguageLearningAggregatorTest {
         )
 
         // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence)
+        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
 
         // Assert
         assertNotNull(result)
@@ -111,7 +111,7 @@ class LanguageLearningAggregatorTest {
         )
 
         // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence)
+        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
 
         // Assert
         assertNotNull(result)
@@ -152,7 +152,7 @@ class LanguageLearningAggregatorTest {
         )
 
         // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence)
+        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
 
         // Assert
         assertNotNull(result)
@@ -199,7 +199,7 @@ class LanguageLearningAggregatorTest {
         )
 
         // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence)
+        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
 
         // Assert
         assertNotNull(result)
@@ -250,7 +250,7 @@ class LanguageLearningAggregatorTest {
         )
 
         // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence)
+        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
 
         // Assert
         assertNotNull(result)
@@ -290,7 +290,7 @@ class LanguageLearningAggregatorTest {
         )
 
         // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence)
+        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
 
         // Assert
         assertNotNull(result)
@@ -330,7 +330,7 @@ class LanguageLearningAggregatorTest {
         )
 
         // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence)
+        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
 
         // Assert
         assertNotNull(result)
@@ -390,7 +390,7 @@ class LanguageLearningAggregatorTest {
         )
 
         // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence)
+        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
 
         // Assert
         assertNotNull(result)
@@ -442,7 +442,7 @@ class LanguageLearningAggregatorTest {
         )
 
         // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence)
+        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
 
         // Assert
         assertNotNull(result)
@@ -480,7 +480,7 @@ class LanguageLearningAggregatorTest {
         )
 
         // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence)
+        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
 
         // Assert
         assertNotNull(result)
@@ -517,7 +517,7 @@ class LanguageLearningAggregatorTest {
         )
 
         // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence)
+        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
 
         // Assert
         assertNotNull(result)
@@ -549,7 +549,7 @@ class LanguageLearningAggregatorTest {
         )
 
         // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence)
+        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
 
         // Assert
         assertNotNull(result)
@@ -583,7 +583,7 @@ class LanguageLearningAggregatorTest {
         )
 
         // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence)
+        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
 
         // Assert
         assertNotNull(result)
@@ -618,7 +618,7 @@ class LanguageLearningAggregatorTest {
         )
 
         // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence)
+        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
 
         // Assert
         assertNotNull(result)
@@ -650,7 +650,7 @@ class LanguageLearningAggregatorTest {
         )
 
         // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence)
+        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
 
         // Assert
         assertNotNull(result)
@@ -678,7 +678,7 @@ class LanguageLearningAggregatorTest {
         )
 
         // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence)
+        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
 
         // Assert
         assertNotNull(result)
@@ -706,7 +706,7 @@ class LanguageLearningAggregatorTest {
         )
 
         // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence)
+        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
 
         // Assert
         assertNotNull(result)
@@ -738,7 +738,7 @@ class LanguageLearningAggregatorTest {
         )
 
         // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence)
+        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
 
         // Assert
         assertNotNull(result)
@@ -766,7 +766,7 @@ class LanguageLearningAggregatorTest {
         )
 
         // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence)
+        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
 
         // Assert
         assertNotNull(result)
@@ -810,7 +810,7 @@ class LanguageLearningAggregatorTest {
         )
 
         // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence)
+        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
 
         // Assert
         assertNotNull(result)
@@ -850,7 +850,7 @@ class LanguageLearningAggregatorTest {
         )
 
         // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence)
+        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
 
         // Assert
         assertNotNull(result)
@@ -883,11 +883,92 @@ class LanguageLearningAggregatorTest {
         )
 
         // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence)
+        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
 
         // Assert
         assertNotNull(result)
         // Primary source should be from the highest confidence evidence
         assertEquals(DataSource.USAGE_STATS, result!!.source)
+    }
+
+    /**
+     * Test: minConfidence parameter affects occurred determination.
+     *
+     * The same evidence with confidence 0.60 should:
+     * - occurred = true when minConfidence = 0.50 (0.60 >= 0.50)
+     * - occurred = false when minConfidence = 0.70 (0.60 < 0.70)
+     */
+    @Test
+    fun `aggregate respects minConfidence parameter for occurred determination`() {
+        // Arrange
+        val aggregator = LanguageLearningAggregator()
+        val evidence = listOf(
+            Evidence(
+                source = DataSource.USAGE_STATS,
+                timestampMillis = 1000L,
+                confidence = 0.60f,
+                durationMinutes = 30,
+                metadata = mapOf(
+                    "packageName" to "com.duolingo",
+                    "appName" to "Duolingo"
+                )
+            )
+        )
+
+        // Act & Assert 1: With minConfidence = 0.50, should occur
+        val result1 = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
+        assertNotNull(result1)
+        assertEquals(0.60f, result1!!.confidence, 0.001f)
+        assertEquals(true, result1.occurred) // 0.60 >= 0.50
+
+        // Act & Assert 2: With minConfidence = 0.70, should NOT occur
+        // Note: 0.60 < 0.70, so weak-only penalty applies: 0.60 - 0.15 = 0.45
+        val result2 = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.70f)
+        assertNotNull(result2)
+        assertEquals(0.45f, result2!!.confidence, 0.001f) // Penalty applied
+        assertEquals(false, result2.occurred) // 0.45 < 0.70
+
+        // Act & Assert 3: With minConfidence = 0.60, should occur (boundary case)
+        val result3 = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.60f)
+        assertNotNull(result3)
+        assertEquals(0.60f, result3!!.confidence, 0.001f)
+        assertEquals(true, result3.occurred) // 0.60 >= 0.60
+    }
+
+    /**
+     * Test: minConfidence parameter affects weak-only penalty determination.
+     *
+     * Evidence with confidence 0.45 should:
+     * - Be considered "weak" when minConfidence = 0.50
+     * - Be considered "strong" when minConfidence = 0.40
+     */
+    @Test
+    fun `aggregate uses minConfidence for weak-only penalty determination`() {
+        // Arrange
+        val aggregator = LanguageLearningAggregator()
+        val evidence = listOf(
+            Evidence(
+                source = DataSource.USAGE_STATS,
+                timestampMillis = 1000L,
+                confidence = 0.45f,
+                durationMinutes = 30,
+                metadata = mapOf(
+                    "packageName" to "com.duolingo",
+                    "appName" to "Duolingo"
+                )
+            )
+        )
+
+        // Act & Assert 1: With minConfidence = 0.50, evidence is weak, penalty applied
+        val result1 = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
+        assertNotNull(result1)
+        // Original confidence 0.45, penalty applied: 0.45 - 0.15 = 0.30
+        assertEquals(0.30f, result1!!.confidence, 0.001f)
+
+        // Act & Assert 2: With minConfidence = 0.40, evidence is NOT weak, no penalty
+        val result2 = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.40f)
+        assertNotNull(result2)
+        // Original confidence 0.45, no penalty applied
+        assertEquals(0.45f, result2!!.confidence, 0.001f)
     }
 }

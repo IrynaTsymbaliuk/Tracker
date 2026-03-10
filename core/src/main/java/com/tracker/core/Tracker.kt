@@ -35,7 +35,7 @@ class Tracker private constructor(
     private val lookbackDays: Int
 ) {
 
-    private val habitEngine = HabitEngine.create(context, requestedMetrics)
+    private val habitEngine = HabitEngine.create(context, requestedMetrics, minConfidence)
 
     /**
      * Get the configured lookback period in days.

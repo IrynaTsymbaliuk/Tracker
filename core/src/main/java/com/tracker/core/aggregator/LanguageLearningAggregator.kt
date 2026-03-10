@@ -25,7 +25,7 @@ class LanguageLearningAggregator : Aggregator<LanguageLearningResult> {
         private const val OVERLAP_THRESHOLD = 0.80f // 80% overlap
     }
 
-    override fun aggregate(dayMillis: Long, evidence: List<Evidence>): LanguageLearningResult? {
+    override fun aggregate(dayMillis: Long, evidence: List<Evidence>, minConfidence: Float): LanguageLearningResult? {
         if (evidence.isEmpty()) {
             return null
         }
@@ -40,13 +40,13 @@ class LanguageLearningAggregator : Aggregator<LanguageLearningResult> {
         val totalDuration = deduplicated.mapNotNull { it.durationMinutes }.sum()
 
         // Step 4: Apply weak-only penalty
-        val allWeak = deduplicated.all { it.confidence < 0.50f }
+        val allWeak = deduplicated.all { it.confidence < minConfidence }
         if (allWeak) {
             combinedConfidence = max(0f, combinedConfidence - WEAK_ONLY_PENALTY)
         }
 
         // Step 5: Determine occurred status
-        val occurred = combinedConfidence.toOccurred()
+        val occurred = combinedConfidence.toOccurred(minConfidence)
         val confidenceLevel = combinedConfidence.toConfidenceLevel()
 
         // Step 6: Extract app information (package name + app name)
