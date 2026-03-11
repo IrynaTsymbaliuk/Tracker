@@ -203,7 +203,3 @@ Apache 2.0 — see [LICENSE](LICENSE) for details.
 - [ ] Additional metrics (Social Activity, Screen Time, Focus Time)
 - [ ] Custom habit definitions via DSL
 - [ ] ML-based confidence scoring
-
----
-
-**Questions?** Open an issue or check the [documentation](docs/).
