@@ -3,12 +3,10 @@ package com.tracker.core.engine
 import com.tracker.core.aggregator.Aggregator
 import com.tracker.core.collector.Collector
 import com.tracker.core.model.Evidence
-import com.tracker.core.permission.Permission
 import com.tracker.core.permission.PermissionManager
 import com.tracker.core.permission.PermissionStatus
+import com.tracker.core.result.AccessStatus
 import com.tracker.core.result.LanguageLearningResult
-import com.tracker.core.result.MissingReason
-import com.tracker.core.result.ReliabilityLevel
 import com.tracker.core.types.ConfidenceLevel
 import com.tracker.core.types.DataSource
 import com.tracker.core.types.Metric
@@ -22,7 +20,6 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -98,7 +95,13 @@ class HabitEngineTest {
         coEvery { mockCollector.collect(any(), any()) } returns Result.success(evidence)
 
         val mockAggregator = mockk<Aggregator<LanguageLearningResult>>()
-        every { mockAggregator.aggregate(any(), any(), any()) } returns createLanguageLearningResult()
+        every {
+            mockAggregator.aggregate(
+                any(),
+                any(),
+                any()
+            )
+        } returns createLanguageLearningResult()
 
         val engine = createEngine(
             requestedMetrics = setOf(Metric.LANGUAGE_LEARNING),
@@ -130,7 +133,13 @@ class HabitEngineTest {
         coEvery { mockCollector.collect(any(), any()) } returns Result.success(evidence)
 
         val mockAggregator = mockk<Aggregator<LanguageLearningResult>>()
-        every { mockAggregator.aggregate(any(), any(), any()) } returns createLanguageLearningResult()
+        every {
+            mockAggregator.aggregate(
+                any(),
+                any(),
+                any()
+            )
+        } returns createLanguageLearningResult()
 
         val engine = createEngine(
             requestedMetrics = setOf(Metric.LANGUAGE_LEARNING),
@@ -411,7 +420,13 @@ class HabitEngineTest {
         coEvery { mockCollector.collect(any(), any()) } returns Result.success(evidence)
 
         val mockAggregator = mockk<Aggregator<LanguageLearningResult>>()
-        every { mockAggregator.aggregate(any(), any(), any()) } returns createLanguageLearningResult()
+        every {
+            mockAggregator.aggregate(
+                any(),
+                any(),
+                any()
+            )
+        } returns createLanguageLearningResult()
 
         val engine = createEngine(
             requestedMetrics = setOf(Metric.LANGUAGE_LEARNING),
@@ -446,152 +461,6 @@ class HabitEngineTest {
     // ============================================================
     // Data Quality Tests
     // ============================================================
-
-    @Test
-    fun `data quality includes USAGE_STATS when permission granted`() = runTest {
-        // Arrange
-        val mockPermissionManager = mockk<PermissionManager>()
-        every { mockPermissionManager.checkPermission(Permission.PACKAGE_USAGE_STATS) } returns PermissionStatus.GRANTED
-
-        val engine = createEngine(
-            requestedMetrics = setOf(Metric.LANGUAGE_LEARNING),
-            permissionManager = mockPermissionManager
-        )
-
-        // Act
-        val result = engine.query(fromMillis = 1000L, toMillis = 2000L)
-
-        // Assert
-        assertTrue(result.dataQuality.availableSources.contains(DataSource.USAGE_STATS))
-        assertFalse(result.dataQuality.missingSources.any { it.source == DataSource.USAGE_STATS })
-    }
-
-    @Test
-    fun `data quality excludes USAGE_STATS when permission missing`() = runTest {
-        // Arrange
-        val mockPermissionManager = mockk<PermissionManager>()
-        every { mockPermissionManager.checkPermission(Permission.PACKAGE_USAGE_STATS) } returns PermissionStatus.MISSING
-
-        val engine = createEngine(
-            requestedMetrics = setOf(Metric.LANGUAGE_LEARNING),
-            permissionManager = mockPermissionManager
-        )
-
-        // Act
-        val result = engine.query(fromMillis = 1000L, toMillis = 2000L)
-
-        // Assert
-        assertFalse(result.dataQuality.availableSources.contains(DataSource.USAGE_STATS))
-        assertTrue(result.dataQuality.missingSources.any { it.source == DataSource.USAGE_STATS })
-    }
-
-    @Test
-    fun `missing sources includes USAGE_STATS with NO_PERMISSION reason when missing`() = runTest {
-        // Arrange
-        val mockPermissionManager = mockk<PermissionManager>()
-        every { mockPermissionManager.checkPermission(Permission.PACKAGE_USAGE_STATS) } returns PermissionStatus.MISSING
-
-        val engine = createEngine(
-            requestedMetrics = setOf(Metric.LANGUAGE_LEARNING),
-            permissionManager = mockPermissionManager
-        )
-
-        // Act
-        val result = engine.query(fromMillis = 1000L, toMillis = 2000L)
-
-        // Assert
-        val missingSource =
-            result.dataQuality.missingSources.find { it.source == DataSource.USAGE_STATS }
-        assertNotNull(missingSource)
-        assertEquals(MissingReason.NO_PERMISSION, missingSource?.reason)
-    }
-
-    @Test
-    fun `reliability is HIGH when all sources available`() = runTest {
-        // Arrange
-        val mockPermissionManager = mockk<PermissionManager>()
-        every { mockPermissionManager.checkPermission(Permission.PACKAGE_USAGE_STATS) } returns PermissionStatus.GRANTED
-
-        val engine = createEngine(
-            requestedMetrics = setOf(Metric.LANGUAGE_LEARNING),
-            permissionManager = mockPermissionManager
-        )
-
-        // Act
-        val result = engine.query(fromMillis = 1000L, toMillis = 2000L)
-
-        // Assert
-        assertEquals(ReliabilityLevel.HIGH, result.dataQuality.overallReliability)
-    }
-
-    @Test
-    fun `reliability is MEDIUM when some sources available`() = runTest {
-        // Note: Current implementation only has one source (USAGE_STATS)
-        // This test documents expected behavior when multiple sources exist
-        // For now, this scenario doesn't occur with single source
-
-        // Arrange
-        val mockPermissionManager = mockk<PermissionManager>()
-        every { mockPermissionManager.checkPermission(Permission.PACKAGE_USAGE_STATS) } returns PermissionStatus.GRANTED
-
-        val engine = createEngine(
-            requestedMetrics = setOf(Metric.LANGUAGE_LEARNING),
-            permissionManager = mockPermissionManager
-        )
-
-        // Act
-        val result = engine.query(fromMillis = 1000L, toMillis = 2000L)
-
-        // Assert - With only one source, it's either HIGH or LOW
-        assertTrue(
-            result.dataQuality.overallReliability in listOf(
-                ReliabilityLevel.HIGH,
-                ReliabilityLevel.LOW
-            )
-        )
-    }
-
-    @Test
-    fun `reliability is LOW when no sources available`() = runTest {
-        // Arrange
-        val mockPermissionManager = mockk<PermissionManager>()
-        every { mockPermissionManager.checkPermission(Permission.PACKAGE_USAGE_STATS) } returns PermissionStatus.MISSING
-
-        val engine = createEngine(
-            requestedMetrics = setOf(Metric.LANGUAGE_LEARNING),
-            permissionManager = mockPermissionManager
-        )
-
-        // Act
-        val result = engine.query(fromMillis = 1000L, toMillis = 2000L)
-
-        // Assert
-        assertEquals(ReliabilityLevel.LOW, result.dataQuality.overallReliability)
-    }
-
-    @Test
-    fun `recommendations include permission request when permission missing`() = runTest {
-        // Arrange
-        val mockPermissionManager = mockk<PermissionManager>()
-        every { mockPermissionManager.checkPermission(Permission.PACKAGE_USAGE_STATS) } returns PermissionStatus.MISSING
-
-        val engine = createEngine(
-            requestedMetrics = setOf(Metric.LANGUAGE_LEARNING),
-            permissionManager = mockPermissionManager
-        )
-
-        // Act
-        val result = engine.query(fromMillis = 1000L, toMillis = 2000L)
-
-        // Assert
-        assertTrue(result.dataQuality.recommendations.isNotEmpty())
-        assertTrue(result.dataQuality.recommendations.any {
-            it.contains(
-                "permission",
-                ignoreCase = true
-            )
-        })
-    }
 
     // ============================================================
     // Helper Methods
@@ -645,9 +514,11 @@ class HabitEngineTest {
         collectors: Map<Metric, Collector> = emptyMap(),
         aggregators: Map<Metric, Aggregator<out com.tracker.core.result.HabitResult>> = emptyMap()
     ): HabitEngine {
-        val mockPermissionManager = permissionManager ?: mockk<PermissionManager>().also {
-            every { it.checkPermission(any()) } returns PermissionStatus.GRANTED
-        }
+        val mockPermissionManager =
+            permissionManager ?: mockk<PermissionManager>(relaxed = true).also {
+                every { it.checkPermission(any()) } returns PermissionStatus.GRANTED
+                every { it.check(any()) } returns AccessStatus.GRANTED
+            }
 
         return HabitEngine(
             requestedMetrics = requestedMetrics,

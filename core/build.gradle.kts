@@ -37,6 +37,9 @@ android {
 
 dependencies {
 
+    // AndroidX Core
+    implementation(libs.androidx.core.ktx)
+
     // Kotlin Coroutines
     implementation(libs.kotlinx.coroutines.android)
 

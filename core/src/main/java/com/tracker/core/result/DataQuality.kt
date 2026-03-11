@@ -29,22 +29,3 @@ data class MissingSource(
     val reason: MissingReason,
     val message: String
 )
-
-/**
- * Reason why a data source is unavailable.
- */
-enum class MissingReason {
-    NO_PERMISSION,
-    APP_NOT_INSTALLED,
-    API_UNAVAILABLE,
-    OLD_ANDROID_VERSION
-}
-
-/**
- * Overall reliability assessment.
- */
-enum class ReliabilityLevel {
-    HIGH,    // All required sources available
-    MEDIUM,  // Some sources available
-    LOW      // Few or no sources available
-}

@@ -1,7 +1,11 @@
 package com.tracker.core
 
+import android.app.Activity
 import android.content.Context
 import com.tracker.core.engine.HabitEngine
+import com.tracker.core.result.AccessRequirement
+import com.tracker.core.result.AccessStatus
+import com.tracker.core.result.HabitAccessInfo
 import com.tracker.core.result.MetricsResult
 import com.tracker.core.types.Metric
 import kotlinx.coroutines.CoroutineScope
@@ -35,7 +39,11 @@ class Tracker private constructor(
     private val lookbackDays: Int
 ) {
 
-    private val habitEngine = HabitEngine.create(context, requestedMetrics, minConfidence)
+    private val habitEngine = HabitEngine.create(
+        context,
+        requestedMetrics,
+        minConfidence
+    )
 
     /**
      * Get the configured lookback period in days.
@@ -50,6 +58,57 @@ class Tracker private constructor(
      * @return Minimum confidence value (0.0 to 1.0)
      */
     fun getMinConfidence(): Float = minConfidence
+
+    /**
+     * Get access requirements for all requested metrics.
+     *
+     * This method provides transparency about what data sources are available,
+     * what's missing, and how to improve data quality for each requested metric.
+     *
+     * @return List of HabitAccessInfo, one per requested metric
+     */
+    fun getAccessRequirements(): List<HabitAccessInfo> {
+        return habitEngine.getAccessRequirements()
+    }
+
+    /**
+     * Check if all required access is granted.
+     *
+     * This is a convenience method that checks if all data sources for all
+     * requested metrics have their access requirements met.
+     *
+     * @return true if all required permissions/credentials are granted, false otherwise
+     */
+    fun hasAllRequiredAccess(): Boolean {
+        return getAccessRequirements()
+            .flatMap { it.sources }
+            .all { it.status == AccessStatus.GRANTED }
+    }
+
+    /**
+     * Request missing access for all requested metrics.
+     *
+     * This method automatically requests all missing permissions/credentials
+     * needed by the library. For system permissions like PACKAGE_USAGE_STATS,
+     * this will open the appropriate Settings screen.
+     *
+     * Call this method when [hasAllRequiredAccess] returns false.
+     *
+     * @param activity The activity to use for launching permission requests
+     */
+    fun requestMissingAccess(activity: Activity) {
+        getAccessRequirements()
+            .flatMap { it.sources }
+            .filter { it.status != AccessStatus.GRANTED }
+            .distinctBy { it.requirement }
+            .forEach { source ->
+                when (val requirement = source.requirement) {
+                    is AccessRequirement.SystemPermission -> {
+                        habitEngine.requestPermission(activity, requirement)
+                    }
+                }
+            }
+    }
 
     /**
      * Query metrics asynchronously using coroutines with default lookback period.

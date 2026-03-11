@@ -1,5 +1,6 @@
 package com.tracker.core.engine
 
+import android.app.Activity
 import android.content.Context
 import com.tracker.core.aggregator.Aggregator
 import com.tracker.core.aggregator.LanguageLearningAggregator
@@ -39,16 +40,87 @@ class HabitEngine internal constructor(
         /**
          * Create a HabitEngine with default dependencies.
          */
-        fun create(context: Context, requestedMetrics: Set<Metric>, minConfidence: Float): HabitEngine {
+        fun create(
+            context: Context,
+            requestedMetrics: Set<Metric>,
+            minConfidence: Float
+        ): HabitEngine {
             val permissionManager = PermissionManager(context)
-            val collectors = mapOf(
-                Metric.LANGUAGE_LEARNING to UsageStatsCollector(context, permissionManager)
+            val collectors: Map<Metric, Collector> = mapOf(
+                Metric.LANGUAGE_LEARNING to UsageStatsCollector(context, permissionManager),
+                Metric.READING to UsageStatsCollector(context, permissionManager)
             )
-            val aggregators = mapOf<Metric, Aggregator<out HabitResult>>(
+            val aggregators: Map<Metric, Aggregator<out HabitResult>> = mapOf(
                 Metric.LANGUAGE_LEARNING to LanguageLearningAggregator()
             )
             return HabitEngine(requestedMetrics, minConfidence, permissionManager, collectors, aggregators)
         }
+    }
+
+    /**
+     * Get access requirements for all requested metrics.
+     *
+     * Dynamically builds access info from registered collectors,
+     * following the self-describing collector pattern.
+     *
+     * @return List of HabitAccessInfo, one per requested metric
+     */
+    fun getAccessRequirements(): List<HabitAccessInfo> {
+        return requestedMetrics.map { metric ->
+            val collector = collectors[metric]
+                ?: throw IllegalStateException("No collector registered for metric: $metric")
+
+            // Build source access info from collector's declared requirements
+            val sources = collector.sourceRequirements.map { requirement ->
+                SourceAccessInfo(
+                    sourceName = collector.sourceName,
+                    requirement = requirement,
+                    status = permissionManager.check(requirement),
+                    reliabilityContribution = collector.reliabilityContribution,
+                    description = when (requirement) {
+                        is AccessRequirement.SystemPermission ->
+                            "System permission: ${requirement.permission}"
+                        else -> "Unknown requirement type"
+                    }
+                )
+            }
+
+            // Calculate current reliability based on granted sources
+            val currentReliability = if (sources.any { it.status == AccessStatus.GRANTED }) {
+                // Use the highest reliability among granted sources
+                sources
+                    .filter { it.status == AccessStatus.GRANTED }
+                    .maxOfOrNull { it.reliabilityContribution }
+                    ?: ReliabilityLevel.NONE
+            } else {
+                ReliabilityLevel.NONE
+            }
+
+            // Potential reliability is the highest possible if all sources were available
+            val potentialReliability = sources
+                .maxOfOrNull { it.reliabilityContribution }
+                ?: ReliabilityLevel.NONE
+
+            HabitAccessInfo(
+                metric = metric,
+                currentReliability = currentReliability,
+                potentialReliability = potentialReliability,
+                sources = sources
+            )
+        }
+    }
+
+    /**
+     * Request a system permission.
+     *
+     * Delegates to PermissionManager to handle the actual permission request.
+     * For PACKAGE_USAGE_STATS, this opens the Settings screen.
+     *
+     * @param activity The activity to use for launching permission requests
+     * @param requirement The system permission requirement to request
+     */
+    fun requestPermission(activity: Activity, requirement: AccessRequirement.SystemPermission) {
+        permissionManager.requestPermission(activity, requirement)
     }
 
     /**

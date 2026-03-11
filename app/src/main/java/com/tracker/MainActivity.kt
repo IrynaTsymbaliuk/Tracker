@@ -1,11 +1,6 @@
 package com.tracker
 
-import android.app.AppOpsManager
-import android.content.Context
-import android.content.Intent
 import android.os.Bundle
-import android.os.Process
-import android.provider.Settings
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -19,7 +14,7 @@ import kotlinx.coroutines.launch
  *
  * This app shows:
  * 1. How to build a Tracker instance
- * 2. How to check and request PACKAGE_USAGE_STATS permission
+ * 2. How to check and request access using library methods
  * 3. How to query metrics using coroutines
  * 4. How to display results (summary, day-by-day data, data quality)
  */
@@ -35,7 +30,7 @@ class MainActivity : AppCompatActivity() {
 
         setupTracker()
         setupUI()
-        checkPermissionAndQuery()
+        checkAccessAndQuery()
     }
 
     /**
@@ -54,19 +49,21 @@ class MainActivity : AppCompatActivity() {
      */
     private fun setupUI() {
         binding.btnQuery.setOnClickListener {
-            checkPermissionAndQuery()
+            checkAccessAndQuery()
         }
 
         binding.btnRequestPermission.setOnClickListener {
-            requestUsageStatsPermission()
+            // Use library method to request missing access
+            tracker.requestMissingAccess(this)
         }
     }
 
     /**
-     * Step 3: Check permission and query if granted
+     * Step 3: Check access and query if granted
      */
-    private fun checkPermissionAndQuery() {
-        if (hasUsageStatsPermission()) {
+    private fun checkAccessAndQuery() {
+        // Use library method to check if all required access is granted
+        if (tracker.hasAllRequiredAccess()) {
             showPermissionGranted()
             queryMetrics()
         } else {
@@ -119,7 +116,6 @@ class MainActivity : AppCompatActivity() {
     private fun buildDataQualityText(dataQuality: com.tracker.core.result.DataQuality): String {
         return buildString {
             appendLine("Reliability: ${dataQuality.overallReliability}")
-            appendLine("Available Sources: ${dataQuality.availableSources.size}")
             appendLine("Missing Sources: ${dataQuality.missingSources.size}")
 
             if (dataQuality.recommendations.isNotEmpty()) {
@@ -160,30 +156,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Check if PACKAGE_USAGE_STATS permission is granted
-     */
-    private fun hasUsageStatsPermission(): Boolean {
-        val appOps = getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager ?: return false
-        val mode = appOps.checkOpNoThrow(
-            AppOpsManager.OPSTR_GET_USAGE_STATS,
-            Process.myUid(),
-            packageName
-        )
-        return mode == AppOpsManager.MODE_ALLOWED
-    }
-
-    /**
-     * Request PACKAGE_USAGE_STATS permission by opening Settings
-     */
-    private fun requestUsageStatsPermission() {
-        startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-    }
-
     override fun onResume() {
         super.onResume()
-        // Re-check permission when returning from Settings
-        checkPermissionAndQuery()
+        // Re-check access when returning from Settings
+        checkAccessAndQuery()
     }
 
     // UI State Management

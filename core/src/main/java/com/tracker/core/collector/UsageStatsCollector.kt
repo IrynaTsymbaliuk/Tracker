@@ -20,11 +20,25 @@ import java.util.concurrent.TimeUnit
  * 3. Filters for known language learning apps
  * 4. Queries UsageStats for time range
  * 5. Creates Evidence for sessions that exceed minimum duration
+ *
+ * Required permissions: PACKAGE_USAGE_STATS
+ * Reliability contribution: MEDIUM
  */
 class UsageStatsCollector(
     private val context: Context,
     private val permissionManager: PermissionManager
 ) : Collector {
+
+    override val sourceRequirements: Set<com.tracker.core.result.AccessRequirement> = setOf(
+        com.tracker.core.result.AccessRequirement.SystemPermission(
+            com.tracker.core.result.AccessRequirement.PERMISSION_USAGE_STATS
+        )
+    )
+
+    override val sourceName: String = "Usage Stats"
+
+    override val reliabilityContribution: com.tracker.core.result.ReliabilityLevel =
+        com.tracker.core.result.ReliabilityLevel.MEDIUM
 
     private val usageStatsManager by lazy {
         context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
