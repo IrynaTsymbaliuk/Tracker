@@ -2,7 +2,7 @@
 
 **Detect user habits from Android system data — no user input required.**
 
-Tracker is an Android library that automatically identifies user behaviors (like language learning, reading, or exercise) by analyzing device usage patterns. Your app gets reliable habit data without asking users to manually track anything.
+Tracker is an Android library that automatically identifies user behaviors (like language learning and reading) by analyzing device usage patterns. Your app gets reliable habit data without asking users to manually track anything.
 
 ## Do You Need This?
 
@@ -19,7 +19,7 @@ Tracker is an Android library that automatically identifies user behaviors (like
 ```kotlin
 // 1. Configure what to track
 val tracker = Tracker.Builder(context)
-    .requestMetrics(Metric.LANGUAGE_LEARNING)
+    .requestMetrics(Metric.LANGUAGE_LEARNING, Metric.READING)
     .setLookbackDays(30)
     .build()
 
@@ -32,24 +32,26 @@ if (!tracker.hasAllRequiredAccess()) {
 val result = tracker.queryAsync()
 
 // Result contains:
-result.summary.languageLearningDays  // How many days user studied
-result.summary.averageMinutes        // Average time per day
-result.days                          // Day-by-day breakdown with confidence scores
-result.dataQuality                   // What data sources are available/missing
+result.summary.languageLearningDays            // How many days user studied
+result.summary.averageLanguageLearningMinutes  // Average language learning time per day
+result.summary.readingDays                     // How many days user read
+result.summary.averageReadingMinutes           // Average reading time per day
+result.days                                    // Day-by-day breakdown with confidence scores
+result.dataQuality                             // What data sources are available/missing
 ```
 
 **Output example:**
-- "15 out of 30 days: language learning detected"
-- "Average 45 minutes/day"
-- "Confidence: HIGH (85%)"
-- "Used apps: Duolingo, Anki, LingoDeer"
+- **Language Learning**: "15 out of 30 days detected, average 25.5 minutes/day (HIGH confidence)"
+  - Apps: Duolingo, Anki, LingoDeer
+- **Reading**: "12 out of 30 days detected, average 18.3 minutes/day (HIGH confidence)"
+  - Apps: Kindle, Google Play Books
 
 ## Supported Metrics
 
-| Metric | Data Source | Permission Required |
-|--------|-------------|---------------------|
-| **LANGUAGE_LEARNING** | App usage stats | PACKAGE_USAGE_STATS |
-| **READING** | App usage stats | PACKAGE_USAGE_STATS |
+| Metric | Data Source | Detected Apps | Permission Required |
+|--------|-------------|---------------|---------------------|
+| **LANGUAGE_LEARNING** | App usage stats | Duolingo, Anki, LingoDeer, Drops, Kanji Study, and 8 more | PACKAGE_USAGE_STATS |
+| **READING** | App usage stats | Kindle, Google Play Books | PACKAGE_USAGE_STATS |
 
 *More metrics coming: Exercise (Health Connect), Sleep, Social Activity*
 
@@ -109,7 +111,7 @@ val result = tracker.queryAsync(oneWeekAgo, now)
 
 ```kotlin
 val tracker = Tracker.Builder(context)
-    .requestMetrics(Metric.LANGUAGE_LEARNING)
+    .requestMetrics(Metric.LANGUAGE_LEARNING, Metric.READING)
     .setMinConfidence(0.70f)  // Only return HIGH confidence results
     .build()
 ```
@@ -118,11 +120,25 @@ val tracker = Tracker.Builder(context)
 
 ```kotlin
 result.days.forEach { day ->
-    val ll = day.languageLearning
-    if (ll?.occurred == true) {
-        println("${day.date}: ${ll.durationMinutes} min (${ll.confidenceLevel})")
-        ll.apps.forEach { app ->
-            println("  - ${app.appName}: ${app.durationMinutes} min")
+    val date = SimpleDateFormat("MMM dd, yyyy").format(Date(day.timestampMillis))
+
+    // Language learning activity
+    day.languageLearning?.let { ll ->
+        if (ll.occurred) {
+            println("$date - Language Learning: ${ll.durationMinutes} min (${ll.confidenceLevel})")
+            ll.apps.forEach { app ->
+                println("  - ${app.appName}")
+            }
+        }
+    }
+
+    // Reading activity
+    day.reading?.let { reading ->
+        if (reading.occurred) {
+            println("$date - Reading: ${reading.durationMinutes} min (${reading.confidenceLevel})")
+            reading.apps.forEach { app ->
+                println("  - ${app.appName}")
+            }
         }
     }
 }
@@ -167,8 +183,10 @@ Run the included sample app to see the library in action:
 
 The sample demonstrates:
 - Permission request flow
-- Querying metrics
-- Displaying results with data quality info
+- Querying multiple metrics (Language Learning + Reading)
+- Displaying summary statistics with decimal averages
+- Day-by-day breakdown showing both habits
+- Confidence scores and app detection
 
 ## Contributing
 
@@ -181,8 +199,8 @@ Apache 2.0 — see [LICENSE](LICENSE) for details.
 ## Roadmap
 
 - [ ] Health Connect integration (exercise, sleep)
-- [ ] Reading aggregator (currently using generic usage stats)
-- [ ] OAuth support for third-party APIs (Goodreads, Trakt, etc.)
+- [ ] OAuth support for third-party APIs (Goodreads, Kindle API, Trakt, etc.)
+- [ ] Additional metrics (Social Activity, Screen Time, Focus Time)
 - [ ] Custom habit definitions via DSL
 - [ ] ML-based confidence scoring
 
