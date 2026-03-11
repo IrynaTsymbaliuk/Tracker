@@ -6,13 +6,13 @@ Tracker is an Android library that automatically identifies user behaviors (like
 
 ## Do You Need This?
 
-✅ You're building a habit tracking, wellness, or productivity app
-✅ You want to detect behaviors without manual logging
-✅ You need confidence scores for detected activities
-✅ You want graceful degradation when permissions are missing
+- ✅ You're building a habit tracking, wellness, or productivity app
+- ✅ You want to detect behaviors without manual logging
+- ✅ You need confidence scores for detected activities
+- ✅ You want graceful degradation when permissions are missing
 
-❌ You just need basic step counting (use Health Connect directly)
-❌ You want to track custom app-specific actions (use your own analytics)
+- ❌ You just need basic step counting (use Health Connect directly)
+- ❌ You want to track custom app-specific actions (use your own analytics)
 
 ## What It Does
 
