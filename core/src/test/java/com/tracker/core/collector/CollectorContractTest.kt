@@ -38,7 +38,7 @@ class CollectorContractTest {
         val mockPermissionManager = mockk<PermissionManager>(relaxed = true)
 
         // Act
-        val collector = UsageStatsCollector(mockContext, mockPermissionManager)
+        val collector = UsageStatsLanguageLearningCollector(mockContext, mockPermissionManager)
 
         // Assert
         assertTrue(collector.sourceRequirements.isNotEmpty())
@@ -51,7 +51,7 @@ class CollectorContractTest {
         val mockPermissionManager = mockk<PermissionManager>(relaxed = true)
 
         // Act
-        val collector = UsageStatsCollector(mockContext, mockPermissionManager)
+        val collector = UsageStatsLanguageLearningCollector(mockContext, mockPermissionManager)
 
         // Assert
         val requirements = collector.sourceRequirements
@@ -72,7 +72,7 @@ class CollectorContractTest {
         val mockPermissionManager = mockk<PermissionManager>(relaxed = true)
 
         // Act
-        val collector = UsageStatsCollector(mockContext, mockPermissionManager)
+        val collector = UsageStatsLanguageLearningCollector(mockContext, mockPermissionManager)
 
         // Assert
         assertTrue(collector.sourceName.isNotEmpty())
@@ -86,7 +86,7 @@ class CollectorContractTest {
         val mockPermissionManager = mockk<PermissionManager>(relaxed = true)
 
         // Act
-        val collector = UsageStatsCollector(mockContext, mockPermissionManager)
+        val collector = UsageStatsLanguageLearningCollector(mockContext, mockPermissionManager)
 
         // Assert
         assertNotNull(collector.reliabilityContribution)
@@ -105,7 +105,7 @@ class CollectorContractTest {
         val mockPermissionManager = mockk<PermissionManager>(relaxed = true)
 
         // Act
-        val collector = UsageStatsCollector(mockContext, mockPermissionManager)
+        val collector = UsageStatsLanguageLearningCollector(mockContext, mockPermissionManager)
 
         // Assert
         assertEquals(ReliabilityLevel.MEDIUM, collector.reliabilityContribution)
@@ -118,7 +118,7 @@ class CollectorContractTest {
         val mockPermissionManager = mockk<PermissionManager>(relaxed = true)
 
         // Act
-        val collector = UsageStatsCollector(mockContext, mockPermissionManager)
+        val collector = UsageStatsLanguageLearningCollector(mockContext, mockPermissionManager)
 
         // Assert
         val sourceName = collector.sourceName
@@ -142,7 +142,7 @@ class CollectorContractTest {
         val mockPermissionManager = mockk<PermissionManager>(relaxed = true)
 
         // Act
-        val collector = UsageStatsCollector(mockContext, mockPermissionManager)
+        val collector = UsageStatsLanguageLearningCollector(mockContext, mockPermissionManager)
 
         // Assert
         assertNotNull(collector.sourceRequirements)
@@ -155,7 +155,7 @@ class CollectorContractTest {
         val mockPermissionManager = mockk<PermissionManager>(relaxed = true)
 
         // Act
-        val collector = UsageStatsCollector(mockContext, mockPermissionManager)
+        val collector = UsageStatsLanguageLearningCollector(mockContext, mockPermissionManager)
 
         // Assert
         assertNotNull(collector.sourceName)
@@ -168,7 +168,7 @@ class CollectorContractTest {
         val mockPermissionManager = mockk<PermissionManager>(relaxed = true)
 
         // Act
-        val collector = UsageStatsCollector(mockContext, mockPermissionManager)
+        val collector = UsageStatsLanguageLearningCollector(mockContext, mockPermissionManager)
 
         // Assert
         // A collector should contribute some reliability, not NONE
@@ -226,7 +226,7 @@ class CollectorContractTest {
         val mockPermissionManager = mockk<PermissionManager>(relaxed = true)
 
         // Act
-        val collector = UsageStatsCollector(mockContext, mockPermissionManager)
+        val collector = UsageStatsLanguageLearningCollector(mockContext, mockPermissionManager)
 
         // Assert
         val requirements = collector.sourceRequirements

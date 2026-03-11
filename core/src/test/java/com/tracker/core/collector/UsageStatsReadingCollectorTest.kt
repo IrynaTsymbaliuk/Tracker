@@ -21,14 +21,14 @@ import org.junit.Test
 import java.util.concurrent.TimeUnit
 
 /**
- * Test suite for UsageStatsCollector.
+ * Test suite for UsageStatsReadingCollector.
  *
  * Tests Result<T>-based collection with clear distinction between:
  * - Failures: can't collect (permission denied, service unavailable, no apps, errors)
- * - Success with empty: collected successfully but no usage found
+ * - Success with empty: collected successfully but no reading usage found
  * - Success with data: collected successfully with evidence
  */
-class UsageStatsCollectorTest {
+class UsageStatsReadingCollectorTest {
 
     @After
     fun tearDown() {
@@ -57,7 +57,7 @@ class UsageStatsCollectorTest {
         // Arrange
         val collector = createCollector(
             permissionGranted = true,
-            installedApps = listOf("com.duolingo")
+            installedApps = listOf("com.amazon.kindle")
         )
 
         // Act
@@ -81,7 +81,7 @@ class UsageStatsCollectorTest {
 
         val collector = createCollector(
             permissionGranted = true,
-            installedApps = listOf("com.duolingo"),
+            installedApps = listOf("com.amazon.kindle"),
             usageStatsManager = mockUsageStatsManager
         )
 
@@ -109,7 +109,7 @@ class UsageStatsCollectorTest {
     }
 
     @Test
-    fun `collect returns failure when no language learning apps installed`() = runTest {
+    fun `collect returns failure when no reading apps installed`() = runTest {
         // Arrange
         val collector = createCollector(
             permissionGranted = true,
@@ -132,7 +132,7 @@ class UsageStatsCollectorTest {
 
         val collector = createCollector(
             permissionGranted = true,
-            installedApps = listOf("com.duolingo"),
+            installedApps = listOf("com.amazon.kindle"),
             usageStatsManager = mockUsageStatsManager
         )
 
@@ -146,11 +146,11 @@ class UsageStatsCollectorTest {
 
     @Test
     fun `collect creates Evidence for apps exceeding minimum session duration`() = runTest {
-        // Arrange - Duolingo min is 5 minutes, using 30 minutes
-        val usageStats = createUsageStats("com.duolingo", minutes = 30)
+        // Arrange - Reading min is 5 minutes, using 30 minutes
+        val usageStats = createUsageStats("com.amazon.kindle", minutes = 30)
         val collector = createCollector(
             permissionGranted = true,
-            installedApps = listOf("com.duolingo"),
+            installedApps = listOf("com.amazon.kindle"),
             usageStatsList = listOf(usageStats)
         )
 
@@ -164,11 +164,11 @@ class UsageStatsCollectorTest {
 
     @Test
     fun `collect skips apps below minimum session duration`() = runTest {
-        // Arrange - Duolingo min is 5 minutes, using 3 minutes
-        val usageStats = createUsageStats("com.duolingo", minutes = 3)
+        // Arrange - Reading min is 5 minutes, using 3 minutes
+        val usageStats = createUsageStats("com.amazon.kindle", minutes = 3)
         val collector = createCollector(
             permissionGranted = true,
-            installedApps = listOf("com.duolingo"),
+            installedApps = listOf("com.amazon.kindle"),
             usageStatsList = listOf(usageStats)
         )
 
@@ -188,7 +188,7 @@ class UsageStatsCollectorTest {
 
         val collector = createCollector(
             permissionGranted = true,
-            installedApps = listOf("com.duolingo"),
+            installedApps = listOf("com.amazon.kindle"),
             usageStatsManager = mockUsageStatsManager
         )
 
@@ -218,10 +218,10 @@ class UsageStatsCollectorTest {
     @Test
     fun `evidence timestamp is firstTimeStamp from UsageStats`() = runTest {
         // Arrange
-        val usageStats = createUsageStats("com.duolingo", firstTimeStamp = 12345L)
+        val usageStats = createUsageStats("com.amazon.kindle", firstTimeStamp = 12345L)
         val collector = createCollector(
             permissionGranted = true,
-            installedApps = listOf("com.duolingo"),
+            installedApps = listOf("com.amazon.kindle"),
             usageStatsList = listOf(usageStats)
         )
 
@@ -241,16 +241,16 @@ class UsageStatsCollectorTest {
         val evidence = collector.collect(1000L, 2000L).getOrNull()!![0]
 
         // Assert
-        assertEquals(0.80f, evidence.confidence, 0.001f) // Duolingo = 0.80
+        assertEquals(0.82f, evidence.confidence, 0.001f) // Kindle = 0.82
     }
 
     @Test
     fun `evidence duration in minutes is converted from milliseconds correctly`() = runTest {
         // Arrange
-        val usageStats = createUsageStats("com.duolingo", minutes = 45)
+        val usageStats = createUsageStats("com.amazon.kindle", minutes = 45)
         val collector = createCollector(
             permissionGranted = true,
-            installedApps = listOf("com.duolingo"),
+            installedApps = listOf("com.amazon.kindle"),
             usageStatsList = listOf(usageStats)
         )
 
@@ -264,10 +264,10 @@ class UsageStatsCollectorTest {
     @Test
     fun `evidence startTimeMillis is firstTimeStamp`() = runTest {
         // Arrange
-        val usageStats = createUsageStats("com.duolingo", firstTimeStamp = 98765L)
+        val usageStats = createUsageStats("com.amazon.kindle", firstTimeStamp = 98765L)
         val collector = createCollector(
             permissionGranted = true,
-            installedApps = listOf("com.duolingo"),
+            installedApps = listOf("com.amazon.kindle"),
             usageStatsList = listOf(usageStats)
         )
 
@@ -281,10 +281,10 @@ class UsageStatsCollectorTest {
     @Test
     fun `evidence endTimeMillis is lastTimeStamp`() = runTest {
         // Arrange
-        val usageStats = createUsageStats("com.duolingo", lastTimeStamp = 56789L)
+        val usageStats = createUsageStats("com.amazon.kindle", lastTimeStamp = 56789L)
         val collector = createCollector(
             permissionGranted = true,
-            installedApps = listOf("com.duolingo"),
+            installedApps = listOf("com.amazon.kindle"),
             usageStatsList = listOf(usageStats)
         )
 
@@ -304,7 +304,7 @@ class UsageStatsCollectorTest {
         val evidence = collector.collect(1000L, 2000L).getOrNull()!![0]
 
         // Assert
-        assertEquals("com.duolingo", evidence.metadata["packageName"])
+        assertEquals("com.amazon.kindle", evidence.metadata["packageName"])
     }
 
     @Test
@@ -316,18 +316,18 @@ class UsageStatsCollectorTest {
         val evidence = collector.collect(1000L, 2000L).getOrNull()!![0]
 
         // Assert
-        assertEquals("Duolingo", evidence.metadata["appName"])
+        assertEquals("Kindle", evidence.metadata["appName"])
     }
 
     @Test
     fun `app name falls back to packageName when lookup fails`() = runTest {
         // Arrange
         val mockPackageManager = mockk<PackageManager>()
-        val duolingoInfo = ApplicationInfo().apply { packageName = "com.duolingo" }
-        every { mockPackageManager.getInstalledApplications(any<Int>()) } returns listOf<ApplicationInfo>(duolingoInfo)
+        val kindleInfo = ApplicationInfo().apply { packageName = "com.amazon.kindle" }
+        every { mockPackageManager.getInstalledApplications(any<Int>()) } returns listOf<ApplicationInfo>(kindleInfo)
         every { mockPackageManager.getApplicationInfo(any<String>(), any<Int>()) } throws PackageManager.NameNotFoundException()
 
-        val usageStats = createUsageStats("com.duolingo", minutes = 30)
+        val usageStats = createUsageStats("com.amazon.kindle", minutes = 30)
         val collector = createCollector(
             permissionGranted = true,
             packageManager = mockPackageManager,
@@ -338,7 +338,7 @@ class UsageStatsCollectorTest {
         val evidence = collector.collect(1000L, 2000L).getOrNull()!![0]
 
         // Assert
-        assertEquals("com.duolingo", evidence.metadata["appName"])
+        assertEquals("com.amazon.kindle", evidence.metadata["appName"])
     }
 
     // ============================================================
@@ -346,15 +346,14 @@ class UsageStatsCollectorTest {
     // ============================================================
 
     @Test
-    fun `collect handles multiple language learning apps correctly`() = runTest {
+    fun `collect handles multiple reading apps correctly`() = runTest {
         // Arrange
         val mockPackageManager = mockk<PackageManager>()
-        val duolingoInfo = ApplicationInfo().apply { packageName = "com.duolingo" }
-        val ankiInfo = ApplicationInfo().apply { packageName = "com.ichi2.anki" }
-        val lingodeerInfo = ApplicationInfo().apply { packageName = "com.lingodeer" }
+        val kindleInfo = ApplicationInfo().apply { packageName = "com.amazon.kindle" }
+        val playBooksInfo = ApplicationInfo().apply { packageName = "com.google.android.apps.books" }
 
         every { mockPackageManager.getInstalledApplications(any<Int>()) } returns listOf<ApplicationInfo>(
-            duolingoInfo, ankiInfo, lingodeerInfo
+            kindleInfo, playBooksInfo
         )
         every { mockPackageManager.getApplicationInfo(any<String>(), any<Int>()) } answers {
             val pkg: String = firstArg()
@@ -362,17 +361,15 @@ class UsageStatsCollectorTest {
         }
         every { mockPackageManager.getApplicationLabel(any()) } answers {
             when ((firstArg() as ApplicationInfo).packageName) {
-                "com.duolingo" -> "Duolingo"
-                "com.ichi2.anki" -> "Anki"
-                "com.lingodeer" -> "LingoDeer"
+                "com.amazon.kindle" -> "Kindle"
+                "com.google.android.apps.books" -> "Play Books"
                 else -> "Unknown"
             }
         }
 
         val usageStatsList = listOf(
-            createUsageStats("com.duolingo", minutes = 20),
-            createUsageStats("com.ichi2.anki", minutes = 15),
-            createUsageStats("com.lingodeer", minutes = 25)
+            createUsageStats("com.amazon.kindle", minutes = 20),
+            createUsageStats("com.google.android.apps.books", minutes = 15)
         )
 
         val collector = createCollector(
@@ -387,19 +384,18 @@ class UsageStatsCollectorTest {
         // Assert
         assertTrue(result.isSuccess)
         val evidence = result.getOrNull()!!
-        assertEquals(3, evidence.size)
-        assertTrue(evidence.any { it.metadata["packageName"] == "com.duolingo" })
-        assertTrue(evidence.any { it.metadata["packageName"] == "com.ichi2.anki" })
-        assertTrue(evidence.any { it.metadata["packageName"] == "com.lingodeer" })
+        assertEquals(2, evidence.size)
+        assertTrue(evidence.any { it.metadata["packageName"] == "com.amazon.kindle" })
+        assertTrue(evidence.any { it.metadata["packageName"] == "com.google.android.apps.books" })
     }
 
     @Test
     fun `collect handles apps with zero foreground time`() = runTest {
         // Arrange
-        val usageStats = createUsageStats("com.duolingo", minutes = 0)
+        val usageStats = createUsageStats("com.amazon.kindle", minutes = 0)
         val collector = createCollector(
             permissionGranted = true,
-            installedApps = listOf("com.duolingo"),
+            installedApps = listOf("com.amazon.kindle"),
             usageStatsList = listOf(usageStats)
         )
 
@@ -428,6 +424,29 @@ class UsageStatsCollectorTest {
         // Assert
         assertTrue(result.isFailure)
         assertTrue(result.exceptionOrNull() is PackageManagerException)
+    }
+
+    @Test
+    fun `Play Books has correct confidence multiplier`() = runTest {
+        // Arrange
+        val usageStats = createUsageStats("com.google.android.apps.books", minutes = 30)
+        val mockPackageManager = mockk<PackageManager>()
+        val playBooksInfo = ApplicationInfo().apply { packageName = "com.google.android.apps.books" }
+        every { mockPackageManager.getInstalledApplications(any<Int>()) } returns listOf<ApplicationInfo>(playBooksInfo)
+        every { mockPackageManager.getApplicationInfo("com.google.android.apps.books", 0) } returns playBooksInfo
+        every { mockPackageManager.getApplicationLabel(any<ApplicationInfo>()) } returns "Play Books"
+
+        val collector = createCollector(
+            permissionGranted = true,
+            packageManager = mockPackageManager,
+            usageStatsList = listOf(usageStats)
+        )
+
+        // Act
+        val evidence = collector.collect(1000L, 2000L).getOrNull()!![0]
+
+        // Assert
+        assertEquals(0.80f, evidence.confidence, 0.001f) // Play Books = 0.80
     }
 
     // ============================================================
@@ -460,7 +479,7 @@ class UsageStatsCollectorTest {
         usageStatsList: List<UsageStats>? = null,
         usageStatsManager: UsageStatsManager? = mockk(relaxed = true),
         packageManager: PackageManager? = null
-    ): UsageStatsLanguageLearningCollector {
+    ): UsageStatsReadingCollector {
         val mockPermissionManager = mockk<PermissionManager>()
         every { mockPermissionManager.checkPermission(Permission.PACKAGE_USAGE_STATS) } returns
             if (permissionGranted) PermissionStatus.GRANTED else PermissionStatus.MISSING
@@ -470,9 +489,9 @@ class UsageStatsCollectorTest {
                 ApplicationInfo().apply { packageName = pkg }
             }
             every { pm.getInstalledApplications(any<Int>()) } returns appInfoList
-            val duolingoAppInfo = ApplicationInfo().apply { packageName = "com.duolingo" }
-            every { pm.getApplicationInfo("com.duolingo", 0) } returns duolingoAppInfo
-            every { pm.getApplicationLabel(any<ApplicationInfo>()) } returns "Duolingo"
+            val kindleAppInfo = ApplicationInfo().apply { packageName = "com.amazon.kindle" }
+            every { pm.getApplicationInfo("com.amazon.kindle", 0) } returns kindleAppInfo
+            every { pm.getApplicationLabel(any<ApplicationInfo>()) } returns "Kindle"
         }
 
         val mockUsageStatsManager = usageStatsManager?.apply {
@@ -485,17 +504,17 @@ class UsageStatsCollectorTest {
         every { mockContext.getSystemService(Context.USAGE_STATS_SERVICE) } returns mockUsageStatsManager
         every { mockContext.packageManager } returns mockPackageManager
 
-        return UsageStatsLanguageLearningCollector(mockContext, mockPermissionManager)
+        return UsageStatsReadingCollector(mockContext, mockPermissionManager)
     }
 
     /**
      * Create a collector that will return one evidence (for testing evidence fields).
      */
-    private fun createCollectorWithEvidence(): UsageStatsLanguageLearningCollector {
+    private fun createCollectorWithEvidence(): UsageStatsReadingCollector {
         return createCollector(
             permissionGranted = true,
-            installedApps = listOf("com.duolingo"),
-            usageStatsList = listOf(createUsageStats("com.duolingo", minutes = 30))
+            installedApps = listOf("com.amazon.kindle"),
+            usageStatsList = listOf(createUsageStats("com.amazon.kindle", minutes = 30))
         )
     }
 }

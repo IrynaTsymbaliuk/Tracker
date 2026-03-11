@@ -3,7 +3,7 @@ package com.tracker.core.collector
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.pm.PackageManager
-import com.tracker.core.config.KnownApps
+import com.tracker.core.config.AppMetadata
 import com.tracker.core.model.Evidence
 import com.tracker.core.permission.Permission
 import com.tracker.core.permission.PermissionManager
@@ -12,19 +12,19 @@ import com.tracker.core.types.DataSource
 import java.util.concurrent.TimeUnit
 
 /**
- * Collects language learning evidence from UsageStats API.
+ * Abstract base class for collectors that use UsageStats API.
  *
- * This collector:
- * 1. Checks PACKAGE_USAGE_STATS permission (returns empty if missing)
- * 2. Gets list of installed packages
- * 3. Filters for known language learning apps
- * 4. Queries UsageStats for time range
- * 5. Creates Evidence for sessions that exceed minimum duration
+ * This class encapsulates the common logic for:
+ * 1. Permission checking (PACKAGE_USAGE_STATS)
+ * 2. Querying UsageStatsManager
+ * 3. Filtering installed apps
+ * 4. Creating Evidence from usage data
  *
- * Required permissions: PACKAGE_USAGE_STATS
- * Reliability contribution: MEDIUM
+ * Subclasses must provide:
+ * - Which known apps to monitor
+ * - Minimum session duration threshold
  */
-class UsageStatsCollector(
+internal abstract class AbstractUsageStatsCollector(
     private val context: Context,
     private val permissionManager: PermissionManager
 ) : Collector {
@@ -48,6 +48,16 @@ class UsageStatsCollector(
         context.packageManager
     }
 
+    /**
+     * Get the map of known apps to monitor for this habit type.
+     */
+    protected abstract fun getKnownApps(): Map<String, AppMetadata>
+
+    /**
+     * Get the minimum session duration in minutes for this habit type.
+     */
+    protected abstract fun getMinSessionMinutes(): Int
+
     override suspend fun collect(fromMillis: Long, toMillis: Long): Result<List<Evidence>> {
         // Check permission first
         if (permissionManager.checkPermission(Permission.PACKAGE_USAGE_STATS) != PermissionStatus.GRANTED) {
@@ -58,14 +68,14 @@ class UsageStatsCollector(
         val usageStatsManager = this.usageStatsManager
             ?: return Result.failure(SystemServiceUnavailableException("UsageStatsManager"))
 
-        // Get installed language learning apps
-        val installedLanguageApps = try {
-            getInstalledLanguageLearningApps()
+        // Get installed apps for this habit type
+        val installedApps = try {
+            getInstalledMonitoredApps()
         } catch (e: Exception) {
             return Result.failure(PackageManagerException(e))
         }
 
-        if (installedLanguageApps.isEmpty()) {
+        if (installedApps.isEmpty()) {
             return Result.failure(NoMonitorableAppsException())
         }
 
@@ -78,20 +88,22 @@ class UsageStatsCollector(
 
         // Build evidence from usage stats
         val evidenceList = mutableListOf<Evidence>()
+        val knownApps = getKnownApps()
+        val minSessionMinutes = getMinSessionMinutes()
 
         for (usageStats in usageStatsList) {
             val packageName = usageStats.packageName
-            val appMetadata = KnownApps.getLanguageLearningApp(packageName) ?: continue
+            val appMetadata = knownApps[packageName] ?: continue
 
             // Skip if app is not installed (shouldn't happen, but safety check)
-            if (packageName !in installedLanguageApps) continue
+            if (packageName !in installedApps) continue
 
             // Get total foreground time for this app
             val totalTimeMillis = usageStats.totalTimeInForeground
             val totalTimeMinutes = TimeUnit.MILLISECONDS.toMinutes(totalTimeMillis).toInt()
 
             // Skip if doesn't meet minimum session duration
-            if (totalTimeMinutes < appMetadata.minSessionMinutes) continue
+            if (totalTimeMinutes < minSessionMinutes) continue
 
             // Create evidence for this session
             val evidence = Evidence(
@@ -114,13 +126,13 @@ class UsageStatsCollector(
     }
 
     /**
-     * Get list of installed language learning apps (package names).
+     * Get list of installed apps that are being monitored (package names).
      */
-    private fun getInstalledLanguageLearningApps(): Set<String> {
+    private fun getInstalledMonitoredApps(): Set<String> {
         val installedApps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
         val installedPackages = installedApps.map { it.packageName }.toSet()
 
-        return KnownApps.languageLearning.keys.filter { it in installedPackages }.toSet()
+        return getKnownApps().keys.filter { it in installedPackages }.toSet()
     }
 
     /**

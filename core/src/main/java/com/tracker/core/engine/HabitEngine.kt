@@ -4,13 +4,28 @@ import android.app.Activity
 import android.content.Context
 import com.tracker.core.aggregator.Aggregator
 import com.tracker.core.aggregator.LanguageLearningAggregator
+import com.tracker.core.aggregator.ReadingAggregator
 import com.tracker.core.collector.Collector
-import com.tracker.core.collector.UsageStatsCollector
+import com.tracker.core.collector.UsageStatsLanguageLearningCollector
+import com.tracker.core.collector.UsageStatsReadingCollector
 import com.tracker.core.model.Evidence
 import com.tracker.core.permission.Permission
 import com.tracker.core.permission.PermissionManager
 import com.tracker.core.permission.PermissionStatus
-import com.tracker.core.result.*
+import com.tracker.core.result.AccessRequirement
+import com.tracker.core.result.AccessStatus
+import com.tracker.core.result.DataQuality
+import com.tracker.core.result.DayResult
+import com.tracker.core.result.HabitAccessInfo
+import com.tracker.core.result.HabitResult
+import com.tracker.core.result.LanguageLearningResult
+import com.tracker.core.result.MetricsResult
+import com.tracker.core.result.MissingReason
+import com.tracker.core.result.MissingSource
+import com.tracker.core.result.ReadingResult
+import com.tracker.core.result.ReliabilityLevel
+import com.tracker.core.result.SourceAccessInfo
+import com.tracker.core.result.Summary
 import com.tracker.core.types.DataSource
 import com.tracker.core.types.Metric
 import kotlinx.coroutines.Dispatchers
@@ -46,13 +61,27 @@ class HabitEngine internal constructor(
             minConfidence: Float
         ): HabitEngine {
             val permissionManager = PermissionManager(context)
-            val collectors: Map<Metric, Collector> = mapOf(
-                Metric.LANGUAGE_LEARNING to UsageStatsCollector(context, permissionManager),
-                Metric.READING to UsageStatsCollector(context, permissionManager)
-            )
-            val aggregators: Map<Metric, Aggregator<out HabitResult>> = mapOf(
-                Metric.LANGUAGE_LEARNING to LanguageLearningAggregator()
-            )
+
+            // Only instantiate collectors for requested metrics
+            val collectors = buildMap<Metric, Collector> {
+                if (Metric.LANGUAGE_LEARNING in requestedMetrics) {
+                    put(Metric.LANGUAGE_LEARNING, UsageStatsLanguageLearningCollector(context, permissionManager))
+                }
+                if (Metric.READING in requestedMetrics) {
+                    put(Metric.READING, UsageStatsReadingCollector(context, permissionManager))
+                }
+            }
+
+            // Only instantiate aggregators for requested metrics
+            val aggregators = buildMap<Metric, Aggregator<out HabitResult>> {
+                if (Metric.LANGUAGE_LEARNING in requestedMetrics) {
+                    put(Metric.LANGUAGE_LEARNING, LanguageLearningAggregator())
+                }
+                if (Metric.READING in requestedMetrics) {
+                    put(Metric.READING, ReadingAggregator())
+                }
+            }
+
             return HabitEngine(requestedMetrics, minConfidence, permissionManager, collectors, aggregators)
         }
     }
@@ -154,9 +183,19 @@ class HabitEngine internal constructor(
                 null
             }
 
+            val readingResult = if (Metric.READING in requestedMetrics) {
+                val dayEvidence = evidence.filter { it.source == DataSource.USAGE_STATS }
+                @Suppress("UNCHECKED_CAST")
+                val aggregator = aggregators[Metric.READING] as? Aggregator<ReadingResult>
+                aggregator?.aggregate(dayMillis, dayEvidence, minConfidence)
+            } else {
+                null
+            }
+
             DayResult(
                 timestampMillis = dayMillis,
-                languageLearning = languageLearningResult
+                languageLearning = languageLearningResult,
+                reading = readingResult
             )
         }
 
@@ -216,10 +255,18 @@ class HabitEngine internal constructor(
      */
     private fun buildSummary(dayResults: List<DayResult>, totalDaysInRange: Int): Summary {
         val languageLearningDays = dayResults.count { it.languageLearning?.occurred == true }
+        val readingDays = dayResults.count { it.reading?.occurred == true }
 
-        val totalMinutes = dayResults.mapNotNull { it.languageLearning?.durationMinutes }.sum()
-        val averageMinutes = if (totalDaysInRange > 0) {
-            totalMinutes / totalDaysInRange
+        val totalLangMinutes = dayResults.mapNotNull { it.languageLearning?.durationMinutes }.sum()
+        val averageLangMinutes = if (totalDaysInRange > 0) {
+            totalLangMinutes / totalDaysInRange
+        } else {
+            0
+        }
+
+        val totalReadingMinutes = dayResults.mapNotNull { it.reading?.durationMinutes }.sum()
+        val averageReadingMinutes = if (totalDaysInRange > 0) {
+            totalReadingMinutes / totalDaysInRange
         } else {
             0
         }
@@ -227,7 +274,9 @@ class HabitEngine internal constructor(
         return Summary(
             totalDays = totalDaysInRange,
             languageLearningDays = if (Metric.LANGUAGE_LEARNING in requestedMetrics) languageLearningDays else null,
-            averageLanguageLearningMinutes = if (Metric.LANGUAGE_LEARNING in requestedMetrics) averageMinutes else null
+            averageLanguageLearningMinutes = if (Metric.LANGUAGE_LEARNING in requestedMetrics) averageLangMinutes else null,
+            readingDays = if (Metric.READING in requestedMetrics) readingDays else null,
+            averageReadingMinutes = if (Metric.READING in requestedMetrics) averageReadingMinutes else null
         )
     }
 

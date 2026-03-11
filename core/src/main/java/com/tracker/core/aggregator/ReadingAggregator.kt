@@ -1,20 +1,20 @@
 package com.tracker.core.aggregator
 
 import com.tracker.core.result.AppInfo
-import com.tracker.core.result.LanguageLearningResult
+import com.tracker.core.result.ReadingResult
 import com.tracker.core.types.ConfidenceLevel
 import com.tracker.core.types.DataSource
 
 /**
- * Aggregates language learning evidence into a single result.
+ * Aggregates reading evidence into a single result.
  *
  * Uses common aggregation logic from AbstractHabitAggregator and constructs
- * a LanguageLearningResult with the aggregated data.
+ * a ReadingResult with the aggregated data.
  *
  * Note: Deduplication logic will be added when OAuth sources are introduced,
- * where the same session could be reported by both UsageStats and OAuth APIs.
+ * where the same reading session could be reported by both UsageStats and OAuth APIs.
  */
-internal class LanguageLearningAggregator : AbstractHabitAggregator<LanguageLearningResult>() {
+internal class ReadingAggregator : AbstractHabitAggregator<ReadingResult>() {
 
     override fun createResult(
         occurred: Boolean,
@@ -24,16 +24,16 @@ internal class LanguageLearningAggregator : AbstractHabitAggregator<LanguageLear
         sessionCount: Int?,
         source: DataSource,
         apps: List<AppInfo>
-    ): LanguageLearningResult {
-        return LanguageLearningResult(
+    ): ReadingResult {
+        return ReadingResult(
             occurred = occurred,
             confidence = confidence,
             confidenceLevel = confidenceLevel,
             durationMinutes = durationMinutes,
             sessionCount = sessionCount,
             source = source,
-            language = null,  // Reserved for future enhancement
-            apps = apps
+            apps = apps,
+            title = null  // Always null without OAuth integration
         )
     }
 }

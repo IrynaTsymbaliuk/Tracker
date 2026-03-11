@@ -5,10 +5,10 @@ package com.tracker.core.config
  *
  * @property packageName Android package name
  * @property confidenceMultiplier Base confidence score for this app (0.0 to 1.0)
- * @property minSessionMinutes Minimum session duration to count as evidence
+ *
+ * Note: Minimum session duration is defined per-habit in HabitConfig, not per-app.
  */
 data class AppMetadata(
     val packageName: String,
-    val confidenceMultiplier: Float,
-    val minSessionMinutes: Int
+    val confidenceMultiplier: Float
 )

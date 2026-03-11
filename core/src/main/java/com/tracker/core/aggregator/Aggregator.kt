@@ -24,4 +24,12 @@ interface Aggregator<T : HabitResult> {
      * @return Aggregated result, or null if no evidence available
      */
     fun aggregate(dayMillis: Long, evidence: List<Evidence>, minConfidence: Float): T?
+
+    companion object {
+        /**
+         * Penalty applied to combined confidence when all evidence is below minConfidence threshold.
+         * This reduces confidence for cases where only weak signals exist.
+         */
+        const val WEAK_ONLY_PENALTY = 0.15f
+    }
 }

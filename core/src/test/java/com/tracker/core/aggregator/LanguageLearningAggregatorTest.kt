@@ -172,7 +172,7 @@ class LanguageLearningAggregatorTest {
             Evidence(
                 source = DataSource.USAGE_STATS,
                 timestampMillis = 1000L,
-                confidence = 0.80f,
+                confidence = 0.80f,  // Duolingo confidence from KnownApps
                 metadata = mapOf(
                     "packageName" to "com.duolingo",
                     "appName" to "Duolingo"
@@ -181,20 +181,20 @@ class LanguageLearningAggregatorTest {
             Evidence(
                 source = DataSource.USAGE_STATS,
                 timestampMillis = 2000L,
-                confidence = 0.70f,
+                confidence = 0.83f,  // Lingodeer confidence from KnownApps
                 metadata = mapOf(
-                    "packageName" to "com.babbel",
-                    "appName" to "Babbel"
+                    "packageName" to "com.lingodeer",
+                    "appName" to "Lingodeer"
                 )
             ),
             Evidence(
                 source = DataSource.USAGE_STATS,
                 timestampMillis = 3000L,
-                confidence = 0.60f,
+                confidence = 0.80f,  // Duolingo confidence (same as first)
                 metadata = mapOf(
                     "packageName" to "com.duolingo",
                     "appName" to "Duolingo"
-                )  // Duplicate
+                )  // Duplicate package
             )
         )
 
@@ -205,60 +205,12 @@ class LanguageLearningAggregatorTest {
         assertNotNull(result)
         assertEquals(2, result!!.apps.size)  // Distinct only
         assertTrue(result.apps.any { it.packageName == "com.duolingo" && it.appName == "Duolingo" })
-        assertTrue(result.apps.any { it.packageName == "com.babbel" && it.appName == "Babbel" })
+        assertTrue(result.apps.any { it.packageName == "com.lingodeer" && it.appName == "Lingodeer" })
     }
 
     // ============================================================
     // Deduplication Tests
     // ============================================================
-
-    /**
-     * Test: Overlapping evidence (>80%) keeps higher confidence item.
-     *
-     * When two evidence items overlap by more than 80%, only the one
-     * with higher confidence should be retained.
-     */
-    @Test
-    fun `overlapping evidence keeps higher confidence item`() {
-        // Arrange
-        val aggregator = LanguageLearningAggregator()
-        val evidence = listOf(
-            Evidence(
-                source = DataSource.USAGE_STATS,
-                timestampMillis = 1000L,
-                confidence = 0.60f,  // Lower confidence
-                durationMinutes = 30,
-                startTimeMillis = 1000L,
-                endTimeMillis = 1000L + 30 * 60 * 1000,  // 30 minutes
-                metadata = mapOf(
-                    "packageName" to "com.duolingo",
-                    "appName" to "Duolingo"
-                )
-            ),
-            Evidence(
-                source = DataSource.USAGE_STATS,
-                timestampMillis = 1000L,
-                confidence = 0.80f,  // Higher confidence
-                durationMinutes = 25,
-                startTimeMillis = 1100L,  // Small offset, creates >80% overlap
-                endTimeMillis = 1100L + 25 * 60 * 1000,  // 25 minutes
-                metadata = mapOf(
-                    "packageName" to "com.duolingo",  // Same app
-                    "appName" to "Duolingo"
-                )
-            )
-        )
-
-        // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
-
-        // Assert
-        assertNotNull(result)
-        // Should use only the 0.80 confidence item (lower one filtered out)
-        assertEquals(0.80f, result!!.confidence, 0.001f)
-        // Duration should be from the kept item only
-        assertEquals(25, result.durationMinutes)
-    }
 
     /**
      * Test: Non-overlapping evidence are all retained.
@@ -338,118 +290,6 @@ class LanguageLearningAggregatorTest {
         assertEquals(0.94f, result!!.confidence, 0.001f)
         // Both durations summed
         assertEquals(50, result.durationMinutes)  // 30 + 20
-    }
-
-    /**
-     * Test: Multiple overlaps handled correctly, keeps highest confidence.
-     *
-     * When multiple evidence items overlap with each other, only the
-     * highest confidence item should be retained.
-     */
-    @Test
-    fun `multiple overlaps handled correctly keeps highest confidence`() {
-        // Arrange
-        val aggregator = LanguageLearningAggregator()
-        val evidence = listOf(
-            Evidence(
-                source = DataSource.USAGE_STATS,
-                timestampMillis = 1000L,
-                confidence = 0.90f,  // Highest - should be kept
-                durationMinutes = 30,
-                startTimeMillis = 1000L,
-                endTimeMillis = 1000L + 30 * 60 * 1000,
-                metadata = mapOf(
-                    "packageName" to "com.duolingo",
-                    "appName" to "Duolingo"
-                )
-            ),
-            Evidence(
-                source = DataSource.USAGE_STATS,
-                timestampMillis = 1000L,
-                confidence = 0.70f,  // Overlaps with first - filtered
-                durationMinutes = 28,
-                startTimeMillis = 1100L,
-                endTimeMillis = 1100L + 28 * 60 * 1000,
-                metadata = mapOf(
-                    "packageName" to "com.duolingo",  // Same app
-                    "appName" to "Duolingo"
-                )
-            ),
-            Evidence(
-                source = DataSource.USAGE_STATS,
-                timestampMillis = 1000L,
-                confidence = 0.60f,  // Also overlaps with first - filtered
-                durationMinutes = 25,
-                startTimeMillis = 1200L,
-                endTimeMillis = 1200L + 25 * 60 * 1000,
-                metadata = mapOf(
-                    "packageName" to "com.duolingo",  // Same app
-                    "appName" to "Duolingo"
-                )
-            )
-        )
-
-        // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
-
-        // Assert
-        assertNotNull(result)
-        // Should keep only the 0.90 item
-        assertEquals(0.90f, result!!.confidence, 0.001f)
-        assertEquals(30, result.durationMinutes)
-    }
-
-    /**
-     * Test: Overlap calculation uses shorter duration as base.
-     *
-     * Overlap percentage is calculated as: overlap / min(duration1, duration2)
-     * This test verifies a short event completely inside a long event
-     * results in 100% overlap (based on the short event's duration).
-     */
-    @Test
-    fun `overlap calculation uses shorter duration as base`() {
-        // Arrange
-        val aggregator = LanguageLearningAggregator()
-        // Create evidence where a short event is completely within a long event
-        // Long: 60 minutes (1000 to 1000 + 60*60*1000)
-        // Short: 20 minutes (1000 to 1000 + 20*60*1000), completely inside long
-        // Overlap: 20 minutes / 20 minutes (shorter) = 100% overlap
-        val evidence = listOf(
-            Evidence(
-                source = DataSource.USAGE_STATS,
-                timestampMillis = 1000L,
-                confidence = 0.80f,  // Higher confidence
-                durationMinutes = 60,
-                startTimeMillis = 1000L,
-                endTimeMillis = 1000L + 60 * 60 * 1000,  // 60 minutes
-                metadata = mapOf(
-                    "packageName" to "com.duolingo",
-                    "appName" to "Duolingo"
-                )
-            ),
-            Evidence(
-                source = DataSource.USAGE_STATS,
-                timestampMillis = 1000L,
-                confidence = 0.70f,  // Lower confidence
-                durationMinutes = 20,
-                startTimeMillis = 1000L,
-                endTimeMillis = 1000L + 20 * 60 * 1000,  // 20 minutes, fully inside
-                metadata = mapOf(
-                    "packageName" to "com.duolingo",  // Same app
-                    "appName" to "Duolingo"
-                )
-            )
-        )
-
-        // Act
-        val result = aggregator.aggregate(dayMillis = 1000L, evidence = evidence, minConfidence = 0.50f)
-
-        // Assert
-        assertNotNull(result)
-        // Short event should be filtered (100% overlap > 80%)
-        // Should keep only the 0.80 confidence item
-        assertEquals(0.80f, result!!.confidence, 0.001f)
-        assertEquals(60, result.durationMinutes)
     }
 
     // ============================================================

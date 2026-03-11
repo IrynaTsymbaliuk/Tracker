@@ -7,6 +7,7 @@ import com.tracker.core.permission.PermissionManager
 import com.tracker.core.permission.PermissionStatus
 import com.tracker.core.result.AccessStatus
 import com.tracker.core.result.LanguageLearningResult
+import com.tracker.core.result.ReadingResult
 import com.tracker.core.types.ConfidenceLevel
 import com.tracker.core.types.DataSource
 import com.tracker.core.types.Metric
@@ -459,6 +460,246 @@ class HabitEngineTest {
     }
 
     // ============================================================
+    // Reading Integration Tests
+    // ============================================================
+
+    @Test
+    fun `query with READING metric calls reading collector`() = runTest {
+        // Arrange
+        val mockCollector = mockk<Collector>()
+        coEvery { mockCollector.collect(any(), any()) } returns Result.success(emptyList())
+
+        val engine = createEngine(
+            requestedMetrics = setOf(Metric.READING),
+            collectors = mapOf(Metric.READING to mockCollector)
+        )
+
+        // Act
+        engine.query(fromMillis = 1000L, toMillis = 2000L)
+
+        // Assert
+        coVerify { mockCollector.collect(1000L, 2000L) }
+    }
+
+    @Test
+    fun `query without READING metric doesn't call reading collector`() = runTest {
+        // Arrange
+        val mockCollector = mockk<Collector>()
+
+        val engine = createEngine(
+            requestedMetrics = emptySet(),
+            collectors = mapOf(Metric.READING to mockCollector)
+        )
+
+        // Act
+        engine.query(fromMillis = 1000L, toMillis = 2000L)
+
+        // Assert
+        coVerify(exactly = 0) { mockCollector.collect(any(), any()) }
+    }
+
+    @Test
+    fun `query with READING metric aggregates reading evidence correctly`() = runTest {
+        // Arrange
+        val jan1 = createTimestamp(2024, 1, 1)
+        val evidence = listOf(createEvidence(timestampMillis = jan1))
+
+        val mockCollector = mockk<Collector>()
+        coEvery { mockCollector.collect(any(), any()) } returns Result.success(evidence)
+
+        val mockAggregator = mockk<Aggregator<ReadingResult>>()
+        every {
+            mockAggregator.aggregate(
+                any(),
+                any(),
+                any()
+            )
+        } returns createReadingResult()
+
+        val engine = createEngine(
+            requestedMetrics = setOf(Metric.READING),
+            collectors = mapOf(Metric.READING to mockCollector),
+            aggregators = mapOf(Metric.READING to mockAggregator)
+        )
+
+        // Act
+        engine.query(fromMillis = jan1, toMillis = jan1)
+
+        // Assert
+        verify { mockAggregator.aggregate(jan1, match { it.size == 1 }, any()) }
+    }
+
+    @Test
+    fun `summary counts reading days correctly`() = runTest {
+        // Arrange
+        val jan1 = createTimestamp(2024, 1, 1)
+        val jan2 = createTimestamp(2024, 1, 2)
+        val jan3 = createTimestamp(2024, 1, 3)
+
+        val evidence = listOf(
+            createEvidence(timestampMillis = jan1),
+            createEvidence(timestampMillis = jan2),
+            createEvidence(timestampMillis = jan3)
+        )
+
+        val mockCollector = mockk<Collector>()
+        coEvery { mockCollector.collect(any(), any()) } returns Result.success(evidence)
+
+        val mockAggregator = mockk<Aggregator<ReadingResult>>()
+        every { mockAggregator.aggregate(jan1, any(), any()) } returns createReadingResult(
+            occurred = true
+        )
+        every { mockAggregator.aggregate(jan2, any(), any()) } returns createReadingResult(
+            occurred = true
+        )
+        every { mockAggregator.aggregate(jan3, any(), any()) } returns createReadingResult(
+            occurred = false
+        )
+
+        val engine = createEngine(
+            requestedMetrics = setOf(Metric.READING),
+            collectors = mapOf(Metric.READING to mockCollector),
+            aggregators = mapOf(Metric.READING to mockAggregator)
+        )
+
+        // Act
+        val result = engine.query(fromMillis = jan1, toMillis = jan3)
+
+        // Assert - Only days with occurred=true counted
+        assertEquals(2, result.summary.readingDays)
+    }
+
+    @Test
+    fun `summary calculates reading average as total minutes divided by total days in range`() = runTest {
+        // Arrange
+        val jan1 = createTimestamp(2024, 1, 1)
+        val jan7 = createTimestamp(2024, 1, 7)
+
+        // Only 2 days have activity: Jan 1 (45 min), Jan 3 (30 min)
+        val jan3 = createTimestamp(2024, 1, 3)
+        val evidence = listOf(
+            createEvidence(timestampMillis = jan1),
+            createEvidence(timestampMillis = jan3)
+        )
+
+        val mockCollector = mockk<Collector>()
+        coEvery { mockCollector.collect(any(), any()) } returns Result.success(evidence)
+
+        val mockAggregator = mockk<Aggregator<ReadingResult>>()
+        every { mockAggregator.aggregate(jan1, any(), any()) } returns createReadingResult(
+            durationMinutes = 45
+        )
+        every { mockAggregator.aggregate(jan3, any(), any()) } returns createReadingResult(
+            durationMinutes = 30
+        )
+
+        val engine = createEngine(
+            requestedMetrics = setOf(Metric.READING),
+            collectors = mapOf(Metric.READING to mockCollector),
+            aggregators = mapOf(Metric.READING to mockAggregator)
+        )
+
+        // Act
+        val result = engine.query(fromMillis = jan1, toMillis = jan7)
+
+        // Assert - Average = 75 total minutes / 7 days = 10 min/day
+        assertEquals(7, result.summary.totalDays)
+        assertEquals(10, result.summary.averageReadingMinutes)
+    }
+
+    @Test
+    fun `summary reading fields are null when READING metric not requested`() = runTest {
+        // Arrange
+        val jan1 = createTimestamp(2024, 1, 1)
+        val jan2 = createTimestamp(2024, 1, 2)
+
+        val engine = createEngine(requestedMetrics = emptySet())
+
+        // Act
+        val result = engine.query(fromMillis = jan1, toMillis = jan2)
+
+        // Assert
+        assertNull(result.summary.readingDays)
+        assertNull(result.summary.averageReadingMinutes)
+    }
+
+    @Test
+    fun `query with both LANGUAGE_LEARNING and READING metrics calls both collectors`() = runTest {
+        // Arrange
+        val mockLangCollector = mockk<Collector>()
+        coEvery { mockLangCollector.collect(any(), any()) } returns Result.success(emptyList())
+
+        val mockReadingCollector = mockk<Collector>()
+        coEvery { mockReadingCollector.collect(any(), any()) } returns Result.success(emptyList())
+
+        val engine = createEngine(
+            requestedMetrics = setOf(Metric.LANGUAGE_LEARNING, Metric.READING),
+            collectors = mapOf(
+                Metric.LANGUAGE_LEARNING to mockLangCollector,
+                Metric.READING to mockReadingCollector
+            )
+        )
+
+        // Act
+        engine.query(fromMillis = 1000L, toMillis = 2000L)
+
+        // Assert
+        coVerify { mockLangCollector.collect(1000L, 2000L) }
+        coVerify { mockReadingCollector.collect(1000L, 2000L) }
+    }
+
+    @Test
+    fun `summary includes both language learning and reading when both metrics requested`() = runTest {
+        // Arrange
+        val jan1 = createTimestamp(2024, 1, 1)
+        val jan2 = createTimestamp(2024, 1, 2)
+
+        val langEvidence = listOf(createEvidence(timestampMillis = jan1))
+        val readingEvidence = listOf(createEvidence(timestampMillis = jan2))
+
+        val mockLangCollector = mockk<Collector>()
+        coEvery { mockLangCollector.collect(any(), any()) } returns Result.success(langEvidence)
+
+        val mockReadingCollector = mockk<Collector>()
+        coEvery { mockReadingCollector.collect(any(), any()) } returns Result.success(readingEvidence)
+
+        val mockLangAggregator = mockk<Aggregator<LanguageLearningResult>>()
+        every { mockLangAggregator.aggregate(jan1, any(), any()) } returns createLanguageLearningResult(
+            occurred = true,
+            durationMinutes = 30
+        )
+        every { mockLangAggregator.aggregate(jan2, any(), any()) } returns null
+
+        val mockReadingAggregator = mockk<Aggregator<ReadingResult>>()
+        every { mockReadingAggregator.aggregate(jan1, any(), any()) } returns null
+        every { mockReadingAggregator.aggregate(jan2, any(), any()) } returns createReadingResult(
+            occurred = true,
+            durationMinutes = 45
+        )
+
+        val engine = createEngine(
+            requestedMetrics = setOf(Metric.LANGUAGE_LEARNING, Metric.READING),
+            collectors = mapOf(
+                Metric.LANGUAGE_LEARNING to mockLangCollector,
+                Metric.READING to mockReadingCollector
+            ),
+            aggregators = mapOf(
+                Metric.LANGUAGE_LEARNING to mockLangAggregator,
+                Metric.READING to mockReadingAggregator
+            )
+        )
+
+        // Act
+        val result = engine.query(fromMillis = jan1, toMillis = jan2)
+
+        // Assert
+        assertEquals(1, result.summary.languageLearningDays)
+        assertEquals(1, result.summary.readingDays)
+        assertEquals(15, result.summary.averageLanguageLearningMinutes) // 30/2 days
+        assertEquals(22, result.summary.averageReadingMinutes) // 45/2 days
+    }
+
+    // ============================================================
     // Data Quality Tests
     // ============================================================
 
@@ -504,6 +745,22 @@ class HabitEngineTest {
             confidenceLevel = ConfidenceLevel.HIGH,
             durationMinutes = durationMinutes,
             source = DataSource.USAGE_STATS
+        )
+    }
+
+    private fun createReadingResult(
+        occurred: Boolean = true,
+        confidence: Float = 0.82f,
+        durationMinutes: Int? = 30
+    ): ReadingResult {
+        return ReadingResult(
+            occurred = occurred,
+            confidence = confidence,
+            confidenceLevel = ConfidenceLevel.HIGH,
+            durationMinutes = durationMinutes,
+            sessionCount = 1,
+            source = DataSource.USAGE_STATS,
+            apps = listOf(com.tracker.core.result.AppInfo("com.amazon.kindle", "Kindle"))
         )
     }
 
