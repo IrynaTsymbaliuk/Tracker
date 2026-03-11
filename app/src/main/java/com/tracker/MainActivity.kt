@@ -38,7 +38,7 @@ class MainActivity : AppCompatActivity() {
      */
     private fun setupTracker() {
         tracker = Tracker.Builder(this)
-            .requestMetrics(Metric.LANGUAGE_LEARNING)
+            .requestMetrics(Metric.LANGUAGE_LEARNING, Metric.READING)
             .setLookbackDays(30)  // Query last 30 days
             .setMinConfidence(0.50f)  // 50% confidence threshold
             .build()
@@ -99,11 +99,14 @@ class MainActivity : AppCompatActivity() {
         with(binding) {
             // Summary statistics
             tvTotalDays.text = "Total Days: ${result.summary.totalDays}"
-            tvLanguageLearningDays.text = "Language Learning Days: ${result.summary.languageLearningDays ?: 0}"
-            tvAverageMinutes.text = "Average Minutes/Day: ${result.summary.averageLanguageLearningMinutes ?: 0}"
 
-            // Data quality
-            tvDataQuality.text = buildDataQualityText(result.dataQuality)
+            // Language Learning summary
+            tvLanguageLearningDays.text = "Language Learning Days: ${result.summary.languageLearningDays ?: 0}"
+            tvLanguageLearningAverage.text = "Avg Minutes/Day: ${formatAverage(result.summary.averageLanguageLearningMinutes)}"
+
+            // Reading summary
+            tvReadingDays.text = "Reading Days: ${result.summary.readingDays ?: 0}"
+            tvReadingAverage.text = "Avg Minutes/Day: ${formatAverage(result.summary.averageReadingMinutes)}"
 
             // Day-by-day results
             tvDayByDayResults.text = buildDayByDayText(result.days)
@@ -113,39 +116,52 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun buildDataQualityText(dataQuality: com.tracker.core.result.DataQuality): String {
-        return buildString {
-            appendLine("Reliability: ${dataQuality.overallReliability}")
-            appendLine("Missing Sources: ${dataQuality.missingSources.size}")
-
-            if (dataQuality.recommendations.isNotEmpty()) {
-                appendLine("\nRecommendations:")
-                dataQuality.recommendations.forEach {
-                    appendLine("  • $it")
-                }
-            }
+    private fun formatAverage(average: Float?): String {
+        return if (average != null) {
+            String.format("%.1f", average)
+        } else {
+            "0.0"
         }
     }
 
     private fun buildDayByDayText(days: List<com.tracker.core.result.DayResult>): String {
         if (days.isEmpty()) {
-            return "No language learning activity found in the last 30 days."
+            return "No activity found in the last 30 days."
         }
 
         return buildString {
-            appendLine("Found ${days.size} days with language learning activity:\n")
+            appendLine("Found ${days.size} days with activity:\n")
             days.take(10).forEach { day ->  // Show first 10 days
                 val date = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
                     .format(java.util.Date(day.timestampMillis))
 
                 val ll = day.languageLearning
-                if (ll != null && ll.occurred) {
+                val reading = day.reading
+                val hasActivity = (ll != null && ll.occurred) || (reading != null && reading.occurred)
+
+                if (hasActivity) {
                     appendLine("$date:")
-                    appendLine("  Duration: ${ll.durationMinutes} minutes")
-                    appendLine("  Confidence: ${String.format("%.0f%%", ll.confidence * 100)} (${ll.confidenceLevel})")
-                    if (ll.apps.isNotEmpty()) {
-                        appendLine("  Apps: ${ll.apps.joinToString(", ") { it.appName }}")
+
+                    // Show language learning if present (same order as summary)
+                    if (ll != null && ll.occurred) {
+                        appendLine("  📚 Language Learning:")
+                        appendLine("    Duration: ${ll.durationMinutes} min")
+                        appendLine("    Confidence: ${String.format("%.0f%%", ll.confidence * 100)} (${ll.confidenceLevel})")
+                        if (ll.apps.isNotEmpty()) {
+                            appendLine("    Apps: ${ll.apps.joinToString(", ") { it.appName }}")
+                        }
                     }
+
+                    // Show reading if present (same order as summary)
+                    if (reading != null && reading.occurred) {
+                        appendLine("  📖 Reading:")
+                        appendLine("    Duration: ${reading.durationMinutes} min")
+                        appendLine("    Confidence: ${String.format("%.0f%%", reading.confidence * 100)} (${reading.confidenceLevel})")
+                        if (reading.apps.isNotEmpty()) {
+                            appendLine("    Apps: ${reading.apps.joinToString(", ") { it.appName }}")
+                        }
+                    }
+
                     appendLine()
                 }
             }

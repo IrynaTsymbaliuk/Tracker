@@ -338,9 +338,9 @@ class HabitEngineTest {
         // Act
         val result = engine.query(fromMillis = jan1, toMillis = jan7)
 
-        // Assert - Average = 90 total minutes / 7 days = 12 min/day
+        // Assert - Average = 90 total minutes / 7 days = 12.857...
         assertEquals(7, result.summary.totalDays)
-        assertEquals(12, result.summary.averageLanguageLearningMinutes)
+        assertEquals(12.857143f, result.summary.averageLanguageLearningMinutes!!, 0.001f)
     }
 
     @Test
@@ -379,8 +379,8 @@ class HabitEngineTest {
         // Act
         val result = engine.query(fromMillis = jan1, toMillis = jan3)
 
-        // Assert - Total = 20 + 30 + 15 = 65 minutes, Average = 65/3 = 21 min/day
-        assertEquals(21, result.summary.averageLanguageLearningMinutes)
+        // Assert - Total = 20 + 30 + 15 = 65 minutes, Average = 65/3 = 21.666...
+        assertEquals(21.666666f, result.summary.averageLanguageLearningMinutes!!, 0.001f)
     }
 
     @Test
@@ -402,7 +402,7 @@ class HabitEngineTest {
 
         // Assert
         assertEquals(0, result.summary.languageLearningDays)
-        assertEquals(0, result.summary.averageLanguageLearningMinutes)
+        assertEquals(0f, result.summary.averageLanguageLearningMinutes)
     }
 
     @Test
@@ -602,9 +602,9 @@ class HabitEngineTest {
         // Act
         val result = engine.query(fromMillis = jan1, toMillis = jan7)
 
-        // Assert - Average = 75 total minutes / 7 days = 10 min/day
+        // Assert - Average = 75 total minutes / 7 days = 10.714...
         assertEquals(7, result.summary.totalDays)
-        assertEquals(10, result.summary.averageReadingMinutes)
+        assertEquals(10.714286f, result.summary.averageReadingMinutes!!, 0.001f)
     }
 
     @Test
@@ -695,8 +695,8 @@ class HabitEngineTest {
         // Assert
         assertEquals(1, result.summary.languageLearningDays)
         assertEquals(1, result.summary.readingDays)
-        assertEquals(15, result.summary.averageLanguageLearningMinutes) // 30/2 days
-        assertEquals(22, result.summary.averageReadingMinutes) // 45/2 days
+        assertEquals(15.0f, result.summary.averageLanguageLearningMinutes!!, 0.001f) // 30/2 days = 15.0
+        assertEquals(22.5f, result.summary.averageReadingMinutes!!, 0.001f) // 45/2 days = 22.5
     }
 
     // ============================================================

@@ -21,6 +21,10 @@
         <package android:name="com.lingodeer" />
         <package android:name="com.lulilanguages.j5KjAnd" />
         <package android:name="com.renshuu.renshuu_org" />
+
+        <!-- Reading Apps -->
+        <package android:name="com.google.android.apps.books" />
+        <package android:name="com.amazon.kindle" />
     </queries>
 
 </manifest>

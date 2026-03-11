@@ -42,7 +42,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="This app demonstrates how to use the Tracker library to monitor language learning habits."
+                    android:text="Track your language learning and reading habits with the Tracker library."
                     android:textSize="14sp"
                     android:textColor="?android:textColorSecondary"
                     android:gravity="center"
@@ -165,62 +165,67 @@
                         android:layout_height="wrap_content"
                         android:textSize="16sp"
                         android:textColor="?android:textColorPrimary"
-                        android:layout_marginBottom="8dp"
+                        android:layout_marginBottom="16dp"
                         tools:text="Total Days: 30" />
+
+                    <!-- Language Learning Section -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="📚 Language Learning"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:textColor="?android:textColorPrimary"
+                        android:layout_marginBottom="8dp" />
 
                     <TextView
                         android:id="@+id/tvLanguageLearningDays"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textSize="16sp"
-                        android:textColor="?android:textColorPrimary"
-                        android:layout_marginBottom="8dp"
+                        android:textSize="14sp"
+                        android:textColor="?android:textColorSecondary"
+                        android:layout_marginBottom="4dp"
+                        android:layout_marginStart="12dp"
                         tools:text="Language Learning Days: 15" />
 
                     <TextView
-                        android:id="@+id/tvAverageMinutes"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="16sp"
-                        android:textColor="?android:textColorPrimary"
-                        tools:text="Average Minutes/Day: 25" />
-
-                </LinearLayout>
-
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Data Quality Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardElevation="4dp"
-                app:cardCornerRadius="12dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="✅ Data Quality"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="?android:textColorPrimary"
-                        android:layout_marginBottom="16dp" />
-
-                    <TextView
-                        android:id="@+id/tvDataQuality"
+                        android:id="@+id/tvLanguageLearningAverage"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:textSize="14sp"
+                        android:textColor="?android:textColorSecondary"
+                        android:layout_marginBottom="16dp"
+                        android:layout_marginStart="12dp"
+                        tools:text="Avg Minutes/Day: 25" />
+
+                    <!-- Reading Section -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="📖 Reading"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
                         android:textColor="?android:textColorPrimary"
-                        android:fontFamily="monospace"
-                        android:lineSpacingExtra="4dp"
-                        tools:text="Reliability: HIGH\nAvailable Sources: 1\nMissing Sources: 0" />
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:id="@+id/tvReadingDays"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:textColor="?android:textColorSecondary"
+                        android:layout_marginBottom="4dp"
+                        android:layout_marginStart="12dp"
+                        tools:text="Reading Days: 12" />
+
+                    <TextView
+                        android:id="@+id/tvReadingAverage"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:textColor="?android:textColorSecondary"
+                        android:layout_marginStart="12dp"
+                        tools:text="Avg Minutes/Day: 18" />
 
                 </LinearLayout>
 

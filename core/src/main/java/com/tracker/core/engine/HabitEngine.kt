@@ -156,26 +156,37 @@ class HabitEngine internal constructor(
      * Query metrics for the specified time range.
      */
     suspend fun query(fromMillis: Long, toMillis: Long): MetricsResult = withContext(Dispatchers.IO) {
-        // Collect evidence for requested metrics
-        val allEvidence = mutableListOf<Evidence>()
+        // Collect evidence for requested metrics, keeping them separated by metric
+        val evidenceByMetric = mutableMapOf<Metric, List<Evidence>>()
 
         for ((metric, collector) in collectors) {
             if (metric in requestedMetrics) {
                 val result = collector.collect(fromMillis, toMillis)
-                // On success, add evidence; on failure, continue with empty evidence
-                result.getOrNull()?.let { evidence ->
-                    allEvidence.addAll(evidence)
-                }
+                // On success, store evidence; on failure, store empty list
+                evidenceByMetric[metric] = result.getOrNull() ?: emptyList()
             }
         }
 
-        // Group evidence by day (sparse - only days with data)
-        val evidenceByDay = groupEvidenceByDay(allEvidence)
+        // Group evidence by day for each metric separately
+        val languageLearningByDay = if (Metric.LANGUAGE_LEARNING in requestedMetrics) {
+            groupEvidenceByDay(evidenceByMetric[Metric.LANGUAGE_LEARNING] ?: emptyList())
+        } else {
+            emptyMap()
+        }
+
+        val readingByDay = if (Metric.READING in requestedMetrics) {
+            groupEvidenceByDay(evidenceByMetric[Metric.READING] ?: emptyList())
+        } else {
+            emptyMap()
+        }
+
+        // Get all unique days across all metrics
+        val allDays = (languageLearningByDay.keys + readingByDay.keys).sorted()
 
         // Aggregate evidence for each day
-        val dayResults = evidenceByDay.map { (dayMillis, evidence) ->
+        val dayResults = allDays.map { dayMillis ->
             val languageLearningResult = if (Metric.LANGUAGE_LEARNING in requestedMetrics) {
-                val dayEvidence = evidence.filter { it.source == DataSource.USAGE_STATS }
+                val dayEvidence = languageLearningByDay[dayMillis] ?: emptyList()
                 @Suppress("UNCHECKED_CAST")
                 val aggregator = aggregators[Metric.LANGUAGE_LEARNING] as? Aggregator<LanguageLearningResult>
                 aggregator?.aggregate(dayMillis, dayEvidence, minConfidence)
@@ -184,7 +195,7 @@ class HabitEngine internal constructor(
             }
 
             val readingResult = if (Metric.READING in requestedMetrics) {
-                val dayEvidence = evidence.filter { it.source == DataSource.USAGE_STATS }
+                val dayEvidence = readingByDay[dayMillis] ?: emptyList()
                 @Suppress("UNCHECKED_CAST")
                 val aggregator = aggregators[Metric.READING] as? Aggregator<ReadingResult>
                 aggregator?.aggregate(dayMillis, dayEvidence, minConfidence)
@@ -259,16 +270,16 @@ class HabitEngine internal constructor(
 
         val totalLangMinutes = dayResults.mapNotNull { it.languageLearning?.durationMinutes }.sum()
         val averageLangMinutes = if (totalDaysInRange > 0) {
-            totalLangMinutes / totalDaysInRange
+            totalLangMinutes.toFloat() / totalDaysInRange
         } else {
-            0
+            0f
         }
 
         val totalReadingMinutes = dayResults.mapNotNull { it.reading?.durationMinutes }.sum()
         val averageReadingMinutes = if (totalDaysInRange > 0) {
-            totalReadingMinutes / totalDaysInRange
+            totalReadingMinutes.toFloat() / totalDaysInRange
         } else {
-            0
+            0f
         }
 
         return Summary(

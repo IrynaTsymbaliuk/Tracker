@@ -25,7 +25,7 @@ data class MetricsResult(
 data class Summary(
     val totalDays: Int,
     val languageLearningDays: Int? = null,
-    val averageLanguageLearningMinutes: Int? = null,
+    val averageLanguageLearningMinutes: Float? = null,
     val readingDays: Int? = null,
-    val averageReadingMinutes: Int? = null
+    val averageReadingMinutes: Float? = null
 )
