@@ -11,7 +11,7 @@ android {
     defaultConfig {
         minSdk = 21
 
-        version = "1.0.0"
+        version = "2.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
@@ -61,7 +61,7 @@ afterEvaluate {
 
                 groupId = "com.github.IrynaTsymbaliuk"
                 artifactId = "tracker"
-                version = "1.0.0"
+                version = "2.0.0"
 
                 pom {
                     name.set("Tracker")

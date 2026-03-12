@@ -61,7 +61,7 @@ Add to your `build.gradle`:
 
 ```gradle
 dependencies {
-    implementation 'com.tracker:core:1.0.0'
+    implementation 'com.tracker:core:2.0.0'
 }
 ```
 
