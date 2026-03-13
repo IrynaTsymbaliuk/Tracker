@@ -16,11 +16,12 @@ import com.tracker.core.result.AccessRequirement
 import com.tracker.core.result.AccessStatus
 import com.tracker.core.result.DataQuality
 import com.tracker.core.result.HabitAccessInfo
-import com.tracker.core.result.HabitResult
+import com.tracker.core.result.LanguageLearningMetricResult
 import com.tracker.core.result.LanguageLearningResult
-import com.tracker.core.result.MetricsResult
+import com.tracker.core.result.MetricQueryResult
 import com.tracker.core.result.MissingReason
 import com.tracker.core.result.MissingSource
+import com.tracker.core.result.ReadingMetricResult
 import com.tracker.core.result.ReadingResult
 import com.tracker.core.result.ReliabilityLevel
 import com.tracker.core.result.SourceAccessInfo
@@ -31,18 +32,12 @@ import kotlinx.coroutines.withContext
 
 /**
  * Central coordinator for habit tracking.
- *
- * 1. Register collectors and aggregators per metric
- * 2. Run collectors (in parallel in future)
- * 3. Aggregate all evidence at once
- * 4. Build final MetricsResult with direct fields and data quality
  */
 class HabitEngine internal constructor(
-    private val requestedMetrics: Set<Metric>,
     private val minConfidence: Float,
     private val permissionManager: PermissionManager,
     private val collectors: Map<Metric, Collector>,
-    private val aggregators: Map<Metric, Aggregator<out HabitResult>>
+    private val aggregators: Map<Metric, Aggregator<*>>
 ) {
 
     companion object {
@@ -51,86 +46,76 @@ class HabitEngine internal constructor(
          */
         fun create(
             context: Context,
-            requestedMetrics: Set<Metric>,
             minConfidence: Float
         ): HabitEngine {
             val permissionManager = PermissionManager(context)
 
-            // Only instantiate collectors for requested metrics
-            val collectors = buildMap<Metric, Collector> {
-                if (Metric.LANGUAGE_LEARNING in requestedMetrics) {
-                    put(Metric.LANGUAGE_LEARNING, UsageStatsLanguageLearningCollector(context, permissionManager))
-                }
-                if (Metric.READING in requestedMetrics) {
-                    put(Metric.READING, UsageStatsReadingCollector(context, permissionManager))
-                }
-            }
+            // Instantiate ALL collectors (not filtered by requested metrics)
+            val collectors = mapOf(
+                Metric.LANGUAGE_LEARNING to UsageStatsLanguageLearningCollector(context, permissionManager),
+                Metric.READING to UsageStatsReadingCollector(context, permissionManager)
+            )
 
-            // Only instantiate aggregators for requested metrics
-            val aggregators = buildMap<Metric, Aggregator<out HabitResult>> {
-                if (Metric.LANGUAGE_LEARNING in requestedMetrics) {
-                    put(Metric.LANGUAGE_LEARNING, LanguageLearningAggregator())
-                }
-                if (Metric.READING in requestedMetrics) {
-                    put(Metric.READING, ReadingAggregator())
-                }
-            }
+            // Instantiate ALL aggregators (not filtered by requested metrics)
+            val aggregators = mapOf<Metric, Aggregator<*>>(
+                Metric.LANGUAGE_LEARNING to LanguageLearningAggregator(),
+                Metric.READING to ReadingAggregator()
+            )
 
-            return HabitEngine(requestedMetrics, minConfidence, permissionManager, collectors, aggregators)
+            return HabitEngine(minConfidence, permissionManager, collectors, aggregators)
         }
     }
 
     /**
-     * Get access requirements for all requested metrics.
+     * Get access requirements for a specific metric.
      *
-     * Dynamically builds access info from registered collectors,
+     * Dynamically builds access info from the metric's collector,
      * following the self-describing collector pattern.
      *
-     * @return List of HabitAccessInfo, one per requested metric
+     * @param metric The metric to check access for
+     * @return HabitAccessInfo for the metric
      */
-    fun getAccessRequirements(): List<HabitAccessInfo> {
-        return requestedMetrics.map { metric ->
-            val collector = collectors[metric]
-                ?: throw IllegalStateException("No collector registered for metric: $metric")
+    fun getAccessRequirements(metric: Metric): HabitAccessInfo {
+        val collector = collectors[metric]
+            ?: throw IllegalStateException("No collector registered for metric: $metric")
 
-            // Build source access info from collector's declared requirements
-            val sources = collector.sourceRequirements.map { requirement ->
-                SourceAccessInfo(
-                    sourceName = collector.sourceName,
-                    requirement = requirement,
-                    status = permissionManager.check(requirement),
-                    reliabilityContribution = collector.reliabilityContribution,
-                    description = when (requirement) {
-                        is AccessRequirement.SystemPermission ->
-                            "System permission: ${requirement.permission}"
-                        else -> "Unknown requirement type"
-                    }
-                )
-            }
-
-            // Calculate current reliability based on granted sources
-            val currentReliability = if (sources.any { it.status == AccessStatus.GRANTED }) {
-                // Use the highest reliability among granted sources
-                sources
-                    .filter { it.status == AccessStatus.GRANTED }
-                    .maxOfOrNull { it.reliabilityContribution }
-                    ?: ReliabilityLevel.NONE
-            } else {
-                ReliabilityLevel.NONE
-            }
-
-            // Potential reliability is the highest possible if all sources were available
-            val potentialReliability = sources
-                .maxOfOrNull { it.reliabilityContribution }
-                ?: ReliabilityLevel.NONE
-
-            HabitAccessInfo(
-                metric = metric,
-                currentReliability = currentReliability,
-                potentialReliability = potentialReliability,
-                sources = sources
+        // Build source access info from collector's declared requirements
+        val sources = collector.sourceRequirements.map { requirement ->
+            SourceAccessInfo(
+                sourceName = collector.sourceName,
+                requirement = requirement,
+                status = permissionManager.check(requirement),
+                reliabilityContribution = collector.reliabilityContribution,
+                description = when (requirement) {
+                    is AccessRequirement.SystemPermission ->
+                        "System permission: ${requirement.permission}"
+                    else -> "Unknown requirement type"
+                }
             )
         }
+
+        // Calculate current reliability based on granted sources
+        val currentReliability = if (sources.any { it.status == AccessStatus.GRANTED }) {
+            // Use the highest reliability among granted sources
+            sources
+                .filter { it.status == AccessStatus.GRANTED }
+                .maxOfOrNull { it.reliabilityContribution }
+                ?: ReliabilityLevel.NONE
+        } else {
+            ReliabilityLevel.NONE
+        }
+
+        // Potential reliability is the highest possible if all sources were available
+        val potentialReliability = sources
+            .maxOfOrNull { it.reliabilityContribution }
+            ?: ReliabilityLevel.NONE
+
+        return HabitAccessInfo(
+            metric = metric,
+            currentReliability = currentReliability,
+            potentialReliability = potentialReliability,
+            sources = sources
+        )
     }
 
     /**
@@ -147,51 +132,80 @@ class HabitEngine internal constructor(
     }
 
     /**
-     * Query metrics for the specified time range.
+     * Query a specific metric for the specified time range.
      *
+     * @param metric The metric to query
      * @param fromMillis Start time in milliseconds since epoch (inclusive)
      * @param toMillis End time in milliseconds since epoch (inclusive)
-     * @return MetricsResult with direct metric fields
+     * @return MetricQueryResult containing the metric-specific result and data quality
      */
-    suspend fun query(fromMillis: Long, toMillis: Long): MetricsResult = withContext(Dispatchers.IO) {
-        // Collect evidence for requested metrics, keeping them separated by metric
-        val evidenceByMetric = mutableMapOf<Metric, List<Evidence>>()
-
-        for ((metric, collector) in collectors) {
-            if (metric in requestedMetrics) {
-                val result = collector.collect(fromMillis, toMillis)
-                // On success, store evidence; on failure, store empty list
-                evidenceByMetric[metric] = result.getOrNull() ?: emptyList()
-            }
+    internal suspend fun queryMetric(
+        metric: Metric,
+        fromMillis: Long,
+        toMillis: Long
+    ): MetricQueryResult = withContext(Dispatchers.IO) {
+        when (metric) {
+            Metric.LANGUAGE_LEARNING -> queryLanguageLearning(fromMillis, toMillis)
+            Metric.READING -> queryReading(fromMillis, toMillis)
         }
+    }
 
-        // Aggregate all evidence at once for each metric (no day grouping)
-        val languageLearningResult = if (Metric.LANGUAGE_LEARNING in requestedMetrics) {
-            val evidence = evidenceByMetric[Metric.LANGUAGE_LEARNING] ?: emptyList()
-            @Suppress("UNCHECKED_CAST")
-            val aggregator = aggregators[Metric.LANGUAGE_LEARNING] as? Aggregator<LanguageLearningResult>
-            // Pass toMillis as the timestamp parameter (aggregator signature requires it)
-            aggregator?.aggregate(toMillis, evidence, minConfidence)
-        } else {
-            null
-        }
+    /**
+     * Query language learning metric.
+     */
+    private suspend fun queryLanguageLearning(
+        fromMillis: Long,
+        toMillis: Long
+    ): LanguageLearningMetricResult {
+        val collector = collectors[Metric.LANGUAGE_LEARNING]
+            ?: throw IllegalStateException("No collector for LANGUAGE_LEARNING")
 
-        val readingResult = if (Metric.READING in requestedMetrics) {
-            val evidence = evidenceByMetric[Metric.READING] ?: emptyList()
-            @Suppress("UNCHECKED_CAST")
-            val aggregator = aggregators[Metric.READING] as? Aggregator<ReadingResult>
-            // Pass toMillis as the timestamp parameter (aggregator signature requires it)
-            aggregator?.aggregate(toMillis, evidence, minConfidence)
-        } else {
-            null
-        }
+        val aggregator = aggregators[Metric.LANGUAGE_LEARNING]
+            ?: throw IllegalStateException("No aggregator for LANGUAGE_LEARNING")
+
+        // Collect evidence
+        val evidenceResult = collector.collect(fromMillis, toMillis)
+        val evidence = evidenceResult.getOrNull() ?: emptyList()
+
+        // Aggregate evidence
+        @Suppress("UNCHECKED_CAST")
+        val result = aggregator.aggregate(toMillis, evidence, minConfidence) as? LanguageLearningResult
 
         // Build data quality
         val dataQuality = buildDataQuality()
 
-        MetricsResult(
-            languageLearning = languageLearningResult,
-            reading = readingResult,
+        return LanguageLearningMetricResult(
+            result = result,
+            dataQuality = dataQuality
+        )
+    }
+
+    /**
+     * Query reading metric.
+     */
+    private suspend fun queryReading(
+        fromMillis: Long,
+        toMillis: Long
+    ): ReadingMetricResult {
+        val collector = collectors[Metric.READING]
+            ?: throw IllegalStateException("No collector for READING")
+
+        val aggregator = aggregators[Metric.READING]
+            ?: throw IllegalStateException("No aggregator for READING")
+
+        // Collect evidence
+        val evidenceResult = collector.collect(fromMillis, toMillis)
+        val evidence = evidenceResult.getOrNull() ?: emptyList()
+
+        // Aggregate evidence
+        @Suppress("UNCHECKED_CAST")
+        val result = aggregator.aggregate(toMillis, evidence, minConfidence) as? ReadingResult
+
+        // Build data quality
+        val dataQuality = buildDataQuality()
+
+        return ReadingMetricResult(
+            result = result,
             dataQuality = dataQuality
         )
     }

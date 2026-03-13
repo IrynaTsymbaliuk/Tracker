@@ -3,137 +3,14 @@ package com.tracker.core.result
 import com.tracker.core.types.ConfidenceLevel
 import com.tracker.core.types.DataSource
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
- * Tests for result types after time refactoring.
- * Verifies that:
- * - MetricsResult has direct metric fields (languageLearning, reading)
+ * Tests for individual result types.
+ * These are the base result types used within metric-specific results.
  */
 class MetricResultTypesTimeTest {
-
-    @Test
-    fun `MetricsResult has languageLearning field`() {
-        val result = MetricsResult(
-            languageLearning = LanguageLearningResult(
-                occurred = true,
-                confidence = 0.85f,
-                confidenceLevel = ConfidenceLevel.HIGH,
-                durationMinutes = 45,
-                sessionCount = 2,
-                source = DataSource.USAGE_STATS,
-                apps = emptyList()
-            ),
-            reading = null,
-            dataQuality = createDataQuality()
-        )
-
-        assertNotNull(result.languageLearning)
-        assertEquals(true, result.languageLearning?.occurred)
-    }
-
-    @Test
-    fun `MetricsResult has reading field`() {
-        val result = MetricsResult(
-            languageLearning = null,
-            reading = ReadingResult(
-                occurred = true,
-                confidence = 0.75f,
-                confidenceLevel = ConfidenceLevel.MEDIUM,
-                durationMinutes = 30,
-                sessionCount = 1,
-                source = DataSource.USAGE_STATS,
-                apps = emptyList()
-            ),
-            dataQuality = createDataQuality()
-        )
-
-        assertNotNull(result.reading)
-        assertEquals(30, result.reading?.durationMinutes)
-    }
-
-    @Test
-    fun `MetricsResult has dataQuality field`() {
-        val dataQuality = createDataQuality()
-        val result = MetricsResult(
-            languageLearning = null,
-            reading = null,
-            dataQuality = dataQuality
-        )
-
-        assertNotNull(result.dataQuality)
-        assertEquals(dataQuality, result.dataQuality)
-    }
-
-    @Test
-    fun `MetricsResult supports null languageLearning`() {
-        val result = MetricsResult(
-            languageLearning = null,
-            reading = ReadingResult(
-                occurred = true,
-                confidence = 0.75f,
-                confidenceLevel = ConfidenceLevel.MEDIUM,
-                durationMinutes = 30,
-                sessionCount = 1,
-                source = DataSource.USAGE_STATS,
-                apps = emptyList()
-            ),
-            dataQuality = createDataQuality()
-        )
-
-        assertNull(result.languageLearning)
-        assertNotNull(result.reading)
-    }
-
-    @Test
-    fun `MetricsResult supports null reading`() {
-        val result = MetricsResult(
-            languageLearning = LanguageLearningResult(
-                occurred = true,
-                confidence = 0.85f,
-                confidenceLevel = ConfidenceLevel.HIGH,
-                durationMinutes = 45,
-                sessionCount = 2,
-                source = DataSource.USAGE_STATS,
-                apps = emptyList()
-            ),
-            reading = null,
-            dataQuality = createDataQuality()
-        )
-
-        assertNotNull(result.languageLearning)
-        assertNull(result.reading)
-    }
-
-    @Test
-    fun `MetricsResult supports both metrics`() {
-        val result = MetricsResult(
-            languageLearning = LanguageLearningResult(
-                occurred = true,
-                confidence = 0.85f,
-                confidenceLevel = ConfidenceLevel.HIGH,
-                durationMinutes = 45,
-                sessionCount = 2,
-                source = DataSource.USAGE_STATS,
-                apps = emptyList()
-            ),
-            reading = ReadingResult(
-                occurred = true,
-                confidence = 0.75f,
-                confidenceLevel = ConfidenceLevel.MEDIUM,
-                durationMinutes = 30,
-                sessionCount = 1,
-                source = DataSource.USAGE_STATS,
-                apps = emptyList()
-            ),
-            dataQuality = createDataQuality()
-        )
-
-        assertNotNull(result.languageLearning)
-        assertNotNull(result.reading)
-    }
 
     @Test
     fun `LanguageLearningResult has all required fields`() {
@@ -185,12 +62,35 @@ class MetricResultTypesTimeTest {
         assertEquals(1, result.apps.size)
     }
 
-    // Helper methods
+    @Test
+    fun `LanguageLearningResult supports occurred false`() {
+        val result = LanguageLearningResult(
+            occurred = false,
+            confidence = 0.0f,
+            confidenceLevel = ConfidenceLevel.LOW,
+            durationMinutes = 0,
+            sessionCount = 0,
+            source = DataSource.USAGE_STATS,
+            apps = emptyList()
+        )
 
-    private fun createDataQuality() = DataQuality(
-        availableSources = listOf(DataSource.USAGE_STATS),
-        missingSources = emptyList(),
-        overallReliability = ReliabilityLevel.HIGH,
-        recommendations = emptyList()
-    )
+        assertEquals(false, result.occurred)
+        assertEquals(0, result.durationMinutes)
+    }
+
+    @Test
+    fun `ReadingResult supports occurred false`() {
+        val result = ReadingResult(
+            occurred = false,
+            confidence = 0.0f,
+            confidenceLevel = ConfidenceLevel.LOW,
+            durationMinutes = 0,
+            sessionCount = 0,
+            source = DataSource.USAGE_STATS,
+            apps = emptyList()
+        )
+
+        assertEquals(false, result.occurred)
+        assertEquals(0, result.durationMinutes)
+    }
 }

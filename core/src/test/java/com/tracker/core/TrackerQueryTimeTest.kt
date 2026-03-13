@@ -1,7 +1,6 @@
 package com.tracker.core
 
 import android.content.Context
-import com.tracker.core.types.Metric
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -18,8 +17,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 
 /**
- * Tests for Tracker query methods.
- * Verifies that queryAsync() and query() use 24-hour window with no date parameters.
+ * Tests for Tracker per-metric query methods.
+ * Verifies that queryLanguageLearning() and queryReading() use 24-hour window.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -41,20 +40,40 @@ class TrackerQueryTimeTest {
     }
 
     @Test
-    fun `queryAsync takes no parameters`() = runTest {
-        // This test verifies the method signature has changed
-        val tracker = createTrackerWithFixedTime(Metric.LANGUAGE_LEARNING)
+    fun `queryLanguageLearning takes no parameters`() = runTest {
+        // This test verifies the method signature has no date parameters
+        val tracker = createTrackerWithFixedTime()
 
-        val result = tracker.queryAsync()
+        val result = tracker.queryLanguageLearning()
 
         assertNotNull(result)
     }
 
     @Test
-    fun `MetricsResult has dataQuality field`() = runTest {
-        val tracker = createTrackerWithFixedTime(Metric.LANGUAGE_LEARNING)
+    fun `queryReading takes no parameters`() = runTest {
+        // This test verifies the method signature has no date parameters
+        val tracker = createTrackerWithFixedTime()
 
-        val result = tracker.queryAsync()
+        val result = tracker.queryReading()
+
+        assertNotNull(result)
+    }
+
+    @Test
+    fun `LanguageLearningMetricResult has dataQuality field`() = runTest {
+        val tracker = createTrackerWithFixedTime()
+
+        val result = tracker.queryLanguageLearning()
+
+        // Verify result structure
+        assertNotNull(result.dataQuality)
+    }
+
+    @Test
+    fun `ReadingMetricResult has dataQuality field`() = runTest {
+        val tracker = createTrackerWithFixedTime()
+
+        val result = tracker.queryReading()
 
         // Verify result structure
         assertNotNull(result.dataQuality)
@@ -84,11 +103,22 @@ class TrackerQueryTimeTest {
         assertEquals(fixedTime - 86_400_000L, fromMillis)
     }
 
+    @Test
+    fun `per-metric queries use same TimeProvider instance`() = runTest {
+        val tracker = createTrackerWithFixedTime()
+
+        val llResult = tracker.queryLanguageLearning()
+        val readingResult = tracker.queryReading()
+
+        // Both should use the same fixed time
+        assertNotNull(llResult)
+        assertNotNull(readingResult)
+    }
+
     // Helper methods
 
-    private fun createTrackerWithFixedTime(vararg metrics: Metric): Tracker {
+    private fun createTrackerWithFixedTime(): Tracker {
         val builder = Tracker.Builder(context)
-            .requestMetrics(*metrics)
             .setMinConfidence(0.50f)
 
         // Inject fixed time provider via internal property

@@ -1,7 +1,6 @@
 package com.tracker.core
 
 import android.content.Context
-import com.tracker.core.types.Metric
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -36,7 +35,6 @@ class TrackerMinConfidenceTest {
     fun `default min confidence is 0_50`() {
         // Arrange & Act
         val tracker = Tracker.Builder(context)
-            .requestMetrics(Metric.LANGUAGE_LEARNING)
             .build()
 
         // Assert (using delta for float comparison)
@@ -55,7 +53,6 @@ class TrackerMinConfidenceTest {
 
         // Act
         val tracker = Tracker.Builder(context)
-            .requestMetrics(Metric.LANGUAGE_LEARNING)
             .setMinConfidence(customConfidence)
             .build()
 
@@ -70,7 +67,6 @@ class TrackerMinConfidenceTest {
     fun `setMinConfidence accepts min value of 0_0`() {
         // Act
         val tracker = Tracker.Builder(context)
-            .requestMetrics(Metric.LANGUAGE_LEARNING)
             .setMinConfidence(0.0f)
             .build()
 
@@ -85,7 +81,6 @@ class TrackerMinConfidenceTest {
     fun `setMinConfidence accepts max value of 1_0`() {
         // Act
         val tracker = Tracker.Builder(context)
-            .requestMetrics(Metric.LANGUAGE_LEARNING)
             .setMinConfidence(1.0f)
             .build()
 
@@ -99,7 +94,6 @@ class TrackerMinConfidenceTest {
     @Test(expected = IllegalArgumentException::class)
     fun `setMinConfidence rejects negative values`() {
         Tracker.Builder(context)
-            .requestMetrics(Metric.LANGUAGE_LEARNING)
             .setMinConfidence(-0.1f)
             .build()
     }
@@ -110,7 +104,6 @@ class TrackerMinConfidenceTest {
     @Test(expected = IllegalArgumentException::class)
     fun `setMinConfidence rejects values greater than 1_0`() {
         Tracker.Builder(context)
-            .requestMetrics(Metric.LANGUAGE_LEARNING)
             .setMinConfidence(1.1f)
             .build()
     }

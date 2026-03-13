@@ -6,7 +6,8 @@ import com.tracker.core.engine.HabitEngine
 import com.tracker.core.result.AccessRequirement
 import com.tracker.core.result.AccessStatus
 import com.tracker.core.result.HabitAccessInfo
-import com.tracker.core.result.MetricsResult
+import com.tracker.core.result.LanguageLearningMetricResult
+import com.tracker.core.result.ReadingMetricResult
 import com.tracker.core.types.Metric
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -19,29 +20,34 @@ import kotlinx.coroutines.launch
  * Usage:
  * ```
  * val tracker = Tracker.Builder(context)
- *     .requestMetrics(Metric.LANGUAGE_LEARNING)
  *     .setMinConfidence(0.50)
  *     .build()
  *
- * // Query with coroutines (last 24 hours)
- * val result = tracker.queryAsync()
+ * // Query language learning with coroutines (last 24 hours)
+ * val result = tracker.queryLanguageLearning()
  *
- * // Query with callback (last 24 hours)
- * tracker.query { result ->
+ * // Query language learning with callback (last 24 hours)
+ * tracker.queryLanguageLearning { result ->
+ *     // Handle result
+ * }
+ *
+ * // Query reading with coroutines (last 24 hours)
+ * val result = tracker.queryReading()
+ *
+ * // Query reading with callback (last 24 hours)
+ * tracker.queryReading { result ->
  *     // Handle result
  * }
  * ```
  */
 class Tracker private constructor(
     private val context: Context,
-    private val requestedMetrics: Set<Metric>,
     private val minConfidence: Float,
     internal val timeProvider: TimeProvider = TimeProvider { System.currentTimeMillis() }
 ) {
 
     private val habitEngine = HabitEngine.create(
         context,
-        requestedMetrics,
         minConfidence
     )
 
@@ -53,45 +59,48 @@ class Tracker private constructor(
     fun getMinConfidence(): Float = minConfidence
 
     /**
-     * Get access requirements for all requested metrics.
+     * Get access requirements for a specific metric.
      *
      * This method provides transparency about what data sources are available,
-     * what's missing, and how to improve data quality for each requested metric.
+     * what's missing, and how to improve data quality for the requested metric.
      *
-     * @return List of HabitAccessInfo, one per requested metric
+     * @param metric The metric to check access for
+     * @return HabitAccessInfo for the metric
      */
-    fun getAccessRequirements(): List<HabitAccessInfo> {
-        return habitEngine.getAccessRequirements()
+    fun getAccessRequirements(metric: Metric): HabitAccessInfo {
+        return habitEngine.getAccessRequirements(metric)
     }
 
     /**
-     * Check if all required access is granted.
+     * Check if all required access is granted for a specific metric.
      *
-     * This is a convenience method that checks if all data sources for all
-     * requested metrics have their access requirements met.
+     * This is a convenience method that checks if all data sources for the
+     * requested metric have their access requirements met.
      *
+     * @param metric The metric to check access for
      * @return true if all required permissions/credentials are granted, false otherwise
      */
-    fun hasAllRequiredAccess(): Boolean {
-        return getAccessRequirements()
-            .flatMap { it.sources }
+    fun hasAllRequiredAccess(metric: Metric): Boolean {
+        return getAccessRequirements(metric)
+            .sources
             .all { it.status == AccessStatus.GRANTED }
     }
 
     /**
-     * Request missing access for all requested metrics.
+     * Request missing access for a specific metric.
      *
      * This method automatically requests all missing permissions/credentials
-     * needed by the library. For system permissions like PACKAGE_USAGE_STATS,
-     * this will open the appropriate Settings screen.
+     * needed by the library for the specified metric. For system permissions
+     * like PACKAGE_USAGE_STATS, this will open the appropriate Settings screen.
      *
-     * Call this method when [hasAllRequiredAccess] returns false.
+     * Call this method when [hasAllRequiredAccess] returns false for a metric.
      *
      * @param activity The activity to use for launching permission requests
+     * @param metric The metric to request access for
      */
-    fun requestMissingAccess(activity: Activity) {
-        getAccessRequirements()
-            .flatMap { it.sources }
+    fun requestMissingAccess(activity: Activity, metric: Metric) {
+        getAccessRequirements(metric)
+            .sources
             .filter { it.status != AccessStatus.GRANTED }
             .distinctBy { it.requirement }
             .forEach { source ->
@@ -104,30 +113,59 @@ class Tracker private constructor(
     }
 
     /**
-     * Query metrics asynchronously using coroutines.
+     * Query language learning metric asynchronously using coroutines.
      *
      * Returns data for the last 24 hours from current time.
      *
-     * @return MetricsResult containing data from the last 24 hours
+     * @return LanguageLearningMetricResult containing language learning data and data quality
      */
-    suspend fun queryAsync(): MetricsResult {
+    suspend fun queryLanguageLearning(): LanguageLearningMetricResult {
         val now = timeProvider.now()
         val toMillis = now
         val fromMillis = now - 86_400_000L // 24 hours in milliseconds
-        return habitEngine.query(fromMillis, toMillis)
+        return habitEngine.queryMetric(Metric.LANGUAGE_LEARNING, fromMillis, toMillis) as LanguageLearningMetricResult
     }
 
     /**
-     * Query metrics using callback.
+     * Query language learning metric using callback.
      *
      * Returns data for the last 24 hours from current time.
      * Callback is invoked on the Main dispatcher.
      *
      * @param callback Called when results are ready
      */
-    fun query(callback: (MetricsResult) -> Unit) {
+    fun queryLanguageLearning(callback: (LanguageLearningMetricResult) -> Unit) {
         CoroutineScope(Dispatchers.Main).launch {
-            val result = queryAsync()
+            val result = queryLanguageLearning()
+            callback(result)
+        }
+    }
+
+    /**
+     * Query reading metric asynchronously using coroutines.
+     *
+     * Returns data for the last 24 hours from current time.
+     *
+     * @return ReadingMetricResult containing reading data and data quality
+     */
+    suspend fun queryReading(): ReadingMetricResult {
+        val now = timeProvider.now()
+        val toMillis = now
+        val fromMillis = now - 86_400_000L // 24 hours in milliseconds
+        return habitEngine.queryMetric(Metric.READING, fromMillis, toMillis) as ReadingMetricResult
+    }
+
+    /**
+     * Query reading metric using callback.
+     *
+     * Returns data for the last 24 hours from current time.
+     * Callback is invoked on the Main dispatcher.
+     *
+     * @param callback Called when results are ready
+     */
+    fun queryReading(callback: (ReadingMetricResult) -> Unit) {
+        CoroutineScope(Dispatchers.Main).launch {
+            val result = queryReading()
             callback(result)
         }
     }
@@ -136,20 +174,8 @@ class Tracker private constructor(
      * Builder for creating Tracker instances.
      */
     class Builder(private val context: Context) {
-        private val metrics = mutableSetOf<Metric>()
         private var minConfidence: Float = 0.50f
         internal var timeProvider: TimeProvider = TimeProvider { System.currentTimeMillis() }
-
-        /**
-         * Request specific metrics to track.
-         *
-         * @param metrics Metrics to track (e.g., LANGUAGE_LEARNING)
-         * @return This builder for chaining
-         */
-        fun requestMetrics(vararg metrics: Metric): Builder {
-            this.metrics.addAll(metrics)
-            return this
-        }
 
         /**
          * Set minimum confidence threshold for results.
@@ -169,10 +195,8 @@ class Tracker private constructor(
          * @return Configured Tracker instance
          */
         fun build(): Tracker {
-            require(metrics.isNotEmpty()) { "At least one metric must be requested" }
             return Tracker(
                 context = context.applicationContext,
-                requestedMetrics = metrics.toSet(),
                 minConfidence = minConfidence,
                 timeProvider = timeProvider
             )

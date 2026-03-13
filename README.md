@@ -17,33 +17,34 @@ Tracker is an Android library that automatically identifies user behaviors (like
 ## What It Does
 
 ```kotlin
-// 1. Configure what to track
+// 1. Build tracker (no need to declare metrics upfront)
 val tracker = Tracker.Builder(context)
-    .requestMetrics(Metric.LANGUAGE_LEARNING, Metric.READING)
     .setMinConfidence(0.50f)  // 50% confidence threshold
     .build()
 
 // 2. Request permissions (opens Settings)
-if (!tracker.hasAllRequiredAccess()) {
-    tracker.requestMissingAccess(this)
+if (!tracker.hasAllRequiredAccess(Metric.LANGUAGE_LEARNING)) {
+    tracker.requestMissingAccess(this, Metric.LANGUAGE_LEARNING)
 }
 
-// 3. Get results for the last 24 hours
-val result = tracker.queryAsync()
+// 3. Query individual metrics for the last 24 hours
+val llResult = tracker.queryLanguageLearning()
+val readingResult = tracker.queryReading()
 
-// Result contains:
-result.languageLearning?.occurred              // Whether language learning was detected
-result.languageLearning?.durationMinutes       // Total time spent
-result.languageLearning?.confidence            // Confidence score (0.0-1.0)
-result.languageLearning?.confidenceLevel       // LOW/MEDIUM/HIGH
-result.languageLearning?.apps                  // Apps used
+// Language Learning result contains:
+llResult.result?.occurred              // Whether language learning was detected
+llResult.result?.durationMinutes       // Total time spent
+llResult.result?.confidence            // Confidence score (0.0-1.0)
+llResult.result?.confidenceLevel       // LOW/MEDIUM/HIGH
+llResult.result?.apps                  // Apps used
+llResult.dataQuality                   // What data sources are available/missing
 
-result.reading?.occurred                       // Whether reading was detected
-result.reading?.durationMinutes                // Total time spent
-result.reading?.confidence                     // Confidence score (0.0-1.0)
-result.reading?.apps                           // Apps used
-
-result.dataQuality                             // What data sources are available/missing
+// Reading result contains:
+readingResult.result?.occurred         // Whether reading was detected
+readingResult.result?.durationMinutes  // Total time spent
+readingResult.result?.confidence       // Confidence score (0.0-1.0)
+readingResult.result?.apps             // Apps used
+readingResult.dataQuality              // What data sources are available/missing
 ```
 
 **Output example (last 24 hours):**
@@ -87,7 +88,7 @@ Every detection includes a confidence level (LOW/MEDIUM/HIGH) based on data qual
 See exactly what data sources are available, missing, and how they affect reliability:
 
 ```kotlin
-val accessInfo = tracker.getAccessRequirements()
+val accessInfo = tracker.getAccessRequirements(Metric.LANGUAGE_LEARNING)
 // Shows: which permissions are granted, what's missing, recommendations
 ```
 
@@ -109,7 +110,6 @@ Async by default with Kotlin coroutines, plus callback API for Java/legacy code.
 
 ```kotlin
 val tracker = Tracker.Builder(context)
-    .requestMetrics(Metric.LANGUAGE_LEARNING, Metric.READING)
     .setMinConfidence(0.70f)  // Only return HIGH confidence results
     .build()
 ```
@@ -117,15 +117,16 @@ val tracker = Tracker.Builder(context)
 ### Check Detected Apps
 
 ```kotlin
-val result = tracker.queryAsync()
+val llResult = tracker.queryLanguageLearning()
+val readingResult = tracker.queryReading()
 
 // Language learning apps
-result.languageLearning?.apps?.forEach { app ->
+llResult.result?.apps?.forEach { app ->
     println("${app.appName}: ${app.durationMinutes} minutes")
 }
 
 // Reading apps
-result.reading?.apps?.forEach { app ->
+readingResult.result?.apps?.forEach { app ->
     println("${app.appName}: ${app.durationMinutes} minutes")
 }
 ```
@@ -185,7 +186,5 @@ Apache 2.0 — see [LICENSE](LICENSE) for details.
 ## Roadmap
 
 - [ ] Health Connect integration (exercise, sleep)
-- [ ] OAuth support for third-party APIs (Goodreads, Kindle API, Trakt, etc.)
-- [ ] Additional metrics (Social Activity, Screen Time, Focus Time)
-- [ ] Custom habit definitions via DSL
-- [ ] ML-based confidence scoring
+- [ ] OAuth support for third-party APIs (Goodreads, Kindle API, etc.)
+- [ ] Additional metrics (Social Activity, Screen Time)

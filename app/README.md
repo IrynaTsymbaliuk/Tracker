@@ -1,47 +1,63 @@
 # Tracker Library - Sample App
 
-This sample application demonstrates how to integrate and use the **Tracker** library to monitor language learning habits.
+This sample application demonstrates how to integrate and use the **Tracker** library to monitor language learning and reading habits.
 
 ## Features Demonstrated
 
 ### 1. **Library Setup**
 ```kotlin
 val tracker = Tracker.Builder(context)
-    .requestMetrics(Metric.LANGUAGE_LEARNING)
-    .setLookbackDays(30)  // Query last 30 days
     .setMinConfidence(0.50f)  // 50% confidence threshold
     .build()
 ```
 
 ### 2. **Permission Handling**
-- Checks for `PACKAGE_USAGE_STATS` permission
+- Checks for `PACKAGE_USAGE_STATS` permission per-metric
 - Guides user to grant permission via Settings
 - Re-checks permission when returning from Settings
 
+```kotlin
+// Check access for specific metrics
+if (!tracker.hasAllRequiredAccess(Metric.LANGUAGE_LEARNING)) {
+    tracker.requestMissingAccess(this, Metric.LANGUAGE_LEARNING)
+}
+```
+
 ### 3. **Querying Metrics**
 ```kotlin
-// Using coroutines (recommended)
+// Using coroutines (recommended) - query each metric individually
 lifecycleScope.launch {
-    val result = tracker.queryAsync()
-    displayResults(result)
+    val llResult = tracker.queryLanguageLearning()
+    val readingResult = tracker.queryReading()
+    displayResults(llResult, readingResult)
 }
 
 // Using callbacks (alternative)
-tracker.query { result ->
-    displayResults(result)
+tracker.queryLanguageLearning { result ->
+    // Handle language learning result
+}
+
+tracker.queryReading { result ->
+    // Handle reading result
 }
 ```
 
 ### 4. **Displaying Results**
-The app shows three main sections:
+The app shows results for the last 24 hours:
 
-- **Summary Statistics**: Total days, language learning days, average minutes
-- **Data Quality**: Reliability level, available/missing sources, recommendations
-- **Day-by-Day Results**: Detailed breakdown of each day's activity
-  - Date
+- **Language Learning Section**:
+  - Activity status (detected or not)
   - Duration (in minutes)
   - Confidence score and level (HIGH/MEDIUM/LOW)
   - Apps used (by human-readable name, e.g., "Duolingo, Anki")
+
+- **Reading Section**:
+  - Activity status (detected or not)
+  - Duration (in minutes)
+  - Confidence score and level (HIGH/MEDIUM/LOW)
+  - Apps used (e.g., "Kindle, Google Play Books")
+
+- **Data Quality**: Reliability level, available/missing sources, recommendations
 
 ## How to Run
 
@@ -63,8 +79,8 @@ The app shows three main sections:
 
 4. **View Results**:
    - Return to the app
-   - Tap "Query Last 30 Days"
-   - View your language learning statistics
+   - Tap "Query Metrics"
+   - View your language learning and reading activity from the last 24 hours
 
 ## Code Structure
 
@@ -87,10 +103,15 @@ MainActivity.kt
 
 ## Testing
 
-The app works best when you have language learning apps installed and have used them in the past 30 days. Supported apps include:
+The app works best when you have language learning or reading apps installed and have used them in the last 24 hours.
+
+**Supported language learning apps:**
 - Duolingo, Anki, LingoDeer, Drops
 - Japanese learning apps: Kanji Study, Renshuu, J5a, Hey Japan
 - And 5 more (see KnownApps.kt for the complete list)
+
+**Supported reading apps:**
+- Kindle, Google Play Books
 
 The library will automatically detect and track usage of any installed supported apps.
 
@@ -98,5 +119,5 @@ The library will automatically detect and track usage of any installed supported
 
 - The app requires Android API 26+ (Android 8.0+)
 - `PACKAGE_USAGE_STATS` is a protected permission that requires user action
-- The library uses sparse data structure - only days with activity are returned
-- Average calculation: total minutes / total days in range (not just active days)
+- Queries return data for the last 24 hours only
+- Each metric can be queried independently with its own data quality information

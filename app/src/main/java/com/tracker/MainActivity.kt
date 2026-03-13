@@ -5,6 +5,8 @@ import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.tracker.core.Tracker
+import com.tracker.core.result.LanguageLearningMetricResult
+import com.tracker.core.result.ReadingMetricResult
 import com.tracker.core.types.Metric
 import com.tracker.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
@@ -14,9 +16,9 @@ import kotlinx.coroutines.launch
  *
  * This app shows:
  * 1. How to build a Tracker instance
- * 2. How to check and request access using library methods
- * 3. How to query metrics for the last 24 hours using coroutines
- * 4. How to display results (activity data and data quality)
+ * 2. How to check and request access per-metric
+ * 3. How to query individual metrics for the last 24 hours using coroutines
+ * 4. How to display results (activity data and data quality per metric)
  */
 class MainActivity : AppCompatActivity() {
 
@@ -38,7 +40,6 @@ class MainActivity : AppCompatActivity() {
      */
     private fun setupTracker() {
         tracker = Tracker.Builder(this)
-            .requestMetrics(Metric.LANGUAGE_LEARNING, Metric.READING)
             .setMinConfidence(0.50f)  // 50% confidence threshold
             .build()
     }
@@ -52,8 +53,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnRequestPermission.setOnClickListener {
-            // Use library method to request missing access
-            tracker.requestMissingAccess(this)
+            // Request missing access for both metrics
+            tracker.requestMissingAccess(this, Metric.LANGUAGE_LEARNING)
+            tracker.requestMissingAccess(this, Metric.READING)
         }
     }
 
@@ -61,8 +63,11 @@ class MainActivity : AppCompatActivity() {
      * Step 3: Check access and query if granted
      */
     private fun checkAccessAndQuery() {
-        // Use library method to check if all required access is granted
-        if (tracker.hasAllRequiredAccess()) {
+        // Check if access is granted for both metrics
+        val languageLearningAccess = tracker.hasAllRequiredAccess(Metric.LANGUAGE_LEARNING)
+        val readingAccess = tracker.hasAllRequiredAccess(Metric.READING)
+
+        if (languageLearningAccess && readingAccess) {
             showPermissionGranted()
             queryMetrics()
         } else {
@@ -78,11 +83,12 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                // Query for the last 24 hours
-                val result = tracker.queryAsync()
+                // Query each metric for the last 24 hours
+                val languageLearningResult = tracker.queryLanguageLearning()
+                val readingResult = tracker.queryReading()
 
                 // Display results
-                displayResults(result)
+                displayResults(languageLearningResult, readingResult)
             } catch (e: Exception) {
                 showError(e.message ?: "Unknown error")
             }
@@ -92,7 +98,10 @@ class MainActivity : AppCompatActivity() {
     /**
      * Step 5: Display results in the UI
      */
-    private fun displayResults(result: com.tracker.core.result.MetricsResult) {
+    private fun displayResults(
+        languageLearningResult: LanguageLearningMetricResult,
+        readingResult: ReadingMetricResult
+    ) {
         hideLoading()
 
         with(binding) {
@@ -100,7 +109,7 @@ class MainActivity : AppCompatActivity() {
             tvTimeRange.text = "Last 24 Hours"
 
             // Language Learning results
-            val llResult = result.languageLearning
+            val llResult = languageLearningResult.result
             if (llResult != null && llResult.occurred) {
                 tvLanguageLearningStatus.text = "✓ Activity Detected"
                 tvLanguageLearningDuration.text = "Duration: ${llResult.durationMinutes} minutes"
@@ -118,13 +127,13 @@ class MainActivity : AppCompatActivity() {
             }
 
             // Reading results
-            val readingResult = result.reading
-            if (readingResult != null && readingResult.occurred) {
+            val readResult = readingResult.result
+            if (readResult != null && readResult.occurred) {
                 tvReadingStatus.text = "✓ Activity Detected"
-                tvReadingDuration.text = "Duration: ${readingResult.durationMinutes} minutes"
-                tvReadingConfidence.text = "Confidence: ${formatConfidence(readingResult.confidence)} (${readingResult.confidenceLevel})"
-                tvReadingApps.text = if (readingResult.apps.isNotEmpty()) {
-                    "Apps: ${readingResult.apps.joinToString(", ") { it.appName }}"
+                tvReadingDuration.text = "Duration: ${readResult.durationMinutes} minutes"
+                tvReadingConfidence.text = "Confidence: ${formatConfidence(readResult.confidence)} (${readResult.confidenceLevel})"
+                tvReadingApps.text = if (readResult.apps.isNotEmpty()) {
+                    "Apps: ${readResult.apps.joinToString(", ") { it.appName }}"
                 } else {
                     "Apps: None detected"
                 }
@@ -136,7 +145,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             // Data Quality info
-            tvDataQuality.text = buildDataQualityText(result.dataQuality)
+            tvDataQuality.text = buildDataQualityText(languageLearningResult.dataQuality)
 
             // Show results section
             resultSection.visibility = View.VISIBLE

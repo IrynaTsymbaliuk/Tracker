@@ -1,7 +1,6 @@
 package com.tracker.core
 
 import android.content.Context
-import com.tracker.core.types.Metric
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -15,9 +14,6 @@ import org.robolectric.RuntimeEnvironment
 
 /**
  * Test suite for verifying Tracker.Builder validation logic.
- *
- * Tests builder-level validation rules, such as ensuring at least
- * one metric is requested before building.
  */
 @RunWith(RobolectricTestRunner::class)
 class TrackerBuilderValidationTest {
@@ -30,59 +26,39 @@ class TrackerBuilderValidationTest {
     }
 
     /**
-     * Test: Building without requesting metrics throws IllegalArgumentException.
+     * Test: Building without any configuration succeeds.
      *
-     * Given: A Builder instance without calling requestMetrics()
+     * Since metrics are no longer required upfront, the builder
+     * can be built with just a context.
+     *
+     * Given: A Builder instance without any configuration
      * When: build() is called
-     * Then: IllegalArgumentException should be thrown
+     * Then: A valid Tracker instance should be created with defaults
      */
-    @Test(expected = IllegalArgumentException::class)
-    fun `build without metrics throws IllegalArgumentException`() {
-        Tracker.Builder(context)
-            .build() // No requestMetrics() called
+    @Test
+    fun `build without configuration succeeds with defaults`() {
+        val tracker = Tracker.Builder(context)
+            .build()
+
+        assertNotNull(tracker)
+        assertEquals(0.50f, tracker.getMinConfidence(), 0.001f) // Default confidence
     }
 
     /**
-     * Test: Building with a single metric succeeds.
+     * Test: Builder accepts custom minConfidence.
      *
-     * Given: A Builder instance with one metric requested
+     * Given: A Builder instance with custom minConfidence
      * When: build() is called
      * Then: A valid Tracker instance should be created
      */
     @Test
-    fun `build with single metric succeeds`() {
-        // Act
+    fun `build with custom minConfidence succeeds`() {
         val tracker = Tracker.Builder(context)
-            .requestMetrics(Metric.LANGUAGE_LEARNING)
+            .setMinConfidence(0.75f)
             .build()
 
-        // Assert
         assertNotNull(tracker)
-    }
-
-    /**
-     * Test: Building with multiple metrics succeeds.
-     *
-     * Currently only LANGUAGE_LEARNING exists, but this test
-     * demonstrates the builder supports multiple metrics (varargs).
-     * When more metrics are added, this test will be more meaningful.
-     *
-     * Given: A Builder instance with multiple metrics requested
-     * When: build() is called
-     * Then: A valid Tracker instance should be created
-     */
-    @Test
-    fun `build with multiple metrics succeeds`() {
-        // Act: Currently only one metric exists, but using varargs syntax
-        val tracker = Tracker.Builder(context)
-            .requestMetrics(Metric.LANGUAGE_LEARNING)
-            .build()
-
-        // Assert
-        assertNotNull(tracker)
-
-        // Future-proofing: When more metrics exist, test could look like:
-        // .requestMetrics(Metric.LANGUAGE_LEARNING, Metric.EXERCISE, Metric.READING)
+        assertEquals(0.75f, tracker.getMinConfidence(), 0.001f)
     }
 
     /**
@@ -106,7 +82,6 @@ class TrackerBuilderValidationTest {
 
         // Act: Build with mock activity context
         val tracker = Tracker.Builder(mockActivityContext)
-            .requestMetrics(Metric.LANGUAGE_LEARNING)
             .build()
 
         // Assert: Verify applicationContext was accessed
@@ -126,14 +101,75 @@ class TrackerBuilderValidationTest {
      */
     @Test
     fun `builder supports method chaining`() {
-        // Act: Chain all builder methods together
+        // Act: Chain builder methods together
         val tracker = Tracker.Builder(context)
-            .requestMetrics(Metric.LANGUAGE_LEARNING)
             .setMinConfidence(0.75f)
             .build()
 
         // Assert: Verify all configurations were applied
         assertNotNull(tracker)
         assertEquals(0.75f, tracker.getMinConfidence(), 0.001f)
+    }
+
+    /**
+     * Test: minConfidence validation - rejects values below 0.
+     *
+     * Given: A Builder with minConfidence < 0
+     * When: setMinConfidence() is called
+     * Then: IllegalArgumentException should be thrown
+     */
+    @Test(expected = IllegalArgumentException::class)
+    fun `minConfidence below 0 throws exception`() {
+        Tracker.Builder(context)
+            .setMinConfidence(-0.1f)
+            .build()
+    }
+
+    /**
+     * Test: minConfidence validation - rejects values above 1.
+     *
+     * Given: A Builder with minConfidence > 1
+     * When: setMinConfidence() is called
+     * Then: IllegalArgumentException should be thrown
+     */
+    @Test(expected = IllegalArgumentException::class)
+    fun `minConfidence above 1 throws exception`() {
+        Tracker.Builder(context)
+            .setMinConfidence(1.1f)
+            .build()
+    }
+
+    /**
+     * Test: minConfidence validation - accepts 0.
+     *
+     * Given: A Builder with minConfidence = 0
+     * When: build() is called
+     * Then: A valid Tracker instance should be created
+     */
+    @Test
+    fun `minConfidence 0 is valid`() {
+        val tracker = Tracker.Builder(context)
+            .setMinConfidence(0.0f)
+            .build()
+
+        assertNotNull(tracker)
+        assertEquals(0.0f, tracker.getMinConfidence(), 0.001f)
+    }
+
+    /**
+     * Test: minConfidence validation - accepts 1.
+     *
+     * Given: A Builder with minConfidence = 1
+     * When: build() is called
+     * Then: A valid Tracker instance should be created
+     */
+    @Test
+    fun `minConfidence 1 is valid`() {
+        val tracker = Tracker.Builder(context)
+            .setMinConfidence(1.0f)
+            .build()
+
+        assertNotNull(tracker)
+        assertEquals(1.0f, tracker.getMinConfidence(), 0.001f)
     }
 }
