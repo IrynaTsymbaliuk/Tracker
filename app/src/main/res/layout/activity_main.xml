@@ -107,7 +107,7 @@
             android:id="@+id/btnQuery"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Query Last 30 Days"
+            android:text="Query Last 24 Hours"
             android:textSize="16sp"
             android:padding="14dp"
             android:layout_marginBottom="16dp"
@@ -136,7 +136,7 @@
             android:visibility="gone"
             tools:visibility="visible">
 
-            <!-- Summary Card -->
+            <!-- Time Range Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -153,20 +153,20 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="📊 Summary Statistics"
+                        android:text="📊 Activity Results"
                         android:textSize="18sp"
                         android:textStyle="bold"
                         android:textColor="?android:textColorPrimary"
-                        android:layout_marginBottom="16dp" />
+                        android:layout_marginBottom="8dp" />
 
                     <TextView
-                        android:id="@+id/tvTotalDays"
+                        android:id="@+id/tvTimeRange"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textSize="16sp"
-                        android:textColor="?android:textColorPrimary"
+                        android:textSize="14sp"
+                        android:textColor="?android:textColorSecondary"
                         android:layout_marginBottom="16dp"
-                        tools:text="Total Days: 30" />
+                        tools:text="Last 24 Hours" />
 
                     <!-- Language Learning Section -->
                     <TextView
@@ -179,24 +179,44 @@
                         android:layout_marginBottom="8dp" />
 
                     <TextView
-                        android:id="@+id/tvLanguageLearningDays"
+                        android:id="@+id/tvLanguageLearningStatus"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:textSize="14sp"
                         android:textColor="?android:textColorSecondary"
                         android:layout_marginBottom="4dp"
                         android:layout_marginStart="12dp"
-                        tools:text="Language Learning Days: 15" />
+                        tools:text="✓ Activity Detected" />
 
                     <TextView
-                        android:id="@+id/tvLanguageLearningAverage"
+                        android:id="@+id/tvLanguageLearningDuration"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:textColor="?android:textColorSecondary"
+                        android:layout_marginBottom="4dp"
+                        android:layout_marginStart="12dp"
+                        tools:text="Duration: 45 minutes" />
+
+                    <TextView
+                        android:id="@+id/tvLanguageLearningConfidence"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:textColor="?android:textColorSecondary"
+                        android:layout_marginBottom="4dp"
+                        android:layout_marginStart="12dp"
+                        tools:text="Confidence: 85% (HIGH)" />
+
+                    <TextView
+                        android:id="@+id/tvLanguageLearningApps"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:textSize="14sp"
                         android:textColor="?android:textColorSecondary"
                         android:layout_marginBottom="16dp"
                         android:layout_marginStart="12dp"
-                        tools:text="Avg Minutes/Day: 25" />
+                        tools:text="Apps: Duolingo, Memrise" />
 
                     <!-- Reading Section -->
                     <TextView
@@ -209,29 +229,49 @@
                         android:layout_marginBottom="8dp" />
 
                     <TextView
-                        android:id="@+id/tvReadingDays"
+                        android:id="@+id/tvReadingStatus"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:textSize="14sp"
                         android:textColor="?android:textColorSecondary"
                         android:layout_marginBottom="4dp"
                         android:layout_marginStart="12dp"
-                        tools:text="Reading Days: 12" />
+                        tools:text="✓ Activity Detected" />
 
                     <TextView
-                        android:id="@+id/tvReadingAverage"
+                        android:id="@+id/tvReadingDuration"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:textColor="?android:textColorSecondary"
+                        android:layout_marginBottom="4dp"
+                        android:layout_marginStart="12dp"
+                        tools:text="Duration: 30 minutes" />
+
+                    <TextView
+                        android:id="@+id/tvReadingConfidence"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:textColor="?android:textColorSecondary"
+                        android:layout_marginBottom="4dp"
+                        android:layout_marginStart="12dp"
+                        tools:text="Confidence: 75% (MEDIUM)" />
+
+                    <TextView
+                        android:id="@+id/tvReadingApps"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:textSize="14sp"
                         android:textColor="?android:textColorSecondary"
                         android:layout_marginStart="12dp"
-                        tools:text="Avg Minutes/Day: 18" />
+                        tools:text="Apps: Kindle, Google Books" />
 
                 </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Day-by-Day Results Card -->
+            <!-- Data Quality Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -248,21 +288,21 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="📅 Day-by-Day Results"
+                        android:text="🔍 Data Quality"
                         android:textSize="18sp"
                         android:textStyle="bold"
                         android:textColor="?android:textColorPrimary"
                         android:layout_marginBottom="16dp" />
 
                     <TextView
-                        android:id="@+id/tvDayByDayResults"
+                        android:id="@+id/tvDataQuality"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:textSize="14sp"
                         android:textColor="?android:textColorPrimary"
                         android:fontFamily="monospace"
                         android:lineSpacingExtra="4dp"
-                        tools:text="Jan 15, 2024:\n  Duration: 30 minutes\n  Confidence: 80% (HIGH)\n  Apps: Duolingo" />
+                        tools:text="Overall Reliability: HIGH\nAvailable Sources: USAGE_STATS" />
 
                 </LinearLayout>
 

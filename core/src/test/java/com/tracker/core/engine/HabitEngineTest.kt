@@ -20,17 +20,15 @@ import io.mockk.verify
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Calendar
 
 /**
  * Test suite for HabitEngine.
  *
- * Tests coordination of collectors, aggregators, day grouping, summary building,
- * and data quality assessment for habit tracking.
+ * Tests coordination of collectors, aggregators, and result building.
  */
 class HabitEngineTest {
 
@@ -79,17 +77,17 @@ class HabitEngineTest {
     }
 
     @Test
-    fun `query groups evidence by day correctly`() = runTest {
+    fun `query aggregates all evidence in single call not per day`() = runTest {
         // Arrange
-        val day1Start = createTimestamp(2024, 1, 1, 0, 0)
-        val day1_8am = createTimestamp(2024, 1, 1, 8, 0)
-        val day1_5pm = createTimestamp(2024, 1, 1, 17, 0)
-        val day2_10am = createTimestamp(2024, 1, 2, 10, 0)
+        val now = 1700000000000L
+        val fromMillis = now - 86_400_000L
+        val toMillis = now
 
+        // Evidence from different times within 24h window
         val evidence = listOf(
-            createEvidence(timestampMillis = day1_8am),
-            createEvidence(timestampMillis = day1_5pm),
-            createEvidence(timestampMillis = day2_10am)
+            createEvidence(timestampMillis = fromMillis + 1000L),
+            createEvidence(timestampMillis = fromMillis + 3600000L), // 1 hour later
+            createEvidence(timestampMillis = toMillis - 1000L) // Near end
         )
 
         val mockCollector = mockk<Collector>()
@@ -111,28 +109,21 @@ class HabitEngineTest {
         )
 
         // Act
-        engine.query(fromMillis = day1Start, toMillis = day2_10am)
+        engine.query(fromMillis = fromMillis, toMillis = toMillis)
 
-        // Assert - Day 1 should have 2 evidences grouped together
-        verify { mockAggregator.aggregate(day1Start, match { it.size == 2 }, any()) }
+        // Assert - Aggregator called ONCE with all 3 evidence items
+        verify(exactly = 1) { mockAggregator.aggregate(any(), match { it.size == 3 }, any()) }
     }
 
     @Test
-    fun `query returns only days with evidence not empty days`() = runTest {
+    fun `query returns direct result fields not days list`() = runTest {
         // Arrange
-        val jan1 = createTimestamp(2024, 1, 1)
-        val jan3 = createTimestamp(2024, 1, 3)
-        val jan5 = createTimestamp(2024, 1, 5)
-
-        // Evidence only on Jan 1 and Jan 3 (Jan 2, 4, 5 have no evidence)
-        val evidence = listOf(
-            createEvidence(timestampMillis = jan1),
-            createEvidence(timestampMillis = jan3)
-        )
+        val evidence = listOf(createEvidence(timestampMillis = 1700000000000L))
 
         val mockCollector = mockk<Collector>()
         coEvery { mockCollector.collect(any(), any()) } returns Result.success(evidence)
 
+        val expectedResult = createLanguageLearningResult(occurred = true, durationMinutes = 45)
         val mockAggregator = mockk<Aggregator<LanguageLearningResult>>()
         every {
             mockAggregator.aggregate(
@@ -140,7 +131,7 @@ class HabitEngineTest {
                 any(),
                 any()
             )
-        } returns createLanguageLearningResult()
+        } returns expectedResult
 
         val engine = createEngine(
             requestedMetrics = setOf(Metric.LANGUAGE_LEARNING),
@@ -149,246 +140,17 @@ class HabitEngineTest {
         )
 
         // Act
-        val result = engine.query(fromMillis = jan1, toMillis = jan5)
+        val result = engine.query(fromMillis = 1000L, toMillis = 2000L)
 
-        // Assert - Sparse result: only 2 days, not 5
-        assertEquals(2, result.days.size)
-        assertTrue(result.days.any { it.timestampMillis == jan1 })
-        assertTrue(result.days.any { it.timestampMillis == jan3 })
-    }
-
-    // ============================================================
-    // Day Grouping Tests
-    // ============================================================
-
-    @Test
-    fun `group evidence by day uses start of day timestamp 00_00_00`() = runTest {
-        // Arrange
-        val day1Start = createTimestamp(2024, 1, 1, 0, 0)
-        val day1_8am = createTimestamp(2024, 1, 1, 8, 0)
-        val day1_5pm = createTimestamp(2024, 1, 1, 17, 0)
-
-        val evidence = listOf(
-            createEvidence(timestampMillis = day1_8am),
-            createEvidence(timestampMillis = day1_5pm)
-        )
-
-        val engine = createEngine(requestedMetrics = setOf(Metric.LANGUAGE_LEARNING))
-
-        // Act
-        val grouped = engine.groupEvidenceByDay(evidence)
-
-        // Assert
-        assertTrue(grouped.containsKey(day1Start))
-        assertEquals(2, grouped[day1Start]?.size)
+        // Assert - Direct field access, no days
+        assertNotNull(result.languageLearning)
+        assertEquals(expectedResult, result.languageLearning)
+        // result.days would be a compile error
     }
 
     @Test
-    fun `calculate days in range includes all days between from and to inclusive`() = runTest {
+    fun `result has no summary field`() = runTest {
         // Arrange
-        val jan1 = createTimestamp(2024, 1, 1)
-        val jan5 = createTimestamp(2024, 1, 5)
-
-        val engine = createEngine(requestedMetrics = setOf(Metric.LANGUAGE_LEARNING))
-
-        // Act
-        val days = engine.calculateDaysInRange(jan1, jan5)
-
-        // Assert
-        assertEquals(5, days)
-    }
-
-    @Test
-    fun `calculate days in range with same day returns 1`() = runTest {
-        // Arrange
-        val jan1_8am = createTimestamp(2024, 1, 1, 8, 0)
-        val jan1_5pm = createTimestamp(2024, 1, 1, 17, 0)
-
-        val engine = createEngine(requestedMetrics = setOf(Metric.LANGUAGE_LEARNING))
-
-        // Act
-        val days = engine.calculateDaysInRange(jan1_8am, jan1_5pm)
-
-        // Assert
-        assertEquals(1, days)
-    }
-
-    @Test
-    fun `evidence from different hours of same day grouped together`() = runTest {
-        // Arrange
-        val day1Start = createTimestamp(2024, 1, 1, 0, 0)
-        val day1_2am = createTimestamp(2024, 1, 1, 2, 0)
-        val day1_8am = createTimestamp(2024, 1, 1, 8, 0)
-        val day1_5pm = createTimestamp(2024, 1, 1, 17, 0)
-        val day1_11pm = createTimestamp(2024, 1, 1, 23, 0)
-
-        val evidence = listOf(
-            createEvidence(timestampMillis = day1_2am),
-            createEvidence(timestampMillis = day1_8am),
-            createEvidence(timestampMillis = day1_5pm),
-            createEvidence(timestampMillis = day1_11pm)
-        )
-
-        val engine = createEngine(requestedMetrics = setOf(Metric.LANGUAGE_LEARNING))
-
-        // Act
-        val grouped = engine.groupEvidenceByDay(evidence)
-
-        // Assert
-        assertEquals(1, grouped.size)
-        assertEquals(4, grouped[day1Start]?.size)
-    }
-
-    @Test
-    fun `days without evidence are not returned in sparse map`() = runTest {
-        // Arrange
-        val jan1 = createTimestamp(2024, 1, 1)
-        val jan2 = createTimestamp(2024, 1, 2)
-        val jan3 = createTimestamp(2024, 1, 3)
-
-        // Evidence only on day 1
-        val evidence = listOf(createEvidence(timestampMillis = jan1))
-
-        val engine = createEngine(requestedMetrics = setOf(Metric.LANGUAGE_LEARNING))
-
-        // Act
-        val grouped = engine.groupEvidenceByDay(evidence)
-
-        // Assert
-        assertEquals(1, grouped.size)
-        assertEquals(1, grouped[jan1]?.size)
-        assertFalse(grouped.containsKey(jan2))
-        assertFalse(grouped.containsKey(jan3))
-    }
-
-    // ============================================================
-    // Summary Building Tests
-    // ============================================================
-
-    @Test
-    fun `summary counts language learning days correctly`() = runTest {
-        // Arrange
-        val jan1 = createTimestamp(2024, 1, 1)
-        val jan2 = createTimestamp(2024, 1, 2)
-        val jan3 = createTimestamp(2024, 1, 3)
-
-        val evidence = listOf(
-            createEvidence(timestampMillis = jan1),
-            createEvidence(timestampMillis = jan2),
-            createEvidence(timestampMillis = jan3)
-        )
-
-        val mockCollector = mockk<Collector>()
-        coEvery { mockCollector.collect(any(), any()) } returns Result.success(evidence)
-
-        val mockAggregator = mockk<Aggregator<LanguageLearningResult>>()
-        every { mockAggregator.aggregate(jan1, any(), any()) } returns createLanguageLearningResult(
-            occurred = true
-        )
-        every { mockAggregator.aggregate(jan2, any(), any()) } returns createLanguageLearningResult(
-            occurred = true
-        )
-        every { mockAggregator.aggregate(jan3, any(), any()) } returns createLanguageLearningResult(
-            occurred = false
-        )
-
-        val engine = createEngine(
-            requestedMetrics = setOf(Metric.LANGUAGE_LEARNING),
-            collectors = mapOf(Metric.LANGUAGE_LEARNING to mockCollector),
-            aggregators = mapOf(Metric.LANGUAGE_LEARNING to mockAggregator)
-        )
-
-        // Act
-        val result = engine.query(fromMillis = jan1, toMillis = jan3)
-
-        // Assert - Only days with occurred=true counted
-        assertEquals(2, result.summary.languageLearningDays)
-    }
-
-    @Test
-    fun `summary calculates average as total minutes divided by total days in range`() = runTest {
-        // Arrange
-        val jan1 = createTimestamp(2024, 1, 1)
-        val jan7 = createTimestamp(2024, 1, 7)
-
-        // Only 2 days have activity: Jan 1 (30 min), Jan 3 (60 min)
-        val jan3 = createTimestamp(2024, 1, 3)
-        val evidence = listOf(
-            createEvidence(timestampMillis = jan1),
-            createEvidence(timestampMillis = jan3)
-        )
-
-        val mockCollector = mockk<Collector>()
-        coEvery { mockCollector.collect(any(), any()) } returns Result.success(evidence)
-
-        val mockAggregator = mockk<Aggregator<LanguageLearningResult>>()
-        every { mockAggregator.aggregate(jan1, any(), any()) } returns createLanguageLearningResult(
-            durationMinutes = 30
-        )
-        every { mockAggregator.aggregate(jan3, any(), any()) } returns createLanguageLearningResult(
-            durationMinutes = 60
-        )
-
-        val engine = createEngine(
-            requestedMetrics = setOf(Metric.LANGUAGE_LEARNING),
-            collectors = mapOf(Metric.LANGUAGE_LEARNING to mockCollector),
-            aggregators = mapOf(Metric.LANGUAGE_LEARNING to mockAggregator)
-        )
-
-        // Act
-        val result = engine.query(fromMillis = jan1, toMillis = jan7)
-
-        // Assert - Average = 90 total minutes / 7 days = 12.857...
-        assertEquals(7, result.summary.totalDays)
-        assertEquals(12.857143f, result.summary.averageLanguageLearningMinutes!!, 0.001f)
-    }
-
-    @Test
-    fun `summary calculates total minutes correctly`() = runTest {
-        // Arrange
-        val jan1 = createTimestamp(2024, 1, 1)
-        val jan2 = createTimestamp(2024, 1, 2)
-        val jan3 = createTimestamp(2024, 1, 3)
-
-        val evidence = listOf(
-            createEvidence(timestampMillis = jan1),
-            createEvidence(timestampMillis = jan2),
-            createEvidence(timestampMillis = jan3)
-        )
-
-        val mockCollector = mockk<Collector>()
-        coEvery { mockCollector.collect(any(), any()) } returns Result.success(evidence)
-
-        val mockAggregator = mockk<Aggregator<LanguageLearningResult>>()
-        every { mockAggregator.aggregate(jan1, any(), any()) } returns createLanguageLearningResult(
-            durationMinutes = 20
-        )
-        every { mockAggregator.aggregate(jan2, any(), any()) } returns createLanguageLearningResult(
-            durationMinutes = 30
-        )
-        every { mockAggregator.aggregate(jan3, any(), any()) } returns createLanguageLearningResult(
-            durationMinutes = 15
-        )
-
-        val engine = createEngine(
-            requestedMetrics = setOf(Metric.LANGUAGE_LEARNING),
-            collectors = mapOf(Metric.LANGUAGE_LEARNING to mockCollector),
-            aggregators = mapOf(Metric.LANGUAGE_LEARNING to mockAggregator)
-        )
-
-        // Act
-        val result = engine.query(fromMillis = jan1, toMillis = jan3)
-
-        // Assert - Total = 20 + 30 + 15 = 65 minutes, Average = 65/3 = 21.666...
-        assertEquals(21.666666f, result.summary.averageLanguageLearningMinutes!!, 0.001f)
-    }
-
-    @Test
-    fun `summary handles zero language learning days returns 0 for average`() = runTest {
-        // Arrange
-        val jan1 = createTimestamp(2024, 1, 1)
-        val jan2 = createTimestamp(2024, 1, 2)
-
         val mockCollector = mockk<Collector>()
         coEvery { mockCollector.collect(any(), any()) } returns Result.success(emptyList())
 
@@ -398,65 +160,11 @@ class HabitEngineTest {
         )
 
         // Act
-        val result = engine.query(fromMillis = jan1, toMillis = jan2)
+        val result = engine.query(fromMillis = 1000L, toMillis = 2000L)
 
-        // Assert
-        assertEquals(0, result.summary.languageLearningDays)
-        assertEquals(0f, result.summary.averageLanguageLearningMinutes)
-    }
-
-    @Test
-    fun `summary totalDays equals number of days in range not days with data`() = runTest {
-        // Arrange
-        val jan1 = createTimestamp(2024, 1, 1)
-        val jan7 = createTimestamp(2024, 1, 7)
-
-        // Only 2 days have evidence
-        val evidence = listOf(
-            createEvidence(timestampMillis = jan1),
-            createEvidence(timestampMillis = jan7)
-        )
-
-        val mockCollector = mockk<Collector>()
-        coEvery { mockCollector.collect(any(), any()) } returns Result.success(evidence)
-
-        val mockAggregator = mockk<Aggregator<LanguageLearningResult>>()
-        every {
-            mockAggregator.aggregate(
-                any(),
-                any(),
-                any()
-            )
-        } returns createLanguageLearningResult()
-
-        val engine = createEngine(
-            requestedMetrics = setOf(Metric.LANGUAGE_LEARNING),
-            collectors = mapOf(Metric.LANGUAGE_LEARNING to mockCollector),
-            aggregators = mapOf(Metric.LANGUAGE_LEARNING to mockAggregator)
-        )
-
-        // Act
-        val result = engine.query(fromMillis = jan1, toMillis = jan7)
-
-        // Assert
-        assertEquals(7, result.summary.totalDays)
-        assertEquals(2, result.days.size)
-    }
-
-    @Test
-    fun `summary fields are null when metric not requested`() = runTest {
-        // Arrange
-        val jan1 = createTimestamp(2024, 1, 1)
-        val jan2 = createTimestamp(2024, 1, 2)
-
-        val engine = createEngine(requestedMetrics = emptySet())
-
-        // Act
-        val result = engine.query(fromMillis = jan1, toMillis = jan2)
-
-        // Assert
-        assertNull(result.summary.languageLearningDays)
-        assertNull(result.summary.averageLanguageLearningMinutes)
+        // Assert - No summary field exists
+        assertNotNull(result.dataQuality)
+        // result.summary would be a compile error
     }
 
     // ============================================================
@@ -501,8 +209,7 @@ class HabitEngineTest {
     @Test
     fun `query with READING metric aggregates reading evidence correctly`() = runTest {
         // Arrange
-        val jan1 = createTimestamp(2024, 1, 1)
-        val evidence = listOf(createEvidence(timestampMillis = jan1))
+        val evidence = listOf(createEvidence(timestampMillis = 1700000000000L))
 
         val mockCollector = mockk<Collector>()
         coEvery { mockCollector.collect(any(), any()) } returns Result.success(evidence)
@@ -523,139 +230,18 @@ class HabitEngineTest {
         )
 
         // Act
-        engine.query(fromMillis = jan1, toMillis = jan1)
+        val result = engine.query(fromMillis = 1000L, toMillis = 2000L)
 
         // Assert
-        verify { mockAggregator.aggregate(jan1, match { it.size == 1 }, any()) }
+        assertNotNull(result.reading)
+        verify(exactly = 1) { mockAggregator.aggregate(any(), match { it.size == 1 }, any()) }
     }
 
     @Test
-    fun `summary counts reading days correctly`() = runTest {
+    fun `query with both metrics calls both collectors and aggregators`() = runTest {
         // Arrange
-        val jan1 = createTimestamp(2024, 1, 1)
-        val jan2 = createTimestamp(2024, 1, 2)
-        val jan3 = createTimestamp(2024, 1, 3)
-
-        val evidence = listOf(
-            createEvidence(timestampMillis = jan1),
-            createEvidence(timestampMillis = jan2),
-            createEvidence(timestampMillis = jan3)
-        )
-
-        val mockCollector = mockk<Collector>()
-        coEvery { mockCollector.collect(any(), any()) } returns Result.success(evidence)
-
-        val mockAggregator = mockk<Aggregator<ReadingResult>>()
-        every { mockAggregator.aggregate(jan1, any(), any()) } returns createReadingResult(
-            occurred = true
-        )
-        every { mockAggregator.aggregate(jan2, any(), any()) } returns createReadingResult(
-            occurred = true
-        )
-        every { mockAggregator.aggregate(jan3, any(), any()) } returns createReadingResult(
-            occurred = false
-        )
-
-        val engine = createEngine(
-            requestedMetrics = setOf(Metric.READING),
-            collectors = mapOf(Metric.READING to mockCollector),
-            aggregators = mapOf(Metric.READING to mockAggregator)
-        )
-
-        // Act
-        val result = engine.query(fromMillis = jan1, toMillis = jan3)
-
-        // Assert - Only days with occurred=true counted
-        assertEquals(2, result.summary.readingDays)
-    }
-
-    @Test
-    fun `summary calculates reading average as total minutes divided by total days in range`() = runTest {
-        // Arrange
-        val jan1 = createTimestamp(2024, 1, 1)
-        val jan7 = createTimestamp(2024, 1, 7)
-
-        // Only 2 days have activity: Jan 1 (45 min), Jan 3 (30 min)
-        val jan3 = createTimestamp(2024, 1, 3)
-        val evidence = listOf(
-            createEvidence(timestampMillis = jan1),
-            createEvidence(timestampMillis = jan3)
-        )
-
-        val mockCollector = mockk<Collector>()
-        coEvery { mockCollector.collect(any(), any()) } returns Result.success(evidence)
-
-        val mockAggregator = mockk<Aggregator<ReadingResult>>()
-        every { mockAggregator.aggregate(jan1, any(), any()) } returns createReadingResult(
-            durationMinutes = 45
-        )
-        every { mockAggregator.aggregate(jan3, any(), any()) } returns createReadingResult(
-            durationMinutes = 30
-        )
-
-        val engine = createEngine(
-            requestedMetrics = setOf(Metric.READING),
-            collectors = mapOf(Metric.READING to mockCollector),
-            aggregators = mapOf(Metric.READING to mockAggregator)
-        )
-
-        // Act
-        val result = engine.query(fromMillis = jan1, toMillis = jan7)
-
-        // Assert - Average = 75 total minutes / 7 days = 10.714...
-        assertEquals(7, result.summary.totalDays)
-        assertEquals(10.714286f, result.summary.averageReadingMinutes!!, 0.001f)
-    }
-
-    @Test
-    fun `summary reading fields are null when READING metric not requested`() = runTest {
-        // Arrange
-        val jan1 = createTimestamp(2024, 1, 1)
-        val jan2 = createTimestamp(2024, 1, 2)
-
-        val engine = createEngine(requestedMetrics = emptySet())
-
-        // Act
-        val result = engine.query(fromMillis = jan1, toMillis = jan2)
-
-        // Assert
-        assertNull(result.summary.readingDays)
-        assertNull(result.summary.averageReadingMinutes)
-    }
-
-    @Test
-    fun `query with both LANGUAGE_LEARNING and READING metrics calls both collectors`() = runTest {
-        // Arrange
-        val mockLangCollector = mockk<Collector>()
-        coEvery { mockLangCollector.collect(any(), any()) } returns Result.success(emptyList())
-
-        val mockReadingCollector = mockk<Collector>()
-        coEvery { mockReadingCollector.collect(any(), any()) } returns Result.success(emptyList())
-
-        val engine = createEngine(
-            requestedMetrics = setOf(Metric.LANGUAGE_LEARNING, Metric.READING),
-            collectors = mapOf(
-                Metric.LANGUAGE_LEARNING to mockLangCollector,
-                Metric.READING to mockReadingCollector
-            )
-        )
-
-        // Act
-        engine.query(fromMillis = 1000L, toMillis = 2000L)
-
-        // Assert
-        coVerify { mockLangCollector.collect(1000L, 2000L) }
-        coVerify { mockReadingCollector.collect(1000L, 2000L) }
-    }
-
-    @Test
-    fun `summary includes both language learning and reading when both metrics requested`() = runTest {
-        // Arrange
-        val jan1 = createTimestamp(2024, 1, 1)
-        val jan2 = createTimestamp(2024, 1, 2)
-
-        val langEvidence = listOf(createEvidence(timestampMillis = jan1))
-        val readingEvidence = listOf(createEvidence(timestampMillis = jan2))
+        val langEvidence = listOf(createEvidence(timestampMillis = 1700000000000L))
+        val readingEvidence = listOf(createEvidence(timestampMillis = 1700000000000L + 1000L))
 
         val mockLangCollector = mockk<Collector>()
         coEvery { mockLangCollector.collect(any(), any()) } returns Result.success(langEvidence)
@@ -664,17 +250,13 @@ class HabitEngineTest {
         coEvery { mockReadingCollector.collect(any(), any()) } returns Result.success(readingEvidence)
 
         val mockLangAggregator = mockk<Aggregator<LanguageLearningResult>>()
-        every { mockLangAggregator.aggregate(jan1, any(), any()) } returns createLanguageLearningResult(
-            occurred = true,
-            durationMinutes = 30
+        every { mockLangAggregator.aggregate(any(), any(), any()) } returns createLanguageLearningResult(
+            durationMinutes = 45
         )
-        every { mockLangAggregator.aggregate(jan2, any(), any()) } returns null
 
         val mockReadingAggregator = mockk<Aggregator<ReadingResult>>()
-        every { mockReadingAggregator.aggregate(jan1, any(), any()) } returns null
-        every { mockReadingAggregator.aggregate(jan2, any(), any()) } returns createReadingResult(
-            occurred = true,
-            durationMinutes = 45
+        every { mockReadingAggregator.aggregate(any(), any(), any()) } returns createReadingResult(
+            durationMinutes = 30
         )
 
         val engine = createEngine(
@@ -690,18 +272,143 @@ class HabitEngineTest {
         )
 
         // Act
-        val result = engine.query(fromMillis = jan1, toMillis = jan2)
+        val result = engine.query(fromMillis = 1000L, toMillis = 2000L)
 
         // Assert
-        assertEquals(1, result.summary.languageLearningDays)
-        assertEquals(1, result.summary.readingDays)
-        assertEquals(15.0f, result.summary.averageLanguageLearningMinutes!!, 0.001f) // 30/2 days = 15.0
-        assertEquals(22.5f, result.summary.averageReadingMinutes!!, 0.001f) // 45/2 days = 22.5
+        coVerify { mockLangCollector.collect(1000L, 2000L) }
+        coVerify { mockReadingCollector.collect(1000L, 2000L) }
+        assertNotNull(result.languageLearning)
+        assertNotNull(result.reading)
+        assertEquals(45, result.languageLearning?.durationMinutes)
+        assertEquals(30, result.reading?.durationMinutes)
+    }
+
+    @Test
+    fun `unrequested metric returns null in result`() = runTest {
+        // Arrange - Only request LANGUAGE_LEARNING
+        val mockCollector = mockk<Collector>()
+        coEvery { mockCollector.collect(any(), any()) } returns Result.success(
+            listOf(createEvidence())
+        )
+
+        val mockAggregator = mockk<Aggregator<LanguageLearningResult>>()
+        every { mockAggregator.aggregate(any(), any(), any()) } returns createLanguageLearningResult()
+
+        val engine = createEngine(
+            requestedMetrics = setOf(Metric.LANGUAGE_LEARNING),
+            collectors = mapOf(Metric.LANGUAGE_LEARNING to mockCollector),
+            aggregators = mapOf(Metric.LANGUAGE_LEARNING to mockAggregator)
+        )
+
+        // Act
+        val result = engine.query(fromMillis = 1000L, toMillis = 2000L)
+
+        // Assert
+        assertNotNull(result.languageLearning)
+        assertNull(result.reading) // Not requested
+    }
+
+    @Test
+    fun `aggregator returns null when no evidence collected`() = runTest {
+        // Arrange
+        val mockCollector = mockk<Collector>()
+        coEvery { mockCollector.collect(any(), any()) } returns Result.success(emptyList())
+
+        val mockAggregator = mockk<Aggregator<LanguageLearningResult>>()
+        every { mockAggregator.aggregate(any(), any(), any()) } returns null
+
+        val engine = createEngine(
+            requestedMetrics = setOf(Metric.LANGUAGE_LEARNING),
+            collectors = mapOf(Metric.LANGUAGE_LEARNING to mockCollector),
+            aggregators = mapOf(Metric.LANGUAGE_LEARNING to mockAggregator)
+        )
+
+        // Act
+        val result = engine.query(fromMillis = 1000L, toMillis = 2000L)
+
+        // Assert
+        assertNull(result.languageLearning)
+    }
+
+    @Test
+    fun `collector failure results in null metric result`() = runTest {
+        // Arrange
+        val mockCollector = mockk<Collector>()
+        coEvery { mockCollector.collect(any(), any()) } returns
+            Result.failure(SecurityException("Permission denied"))
+
+        val engine = createEngine(
+            requestedMetrics = setOf(Metric.LANGUAGE_LEARNING),
+            collectors = mapOf(Metric.LANGUAGE_LEARNING to mockCollector)
+        )
+
+        // Act
+        val result = engine.query(fromMillis = 1000L, toMillis = 2000L)
+
+        // Assert
+        assertNull(result.languageLearning)
+        assertNotNull(result.dataQuality)
+    }
+
+    @Test
+    fun `evidence from entire 24h window aggregated together`() = runTest {
+        // Arrange
+        val now = 1700000000000L
+        val fromMillis = now - 86_400_000L
+
+        // Evidence spanning the entire 24h window
+        val evidence = listOf(
+            createEvidence(timestampMillis = fromMillis), // Start of window
+            createEvidence(timestampMillis = fromMillis + 12 * 3600 * 1000L), // Middle (12 hours)
+            createEvidence(timestampMillis = now - 1000L) // Near end
+        )
+
+        val mockCollector = mockk<Collector>()
+        coEvery { mockCollector.collect(any(), any()) } returns Result.success(evidence)
+
+        val mockAggregator = mockk<Aggregator<LanguageLearningResult>>()
+        every { mockAggregator.aggregate(any(), any(), any()) } returns createLanguageLearningResult()
+
+        val engine = createEngine(
+            requestedMetrics = setOf(Metric.LANGUAGE_LEARNING),
+            collectors = mapOf(Metric.LANGUAGE_LEARNING to mockCollector),
+            aggregators = mapOf(Metric.LANGUAGE_LEARNING to mockAggregator)
+        )
+
+        // Act
+        engine.query(fromMillis = fromMillis, toMillis = now)
+
+        // Assert - All 3 evidence items aggregated in single call
+        verify(exactly = 1) { mockAggregator.aggregate(any(), match { it.size == 3 }, any()) }
     }
 
     // ============================================================
     // Data Quality Tests
     // ============================================================
+
+    @Test
+    fun `data quality reflects available and missing sources`() = runTest {
+        // Arrange
+        val mockCollector = mockk<Collector>()
+        coEvery { mockCollector.collect(any(), any()) } returns Result.success(
+            listOf(createEvidence())
+        )
+
+        val mockAggregator = mockk<Aggregator<LanguageLearningResult>>()
+        every { mockAggregator.aggregate(any(), any(), any()) } returns createLanguageLearningResult()
+
+        val engine = createEngine(
+            requestedMetrics = setOf(Metric.LANGUAGE_LEARNING),
+            collectors = mapOf(Metric.LANGUAGE_LEARNING to mockCollector),
+            aggregators = mapOf(Metric.LANGUAGE_LEARNING to mockAggregator)
+        )
+
+        // Act
+        val result = engine.query(fromMillis = 1000L, toMillis = 2000L)
+
+        // Assert
+        assertNotNull(result.dataQuality)
+    }
 
     // ============================================================
     // Helper Methods
@@ -721,7 +428,7 @@ class HabitEngineTest {
     }
 
     private fun createEvidence(
-        timestampMillis: Long = 1000L,
+        timestampMillis: Long = 1700000000000L,
         source: DataSource = DataSource.USAGE_STATS,
         confidence: Float = 0.80f,
         durationMinutes: Int = 30

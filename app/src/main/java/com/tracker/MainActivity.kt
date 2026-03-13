@@ -15,8 +15,8 @@ import kotlinx.coroutines.launch
  * This app shows:
  * 1. How to build a Tracker instance
  * 2. How to check and request access using library methods
- * 3. How to query metrics using coroutines
- * 4. How to display results (summary, day-by-day data, data quality)
+ * 3. How to query metrics for the last 24 hours using coroutines
+ * 4. How to display results (activity data and data quality)
  */
 class MainActivity : AppCompatActivity() {
 
@@ -39,7 +39,6 @@ class MainActivity : AppCompatActivity() {
     private fun setupTracker() {
         tracker = Tracker.Builder(this)
             .requestMetrics(Metric.LANGUAGE_LEARNING, Metric.READING)
-            .setLookbackDays(30)  // Query last 30 days
             .setMinConfidence(0.50f)  // 50% confidence threshold
             .build()
     }
@@ -79,7 +78,7 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                // Query using the default lookback period (30 days)
+                // Query for the last 24 hours
                 val result = tracker.queryAsync()
 
                 // Display results
@@ -97,77 +96,65 @@ class MainActivity : AppCompatActivity() {
         hideLoading()
 
         with(binding) {
-            // Summary statistics
-            tvTotalDays.text = "Total Days: ${result.summary.totalDays}"
+            // Time period
+            tvTimeRange.text = "Last 24 Hours"
 
-            // Language Learning summary
-            tvLanguageLearningDays.text = "Language Learning Days: ${result.summary.languageLearningDays ?: 0}"
-            tvLanguageLearningAverage.text = "Avg Minutes/Day: ${formatAverage(result.summary.averageLanguageLearningMinutes)}"
+            // Language Learning results
+            val llResult = result.languageLearning
+            if (llResult != null && llResult.occurred) {
+                tvLanguageLearningStatus.text = "✓ Activity Detected"
+                tvLanguageLearningDuration.text = "Duration: ${llResult.durationMinutes} minutes"
+                tvLanguageLearningConfidence.text = "Confidence: ${formatConfidence(llResult.confidence)} (${llResult.confidenceLevel})"
+                tvLanguageLearningApps.text = if (llResult.apps.isNotEmpty()) {
+                    "Apps: ${llResult.apps.joinToString(", ") { it.appName }}"
+                } else {
+                    "Apps: None detected"
+                }
+            } else {
+                tvLanguageLearningStatus.text = "✗ No Activity"
+                tvLanguageLearningDuration.text = "Duration: 0 minutes"
+                tvLanguageLearningConfidence.text = "Confidence: N/A"
+                tvLanguageLearningApps.text = "Apps: None"
+            }
 
-            // Reading summary
-            tvReadingDays.text = "Reading Days: ${result.summary.readingDays ?: 0}"
-            tvReadingAverage.text = "Avg Minutes/Day: ${formatAverage(result.summary.averageReadingMinutes)}"
+            // Reading results
+            val readingResult = result.reading
+            if (readingResult != null && readingResult.occurred) {
+                tvReadingStatus.text = "✓ Activity Detected"
+                tvReadingDuration.text = "Duration: ${readingResult.durationMinutes} minutes"
+                tvReadingConfidence.text = "Confidence: ${formatConfidence(readingResult.confidence)} (${readingResult.confidenceLevel})"
+                tvReadingApps.text = if (readingResult.apps.isNotEmpty()) {
+                    "Apps: ${readingResult.apps.joinToString(", ") { it.appName }}"
+                } else {
+                    "Apps: None detected"
+                }
+            } else {
+                tvReadingStatus.text = "✗ No Activity"
+                tvReadingDuration.text = "Duration: 0 minutes"
+                tvReadingConfidence.text = "Confidence: N/A"
+                tvReadingApps.text = "Apps: None"
+            }
 
-            // Day-by-day results
-            tvDayByDayResults.text = buildDayByDayText(result.days)
+            // Data Quality info
+            tvDataQuality.text = buildDataQualityText(result.dataQuality)
 
             // Show results section
             resultSection.visibility = View.VISIBLE
         }
     }
 
-    private fun formatAverage(average: Float?): String {
-        return if (average != null) {
-            String.format("%.1f", average)
-        } else {
-            "0.0"
-        }
+    private fun formatConfidence(confidence: Float): String {
+        return String.format("%.0f%%", confidence * 100)
     }
 
-    private fun buildDayByDayText(days: List<com.tracker.core.result.DayResult>): String {
-        if (days.isEmpty()) {
-            return "No activity found in the last 30 days."
-        }
-
+    private fun buildDataQualityText(dataQuality: com.tracker.core.result.DataQuality): String {
         return buildString {
-            appendLine("Found ${days.size} days with activity:\n")
-            days.take(10).forEach { day ->  // Show first 10 days
-                val date = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
-                    .format(java.util.Date(day.timestampMillis))
-
-                val ll = day.languageLearning
-                val reading = day.reading
-                val hasActivity = (ll != null && ll.occurred) || (reading != null && reading.occurred)
-
-                if (hasActivity) {
-                    appendLine("$date:")
-
-                    // Show language learning if present (same order as summary)
-                    if (ll != null && ll.occurred) {
-                        appendLine("  📚 Language Learning:")
-                        appendLine("    Duration: ${ll.durationMinutes} min")
-                        appendLine("    Confidence: ${String.format("%.0f%%", ll.confidence * 100)} (${ll.confidenceLevel})")
-                        if (ll.apps.isNotEmpty()) {
-                            appendLine("    Apps: ${ll.apps.joinToString(", ") { it.appName }}")
-                        }
-                    }
-
-                    // Show reading if present (same order as summary)
-                    if (reading != null && reading.occurred) {
-                        appendLine("  📖 Reading:")
-                        appendLine("    Duration: ${reading.durationMinutes} min")
-                        appendLine("    Confidence: ${String.format("%.0f%%", reading.confidence * 100)} (${reading.confidenceLevel})")
-                        if (reading.apps.isNotEmpty()) {
-                            appendLine("    Apps: ${reading.apps.joinToString(", ") { it.appName }}")
-                        }
-                    }
-
-                    appendLine()
-                }
+            appendLine("Overall Reliability: ${dataQuality.overallReliability}")
+            if (dataQuality.availableSources.isNotEmpty()) {
+                appendLine("Available Sources: ${dataQuality.availableSources.joinToString(", ")}")
             }
-
-            if (days.size > 10) {
-                appendLine("... and ${days.size - 10} more days")
+            if (dataQuality.missingSources.isNotEmpty()) {
+                appendLine("Missing Sources: ${dataQuality.missingSources.size}")
             }
         }
     }
@@ -203,7 +190,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showError(message: String) {
         hideLoading()
-        binding.tvDayByDayResults.text = "Error: $message"
+        binding.tvDataQuality.text = "Error: $message"
         binding.resultSection.visibility = View.VISIBLE
     }
 }

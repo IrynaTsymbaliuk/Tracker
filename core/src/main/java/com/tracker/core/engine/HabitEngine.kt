@@ -15,7 +15,6 @@ import com.tracker.core.permission.PermissionStatus
 import com.tracker.core.result.AccessRequirement
 import com.tracker.core.result.AccessStatus
 import com.tracker.core.result.DataQuality
-import com.tracker.core.result.DayResult
 import com.tracker.core.result.HabitAccessInfo
 import com.tracker.core.result.HabitResult
 import com.tracker.core.result.LanguageLearningResult
@@ -25,23 +24,18 @@ import com.tracker.core.result.MissingSource
 import com.tracker.core.result.ReadingResult
 import com.tracker.core.result.ReliabilityLevel
 import com.tracker.core.result.SourceAccessInfo
-import com.tracker.core.result.Summary
 import com.tracker.core.types.DataSource
 import com.tracker.core.types.Metric
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.util.Calendar
-import java.util.concurrent.TimeUnit
 
 /**
  * Central coordinator for habit tracking.
  *
- * Responsibilities:
  * 1. Register collectors and aggregators per metric
  * 2. Run collectors (in parallel in future)
- * 3. Group evidence by day
- * 4. Pass evidence to aggregators
- * 5. Build final MetricsResult with summary and data quality
+ * 3. Aggregate all evidence at once
+ * 4. Build final MetricsResult with direct fields and data quality
  */
 class HabitEngine internal constructor(
     private val requestedMetrics: Set<Metric>,
@@ -154,6 +148,10 @@ class HabitEngine internal constructor(
 
     /**
      * Query metrics for the specified time range.
+     *
+     * @param fromMillis Start time in milliseconds since epoch (inclusive)
+     * @param toMillis End time in milliseconds since epoch (inclusive)
+     * @return MetricsResult with direct metric fields
      */
     suspend fun query(fromMillis: Long, toMillis: Long): MetricsResult = withContext(Dispatchers.IO) {
         // Collect evidence for requested metrics, keeping them separated by metric
@@ -167,127 +165,34 @@ class HabitEngine internal constructor(
             }
         }
 
-        // Group evidence by day for each metric separately
-        val languageLearningByDay = if (Metric.LANGUAGE_LEARNING in requestedMetrics) {
-            groupEvidenceByDay(evidenceByMetric[Metric.LANGUAGE_LEARNING] ?: emptyList())
+        // Aggregate all evidence at once for each metric (no day grouping)
+        val languageLearningResult = if (Metric.LANGUAGE_LEARNING in requestedMetrics) {
+            val evidence = evidenceByMetric[Metric.LANGUAGE_LEARNING] ?: emptyList()
+            @Suppress("UNCHECKED_CAST")
+            val aggregator = aggregators[Metric.LANGUAGE_LEARNING] as? Aggregator<LanguageLearningResult>
+            // Pass toMillis as the timestamp parameter (aggregator signature requires it)
+            aggregator?.aggregate(toMillis, evidence, minConfidence)
         } else {
-            emptyMap()
+            null
         }
 
-        val readingByDay = if (Metric.READING in requestedMetrics) {
-            groupEvidenceByDay(evidenceByMetric[Metric.READING] ?: emptyList())
+        val readingResult = if (Metric.READING in requestedMetrics) {
+            val evidence = evidenceByMetric[Metric.READING] ?: emptyList()
+            @Suppress("UNCHECKED_CAST")
+            val aggregator = aggregators[Metric.READING] as? Aggregator<ReadingResult>
+            // Pass toMillis as the timestamp parameter (aggregator signature requires it)
+            aggregator?.aggregate(toMillis, evidence, minConfidence)
         } else {
-            emptyMap()
+            null
         }
-
-        // Get all unique days across all metrics
-        val allDays = (languageLearningByDay.keys + readingByDay.keys).sorted()
-
-        // Aggregate evidence for each day
-        val dayResults = allDays.map { dayMillis ->
-            val languageLearningResult = if (Metric.LANGUAGE_LEARNING in requestedMetrics) {
-                val dayEvidence = languageLearningByDay[dayMillis] ?: emptyList()
-                @Suppress("UNCHECKED_CAST")
-                val aggregator = aggregators[Metric.LANGUAGE_LEARNING] as? Aggregator<LanguageLearningResult>
-                aggregator?.aggregate(dayMillis, dayEvidence, minConfidence)
-            } else {
-                null
-            }
-
-            val readingResult = if (Metric.READING in requestedMetrics) {
-                val dayEvidence = readingByDay[dayMillis] ?: emptyList()
-                @Suppress("UNCHECKED_CAST")
-                val aggregator = aggregators[Metric.READING] as? Aggregator<ReadingResult>
-                aggregator?.aggregate(dayMillis, dayEvidence, minConfidence)
-            } else {
-                null
-            }
-
-            DayResult(
-                timestampMillis = dayMillis,
-                languageLearning = languageLearningResult,
-                reading = readingResult
-            )
-        }
-
-        // Build summary (needs total days in range, not just days with data)
-        val totalDaysInRange = calculateDaysInRange(fromMillis, toMillis)
-        val summary = buildSummary(dayResults, totalDaysInRange)
 
         // Build data quality
         val dataQuality = buildDataQuality()
 
         MetricsResult(
-            days = dayResults,
-            summary = summary,
+            languageLearning = languageLearningResult,
+            reading = readingResult,
             dataQuality = dataQuality
-        )
-    }
-
-    /**
-     * Group evidence by day (start of day timestamp).
-     * Returns sparse map - only days with evidence are included.
-     */
-    internal fun groupEvidenceByDay(evidence: List<Evidence>): Map<Long, List<Evidence>> {
-        return evidence.groupBy { e ->
-            getStartOfDay(e.timestampMillis)
-        }
-    }
-
-    /**
-     * Calculate the number of days in the given range (inclusive).
-     */
-    internal fun calculateDaysInRange(fromMillis: Long, toMillis: Long): Int {
-        val startDay = getStartOfDay(fromMillis)
-        val endDay = getStartOfDay(toMillis)
-        val diffMillis = endDay - startDay
-        return (TimeUnit.MILLISECONDS.toDays(diffMillis) + 1).toInt()
-    }
-
-    /**
-     * Get start of day timestamp (00:00:00) for given timestamp.
-     */
-    internal fun getStartOfDay(timestampMillis: Long): Long {
-        val calendar = Calendar.getInstance().apply {
-            timeInMillis = timestampMillis
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        return calendar.timeInMillis
-    }
-
-    /**
-     * Build summary statistics.
-     *
-     * @param dayResults Results for days with data (sparse)
-     * @param totalDaysInRange Total days in the queried range
-     */
-    private fun buildSummary(dayResults: List<DayResult>, totalDaysInRange: Int): Summary {
-        val languageLearningDays = dayResults.count { it.languageLearning?.occurred == true }
-        val readingDays = dayResults.count { it.reading?.occurred == true }
-
-        val totalLangMinutes = dayResults.mapNotNull { it.languageLearning?.durationMinutes }.sum()
-        val averageLangMinutes = if (totalDaysInRange > 0) {
-            totalLangMinutes.toFloat() / totalDaysInRange
-        } else {
-            0f
-        }
-
-        val totalReadingMinutes = dayResults.mapNotNull { it.reading?.durationMinutes }.sum()
-        val averageReadingMinutes = if (totalDaysInRange > 0) {
-            totalReadingMinutes.toFloat() / totalDaysInRange
-        } else {
-            0f
-        }
-
-        return Summary(
-            totalDays = totalDaysInRange,
-            languageLearningDays = if (Metric.LANGUAGE_LEARNING in requestedMetrics) languageLearningDays else null,
-            averageLanguageLearningMinutes = if (Metric.LANGUAGE_LEARNING in requestedMetrics) averageLangMinutes else null,
-            readingDays = if (Metric.READING in requestedMetrics) readingDays else null,
-            averageReadingMinutes = if (Metric.READING in requestedMetrics) averageReadingMinutes else null
         )
     }
 

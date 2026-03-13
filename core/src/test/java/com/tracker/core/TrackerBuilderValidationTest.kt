@@ -129,13 +129,11 @@ class TrackerBuilderValidationTest {
         // Act: Chain all builder methods together
         val tracker = Tracker.Builder(context)
             .requestMetrics(Metric.LANGUAGE_LEARNING)
-            .setLookbackDays(45)
             .setMinConfidence(0.75f)
             .build()
 
         // Assert: Verify all configurations were applied
         assertNotNull(tracker)
-        assertEquals(45, tracker.getLookbackDays())
         assertEquals(0.75f, tracker.getMinConfidence(), 0.001f)
     }
 }

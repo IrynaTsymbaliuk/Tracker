@@ -20,7 +20,7 @@ Tracker is an Android library that automatically identifies user behaviors (like
 // 1. Configure what to track
 val tracker = Tracker.Builder(context)
     .requestMetrics(Metric.LANGUAGE_LEARNING, Metric.READING)
-    .setLookbackDays(30)
+    .setMinConfidence(0.50f)  // 50% confidence threshold
     .build()
 
 // 2. Request permissions (opens Settings)
@@ -28,23 +28,29 @@ if (!tracker.hasAllRequiredAccess()) {
     tracker.requestMissingAccess(this)
 }
 
-// 3. Get results
+// 3. Get results for the last 24 hours
 val result = tracker.queryAsync()
 
 // Result contains:
-result.summary.languageLearningDays            // How many days user studied
-result.summary.averageLanguageLearningMinutes  // Average language learning time per day
-result.summary.readingDays                     // How many days user read
-result.summary.averageReadingMinutes           // Average reading time per day
-result.days                                    // Day-by-day breakdown with confidence scores
+result.languageLearning?.occurred              // Whether language learning was detected
+result.languageLearning?.durationMinutes       // Total time spent
+result.languageLearning?.confidence            // Confidence score (0.0-1.0)
+result.languageLearning?.confidenceLevel       // LOW/MEDIUM/HIGH
+result.languageLearning?.apps                  // Apps used
+
+result.reading?.occurred                       // Whether reading was detected
+result.reading?.durationMinutes                // Total time spent
+result.reading?.confidence                     // Confidence score (0.0-1.0)
+result.reading?.apps                           // Apps used
+
 result.dataQuality                             // What data sources are available/missing
 ```
 
-**Output example:**
-- **Language Learning**: "15 out of 30 days detected, average 25.5 minutes/day (HIGH confidence)"
-  - Apps: Duolingo, Anki, LingoDeer
-- **Reading**: "12 out of 30 days detected, average 18.3 minutes/day (HIGH confidence)"
-  - Apps: Kindle, Google Play Books
+**Output example (last 24 hours):**
+- **Language Learning**: "45 minutes detected with 85% confidence (HIGH)"
+  - Apps: Duolingo, Anki
+- **Reading**: "30 minutes detected with 75% confidence (MEDIUM)"
+  - Apps: Kindle
 
 ## Supported Metrics
 
@@ -99,14 +105,6 @@ Async by default with Kotlin coroutines, plus callback API for Java/legacy code.
 
 ## Advanced Usage
 
-### Custom Time Ranges
-
-```kotlin
-val oneWeekAgo = System.currentTimeMillis() - (7 * 24 * 60 * 60 * 1000L)
-val now = System.currentTimeMillis()
-val result = tracker.queryAsync(oneWeekAgo, now)
-```
-
 ### Adjust Confidence Threshold
 
 ```kotlin
@@ -116,39 +114,27 @@ val tracker = Tracker.Builder(context)
     .build()
 ```
 
-### Day-by-Day Analysis
+### Check Detected Apps
 
 ```kotlin
-result.days.forEach { day ->
-    val date = SimpleDateFormat("MMM dd, yyyy").format(Date(day.timestampMillis))
+val result = tracker.queryAsync()
 
-    // Language learning activity
-    day.languageLearning?.let { ll ->
-        if (ll.occurred) {
-            println("$date - Language Learning: ${ll.durationMinutes} min (${ll.confidenceLevel})")
-            ll.apps.forEach { app ->
-                println("  - ${app.appName}")
-            }
-        }
-    }
+// Language learning apps
+result.languageLearning?.apps?.forEach { app ->
+    println("${app.appName}: ${app.durationMinutes} minutes")
+}
 
-    // Reading activity
-    day.reading?.let { reading ->
-        if (reading.occurred) {
-            println("$date - Reading: ${reading.durationMinutes} min (${reading.confidenceLevel})")
-            reading.apps.forEach { app ->
-                println("  - ${app.appName}")
-            }
-        }
-    }
+// Reading apps
+result.reading?.apps?.forEach { app ->
+    println("${app.appName}: ${app.durationMinutes} minutes")
 }
 ```
 
 ## How It Works
 
 1. **Data Collection**: Queries Android system APIs (UsageStatsManager, Health Connect, etc.)
-2. **Evidence Gathering**: Collects timestamped evidence from multiple sources
-3. **Smart Aggregation**: Groups evidence by day, removes duplicates, calculates confidence
+2. **Evidence Gathering**: Collects timestamped evidence from the last 24 hours
+3. **Smart Aggregation**: Removes duplicates, calculates confidence scores
 4. **Result Building**: Returns structured data with quality metrics
 
 **Privacy**: All processing happens on-device. No data leaves the user's phone.
@@ -184,9 +170,9 @@ Run the included sample app to see the library in action:
 The sample demonstrates:
 - Permission request flow
 - Querying multiple metrics (Language Learning + Reading)
-- Displaying summary statistics with decimal averages
-- Day-by-day breakdown showing both habits
-- Confidence scores and app detection
+- Displaying activity results for the last 24 hours
+- Showing confidence scores and detected apps
+- Data quality information
 
 ## Contributing
 

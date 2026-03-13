@@ -20,14 +20,14 @@ import kotlinx.coroutines.launch
  * ```
  * val tracker = Tracker.Builder(context)
  *     .requestMetrics(Metric.LANGUAGE_LEARNING)
- *     .setLookbackDays(30)
+ *     .setMinConfidence(0.50)
  *     .build()
  *
- * // Query with coroutines
- * val result = tracker.queryAsync(fromMillis, toMillis)
+ * // Query with coroutines (last 24 hours)
+ * val result = tracker.queryAsync()
  *
- * // Query with callback
- * tracker.query(fromMillis, toMillis) { result ->
+ * // Query with callback (last 24 hours)
+ * tracker.query { result ->
  *     // Handle result
  * }
  * ```
@@ -36,7 +36,7 @@ class Tracker private constructor(
     private val context: Context,
     private val requestedMetrics: Set<Metric>,
     private val minConfidence: Float,
-    private val lookbackDays: Int
+    internal val timeProvider: TimeProvider = TimeProvider { System.currentTimeMillis() }
 ) {
 
     private val habitEngine = HabitEngine.create(
@@ -44,13 +44,6 @@ class Tracker private constructor(
         requestedMetrics,
         minConfidence
     )
-
-    /**
-     * Get the configured lookback period in days.
-     *
-     * @return Number of days used for default queries
-     */
-    fun getLookbackDays(): Int = lookbackDays
 
     /**
      * Get the configured minimum confidence threshold.
@@ -111,29 +104,24 @@ class Tracker private constructor(
     }
 
     /**
-     * Query metrics asynchronously using coroutines with default lookback period.
-     *
-     * @return MetricsResult containing data from the last lookbackDays
-     */
-    suspend fun queryAsync(): MetricsResult {
-        val toMillis = System.currentTimeMillis()
-        val fromMillis = toMillis - (lookbackDays * 24 * 60 * 60 * 1000L)
-        return habitEngine.query(fromMillis, toMillis)
-    }
-
-    /**
      * Query metrics asynchronously using coroutines.
      *
-     * @param fromMillis Start time in milliseconds since epoch (inclusive)
-     * @param toMillis End time in milliseconds since epoch (inclusive)
-     * @return MetricsResult containing all requested data
+     * Returns data for the last 24 hours from current time.
+     *
+     * @return MetricsResult containing data from the last 24 hours
      */
-    suspend fun queryAsync(fromMillis: Long, toMillis: Long): MetricsResult {
+    suspend fun queryAsync(): MetricsResult {
+        val now = timeProvider.now()
+        val toMillis = now
+        val fromMillis = now - 86_400_000L // 24 hours in milliseconds
         return habitEngine.query(fromMillis, toMillis)
     }
 
     /**
-     * Query metrics using callback with default lookback period.
+     * Query metrics using callback.
+     *
+     * Returns data for the last 24 hours from current time.
+     * Callback is invoked on the Main dispatcher.
      *
      * @param callback Called when results are ready
      */
@@ -145,26 +133,12 @@ class Tracker private constructor(
     }
 
     /**
-     * Query metrics using callback.
-     *
-     * @param fromMillis Start time in milliseconds since epoch (inclusive)
-     * @param toMillis End time in milliseconds since epoch (inclusive)
-     * @param callback Called when results are ready
-     */
-    fun query(fromMillis: Long, toMillis: Long, callback: (MetricsResult) -> Unit) {
-        CoroutineScope(Dispatchers.Main).launch {
-            val result = habitEngine.query(fromMillis, toMillis)
-            callback(result)
-        }
-    }
-
-    /**
      * Builder for creating Tracker instances.
      */
     class Builder(private val context: Context) {
         private val metrics = mutableSetOf<Metric>()
-        private var lookbackDays: Int = 30
         private var minConfidence: Float = 0.50f
+        internal var timeProvider: TimeProvider = TimeProvider { System.currentTimeMillis() }
 
         /**
          * Request specific metrics to track.
@@ -174,20 +148,6 @@ class Tracker private constructor(
          */
         fun requestMetrics(vararg metrics: Metric): Builder {
             this.metrics.addAll(metrics)
-            return this
-        }
-
-        /**
-         * Set the default lookback period in days.
-         * This is used when querying without explicit time range.
-         *
-         * @param days Number of days to look back (1-365, default: 30)
-         * @return This builder for chaining
-         * @throws IllegalArgumentException if days is not in valid range
-         */
-        fun setLookbackDays(days: Int): Builder {
-            require(days in 1..365) { "Lookback days must be between 1 and 365" }
-            this.lookbackDays = days
             return this
         }
 
@@ -214,7 +174,7 @@ class Tracker private constructor(
                 context = context.applicationContext,
                 requestedMetrics = metrics.toSet(),
                 minConfidence = minConfidence,
-                lookbackDays = lookbackDays
+                timeProvider = timeProvider
             )
         }
     }
