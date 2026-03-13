@@ -87,31 +87,4 @@ object KnownApps {
         )
     )
 
-    /**
-     * Check if a package is a known language learning app.
-     */
-    fun isLanguageLearningApp(packageName: String): Boolean {
-        return languageLearning.containsKey(packageName)
-    }
-
-    /**
-     * Get metadata for a language learning app.
-     */
-    fun getLanguageLearningApp(packageName: String): AppMetadata? {
-        return languageLearning[packageName]
-    }
-
-    /**
-     * Check if a package is a known reading app.
-     */
-    fun isReadingApp(packageName: String): Boolean {
-        return reading.containsKey(packageName)
-    }
-
-    /**
-     * Get metadata for a reading app.
-     */
-    fun getReadingApp(packageName: String): AppMetadata? {
-        return reading[packageName]
-    }
 }

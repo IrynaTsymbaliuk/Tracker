@@ -1,13 +1,16 @@
 package com.tracker
 
+import android.app.AppOpsManager
+import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.tracker.core.Tracker
-import com.tracker.core.result.LanguageLearningMetricResult
-import com.tracker.core.result.ReadingMetricResult
-import com.tracker.core.types.Metric
+import com.tracker.core.result.HabitResult
+import com.tracker.core.result.LanguageLearningResult
+import com.tracker.core.result.ReadingResult
 import com.tracker.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
 
@@ -53,9 +56,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnRequestPermission.setOnClickListener {
-            // Request missing access for both metrics
-            tracker.requestMissingAccess(this, Metric.LANGUAGE_LEARNING)
-            tracker.requestMissingAccess(this, Metric.READING)
+            startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
         }
     }
 
@@ -63,11 +64,15 @@ class MainActivity : AppCompatActivity() {
      * Step 3: Check access and query if granted
      */
     private fun checkAccessAndQuery() {
-        // Check if access is granted for both metrics
-        val languageLearningAccess = tracker.hasAllRequiredAccess(Metric.LANGUAGE_LEARNING)
-        val readingAccess = tracker.hasAllRequiredAccess(Metric.READING)
+        val appOpsManager = getSystemService(APP_OPS_SERVICE) as AppOpsManager
+        val mode = appOpsManager.checkOpNoThrow(
+            AppOpsManager.OPSTR_GET_USAGE_STATS,
+            android.os.Process.myUid(),
+            packageName
+        )
+        val hasAccess = mode == AppOpsManager.MODE_ALLOWED
 
-        if (languageLearningAccess && readingAccess) {
+        if (hasAccess) {
             showPermissionGranted()
             queryMetrics()
         } else {
@@ -99,8 +104,8 @@ class MainActivity : AppCompatActivity() {
      * Step 5: Display results in the UI
      */
     private fun displayResults(
-        languageLearningResult: LanguageLearningMetricResult,
-        readingResult: ReadingMetricResult
+        languageLearningResult: HabitResult?,
+        readingResult: HabitResult?
     ) {
         hideLoading()
 
@@ -109,13 +114,14 @@ class MainActivity : AppCompatActivity() {
             tvTimeRange.text = "Last 24 Hours"
 
             // Language Learning results
-            val llResult = languageLearningResult.result
-            if (llResult != null && llResult.occurred) {
+            if (languageLearningResult != null && languageLearningResult.occurred && languageLearningResult is LanguageLearningResult) {
                 tvLanguageLearningStatus.text = "✓ Activity Detected"
-                tvLanguageLearningDuration.text = "Duration: ${llResult.durationMinutes} minutes"
-                tvLanguageLearningConfidence.text = "Confidence: ${formatConfidence(llResult.confidence)} (${llResult.confidenceLevel})"
-                tvLanguageLearningApps.text = if (llResult.apps.isNotEmpty()) {
-                    "Apps: ${llResult.apps.joinToString(", ") { it.appName }}"
+                tvLanguageLearningDuration.text =
+                    "Duration: ${languageLearningResult.durationMinutes} minutes"
+                tvLanguageLearningConfidence.text =
+                    "Confidence: ${formatConfidence(languageLearningResult.confidence)} (${languageLearningResult.confidenceLevel})"
+                tvLanguageLearningApps.text = if (languageLearningResult.apps.isNotEmpty()) {
+                    "Apps: ${languageLearningResult.apps.joinToString(", ") { it.appName }}"
                 } else {
                     "Apps: None detected"
                 }
@@ -127,13 +133,13 @@ class MainActivity : AppCompatActivity() {
             }
 
             // Reading results
-            val readResult = readingResult.result
-            if (readResult != null && readResult.occurred) {
+            if (readingResult != null && readingResult.occurred && readingResult is ReadingResult) {
                 tvReadingStatus.text = "✓ Activity Detected"
-                tvReadingDuration.text = "Duration: ${readResult.durationMinutes} minutes"
-                tvReadingConfidence.text = "Confidence: ${formatConfidence(readResult.confidence)} (${readResult.confidenceLevel})"
-                tvReadingApps.text = if (readResult.apps.isNotEmpty()) {
-                    "Apps: ${readResult.apps.joinToString(", ") { it.appName }}"
+                tvReadingDuration.text = "Duration: ${readingResult.durationMinutes} minutes"
+                tvReadingConfidence.text =
+                    "Confidence: ${formatConfidence(readingResult.confidence)} (${readingResult.confidenceLevel})"
+                tvReadingApps.text = if (readingResult.apps.isNotEmpty()) {
+                    "Apps: ${readingResult.apps.joinToString(", ") { it.appName }}"
                 } else {
                     "Apps: None detected"
                 }
@@ -144,9 +150,6 @@ class MainActivity : AppCompatActivity() {
                 tvReadingApps.text = "Apps: None"
             }
 
-            // Data Quality info
-            tvDataQuality.text = buildDataQualityText(languageLearningResult.dataQuality)
-
             // Show results section
             resultSection.visibility = View.VISIBLE
         }
@@ -156,25 +159,10 @@ class MainActivity : AppCompatActivity() {
         return String.format("%.0f%%", confidence * 100)
     }
 
-    private fun buildDataQualityText(dataQuality: com.tracker.core.result.DataQuality): String {
-        return buildString {
-            appendLine("Overall Reliability: ${dataQuality.overallReliability}")
-            if (dataQuality.availableSources.isNotEmpty()) {
-                appendLine("Available Sources: ${dataQuality.availableSources.joinToString(", ")}")
-            }
-            if (dataQuality.missingSources.isNotEmpty()) {
-                appendLine("Missing Sources: ${dataQuality.missingSources.size}")
-            }
-        }
-    }
-
     override fun onResume() {
         super.onResume()
-        // Re-check access when returning from Settings
         checkAccessAndQuery()
     }
-
-    // UI State Management
 
     private fun showPermissionGranted() {
         binding.permissionSection.visibility = View.GONE
@@ -199,7 +187,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun showError(message: String) {
         hideLoading()
-        binding.tvDataQuality.text = "Error: $message"
         binding.resultSection.visibility = View.VISIBLE
     }
 }

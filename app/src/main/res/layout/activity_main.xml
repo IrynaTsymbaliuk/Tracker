@@ -271,43 +271,6 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Data Quality Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardElevation="4dp"
-                app:cardCornerRadius="12dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="🔍 Data Quality"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="?android:textColorPrimary"
-                        android:layout_marginBottom="16dp" />
-
-                    <TextView
-                        android:id="@+id/tvDataQuality"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="14sp"
-                        android:textColor="?android:textColorPrimary"
-                        android:fontFamily="monospace"
-                        android:lineSpacingExtra="4dp"
-                        tools:text="Overall Reliability: HIGH\nAvailable Sources: USAGE_STATS" />
-
-                </LinearLayout>
-
-            </com.google.android.material.card.MaterialCardView>
-
         </LinearLayout>
 
     </LinearLayout>
