@@ -5,6 +5,7 @@ import com.tracker.core.permission.PermissionManager
 import com.tracker.core.provider.LanguageLearningProvider
 import com.tracker.core.provider.MetricProvider
 import com.tracker.core.provider.ReadingProvider
+import com.tracker.core.collector.UsageStateCollector
 import com.tracker.core.result.HabitResult
 import com.tracker.core.types.Metric
 
@@ -30,8 +31,8 @@ class HabitEngine internal constructor(
             val permissionManager = PermissionManager(context)
 
             val providers = mapOf(
-                Metric.LANGUAGE_LEARNING to LanguageLearningProvider(context, permissionManager),
-                Metric.READING to ReadingProvider(context, permissionManager)
+                Metric.LANGUAGE_LEARNING to LanguageLearningProvider(UsageStateCollector(context, permissionManager)),
+                Metric.READING to ReadingProvider(UsageStateCollector(context, permissionManager))
             )
 
             return HabitEngine(minConfidence, providers)

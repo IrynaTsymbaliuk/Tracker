@@ -1,29 +1,16 @@
 package com.tracker.core.provider
 
-import android.app.usage.UsageStats
-import android.app.usage.UsageStatsManager
-import android.content.Context
-import android.content.pm.PackageManager
-import com.tracker.core.collector.NoMonitorableAppsException
-import com.tracker.core.collector.PackageManagerException
-import com.tracker.core.collector.PermissionDeniedException
-import com.tracker.core.collector.SystemServiceUnavailableException
+import com.tracker.core.collector.UsageStateCollector
 import com.tracker.core.config.KnownApps
-import com.tracker.core.model.Evidence
-import com.tracker.core.permission.Permission
-import com.tracker.core.permission.PermissionManager
-import com.tracker.core.permission.PermissionStatus
 import com.tracker.core.result.AppInfo
 import com.tracker.core.result.LanguageLearningResult
 import com.tracker.core.result.toConfidenceLevel
 import com.tracker.core.result.toOccurred
 import com.tracker.core.types.DataSource
-import java.util.concurrent.TimeUnit
 import kotlin.math.max
 
 class LanguageLearningProvider internal constructor(
-    private val context: Context,
-    private val permissionManager: PermissionManager
+    private val usageStateCollector: UsageStateCollector
 ) : MetricProvider<LanguageLearningResult> {
 
     private companion object {
@@ -45,14 +32,13 @@ class LanguageLearningProvider internal constructor(
         toMillis: Long,
         minConfidence: Float
     ): LanguageLearningResult? {
-        checkPermissions()
 
-        val installedApps = getInstalledApps()
-
-        val usageStatsList = getUsageStats(fromMillis, toMillis)
-
-        val evidenceList =
-            getEvidenceList(usageStatsList, installedApps)?.ifEmpty { return null } ?: return null
+        val evidenceList = usageStateCollector.collect(
+            fromMillis,
+            toMillis,
+            KnownApps.languageLearning,
+            LANGUAGE_LEARNING_MIN_SESSION_MINUTES
+        )?.ifEmpty { return null } ?: return null
 
         var combinedConfidence = combineProbabilities(evidenceList.map { it.confidence })
         val totalDuration = evidenceList.mapNotNull { it.durationMinutes }.sum()
@@ -85,84 +71,6 @@ class LanguageLearningProvider internal constructor(
             source = primarySource,
             apps = apps
         )
-    }
-
-    private fun checkPermissions() {
-        if (permissionManager.checkPermission(Permission.PACKAGE_USAGE_STATS) != PermissionStatus.GRANTED) {
-            throw PermissionDeniedException("PACKAGE_USAGE_STATS")
-        }
-    }
-
-    private fun getInstalledApps(): Set<String> {
-        try {
-            val allInstalledPackages =
-                context.packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
-                    .map { it.packageName }.toSet()
-            val installedLLApps =
-                KnownApps.languageLearning.keys.filter { it in allInstalledPackages }.toSet()
-
-            if (installedLLApps.isEmpty()) {
-                throw NoMonitorableAppsException()
-            }
-            return installedLLApps
-        } catch (e: Exception) {
-            throw PackageManagerException(e)
-        }
-    }
-
-    private fun getUsageStats(fromMillis: Long, toMillis: Long): List<UsageStats?>? {
-        val usageStatsManager =
-            context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
-                ?: throw SystemServiceUnavailableException("UsageStatsManager")
-        return usageStatsManager.queryUsageStats(
-            UsageStatsManager.INTERVAL_DAILY,
-            fromMillis,
-            toMillis
-        )
-    }
-
-    private fun getEvidenceList(
-        usageStatsList: List<UsageStats?>?,
-        installedApps: Set<String>
-    ): List<Evidence>? {
-        return usageStatsList?.mapNotNull { usageStats ->
-            usageStats?.let {
-                val packageName = usageStats.packageName ?: return@mapNotNull null
-                val appMetadata = KnownApps.languageLearning[packageName] ?: return@mapNotNull null
-
-                if (packageName !in installedApps) null
-
-                val totalTimeMillis = usageStats.totalTimeInForeground
-                val totalTimeMinutes = TimeUnit.MILLISECONDS.toMinutes(totalTimeMillis).toInt()
-
-                if (totalTimeMinutes < 0 || totalTimeMinutes < LANGUAGE_LEARNING_MIN_SESSION_MINUTES) null
-
-                Evidence(
-                    source = DataSource.USAGE_STATS,
-                    timestampMillis = usageStats.firstTimeStamp,
-                    confidence = appMetadata.confidenceMultiplier,
-                    durationMinutes = totalTimeMinutes,
-                    startTimeMillis = usageStats.firstTimeStamp,
-                    endTimeMillis = usageStats.lastTimeStamp,
-                    metadata = mapOf(
-                        "packageName" to packageName,
-                        "appName" to getAppName(context.packageManager, packageName)
-                    )
-                )
-            }
-        }
-    }
-
-    /**
-     * Get human-readable app name from package name.
-     */
-    private fun getAppName(packageManager: PackageManager, packageName: String): String {
-        return try {
-            val appInfo = packageManager.getApplicationInfo(packageName, 0)
-            packageManager.getApplicationLabel(appInfo).toString()
-        } catch (e: Exception) {
-            packageName
-        }
     }
 
     /**
