@@ -4,17 +4,6 @@ import com.tracker.core.types.ConfidenceLevel
 import com.tracker.core.types.DataSource
 
 /**
- * Information about an app that contributed to language learning detection.
- *
- * @property packageName The app's package identifier
- * @property appName The human-readable app name
- */
-data class AppInfo(
-    val packageName: String,
-    val appName: String
-)
-
-/**
  * Result for language learning habit detection.
  *
  * @property occurred Whether language learning was detected for this day
@@ -40,5 +29,6 @@ data class LanguageLearningResult(
     confidence = confidence,
     confidenceLevel = confidenceLevel,
     durationMinutes = durationMinutes,
-    source = source
+    source = source,
+    count = sessionCount
 )

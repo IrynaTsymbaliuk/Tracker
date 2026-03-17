@@ -10,6 +10,7 @@ import androidx.lifecycle.lifecycleScope
 import com.tracker.core.Tracker
 import com.tracker.core.result.HabitResult
 import com.tracker.core.result.LanguageLearningResult
+import com.tracker.core.result.MovieWatchingResult
 import com.tracker.core.result.ReadingResult
 import com.tracker.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
@@ -22,6 +23,9 @@ import kotlinx.coroutines.launch
  * 2. How to check and request access per-metric
  * 3. How to query individual metrics for the last 24 hours using coroutines
  * 4. How to display results (activity data and data quality per metric)
+ *
+ * Note: To enable movie watching tracking, set your Letterboxd username via:
+ * .setLetterboxdUsername("your_username")
  */
 class MainActivity : AppCompatActivity() {
 
@@ -44,6 +48,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupTracker() {
         tracker = Tracker.Builder(this)
             .setMinConfidence(0.50f)  // 50% confidence threshold
+            .setLetterboxdUsername("your_username")  // Set to your Letterboxd username to track movies
             .build()
     }
 
@@ -91,9 +96,10 @@ class MainActivity : AppCompatActivity() {
                 // Query each metric for the last 24 hours
                 val languageLearningResult = tracker.queryLanguageLearning()
                 val readingResult = tracker.queryReading()
+                val movieWatchingResult = tracker.queryMovieWatching()
 
                 // Display results
-                displayResults(languageLearningResult, readingResult)
+                displayResults(languageLearningResult, readingResult, movieWatchingResult)
             } catch (e: Exception) {
                 showError(e.message ?: "Unknown error")
             }
@@ -105,7 +111,8 @@ class MainActivity : AppCompatActivity() {
      */
     private fun displayResults(
         languageLearningResult: HabitResult?,
-        readingResult: HabitResult?
+        readingResult: HabitResult?,
+        movieWatchingResult: HabitResult?
     ) {
         hideLoading()
 
@@ -116,10 +123,8 @@ class MainActivity : AppCompatActivity() {
             // Language Learning results
             if (languageLearningResult != null && languageLearningResult.occurred && languageLearningResult is LanguageLearningResult) {
                 tvLanguageLearningStatus.text = "✓ Activity Detected"
-                tvLanguageLearningDuration.text =
-                    "Duration: ${languageLearningResult.durationMinutes} minutes"
-                tvLanguageLearningConfidence.text =
-                    "Confidence: ${formatConfidence(languageLearningResult.confidence)} (${languageLearningResult.confidenceLevel})"
+                tvLanguageLearningDuration.text = "Duration: ${languageLearningResult.durationMinutes ?: 0} minutes"
+                tvLanguageLearningConfidence.text = "Confidence: ${formatConfidence(languageLearningResult.confidence)} (${languageLearningResult.confidenceLevel})"
                 tvLanguageLearningApps.text = if (languageLearningResult.apps.isNotEmpty()) {
                     "Apps: ${languageLearningResult.apps.joinToString(", ") { it.appName }}"
                 } else {
@@ -135,7 +140,7 @@ class MainActivity : AppCompatActivity() {
             // Reading results
             if (readingResult != null && readingResult.occurred && readingResult is ReadingResult) {
                 tvReadingStatus.text = "✓ Activity Detected"
-                tvReadingDuration.text = "Duration: ${readingResult.durationMinutes} minutes"
+                tvReadingDuration.text = "Duration: ${readingResult.durationMinutes ?: 0} minutes"
                 tvReadingConfidence.text =
                     "Confidence: ${formatConfidence(readingResult.confidence)} (${readingResult.confidenceLevel})"
                 tvReadingApps.text = if (readingResult.apps.isNotEmpty()) {
@@ -148,6 +153,24 @@ class MainActivity : AppCompatActivity() {
                 tvReadingDuration.text = "Duration: 0 minutes"
                 tvReadingConfidence.text = "Confidence: N/A"
                 tvReadingApps.text = "Apps: None"
+            }
+
+            // Movie Watching results
+            if (movieWatchingResult != null && movieWatchingResult.occurred && movieWatchingResult is MovieWatchingResult) {
+                tvMovieWatchingStatus.text = "✓ Activity Detected"
+                tvMovieWatchingCount.text = "Movies: ${movieWatchingResult.count ?: 0} watched"
+                tvMovieWatchingConfidence.text =
+                    "Confidence: ${formatConfidence(movieWatchingResult.confidence)} (${movieWatchingResult.confidenceLevel})"
+                tvMovieWatchingMovies.text = if (movieWatchingResult.movies.isNotEmpty()) {
+                    "Movies: ${movieWatchingResult.movies.joinToString(", ") { it.title }}"
+                } else {
+                    "Movies: None"
+                }
+            } else {
+                tvMovieWatchingStatus.text = "✗ No Activity"
+                tvMovieWatchingCount.text = "Movies: 0 watched"
+                tvMovieWatchingConfidence.text = "Confidence: N/A"
+                tvMovieWatchingMovies.text = "Movies: None"
             }
 
             // Show results section

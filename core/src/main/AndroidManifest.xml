@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Network permission required for fetching Letterboxd RSS feeds -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!--
         Package visibility queries for Android 11+ (API 30+)
         Declares which apps this library needs to detect.

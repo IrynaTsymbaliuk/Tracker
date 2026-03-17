@@ -32,7 +32,8 @@ data class ReadingResult(
     confidence = confidence,
     confidenceLevel = confidenceLevel,
     durationMinutes = durationMinutes,
-    source = source
+    source = source,
+    count = sessionCount
 ) {
     init {
         require(confidence in 0.0f..1.0f) { "Confidence must be between 0.0 and 1.0" }

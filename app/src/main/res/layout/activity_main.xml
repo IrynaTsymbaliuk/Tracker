@@ -42,7 +42,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Track your language learning and reading habits with the Tracker library."
+                    android:text="Track your language learning, reading, and movie watching habits with the Tracker library."
                     android:textSize="14sp"
                     android:textColor="?android:textColorSecondary"
                     android:gravity="center"
@@ -265,7 +265,57 @@
                         android:textSize="14sp"
                         android:textColor="?android:textColorSecondary"
                         android:layout_marginStart="12dp"
+                        android:layout_marginBottom="16dp"
                         tools:text="Apps: Kindle, Google Books" />
+
+                    <!-- Movie Watching Section -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="🎬 Movie Watching"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:textColor="?android:textColorPrimary"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:id="@+id/tvMovieWatchingStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:textColor="?android:textColorSecondary"
+                        android:layout_marginBottom="4dp"
+                        android:layout_marginStart="12dp"
+                        tools:text="✓ Activity Detected" />
+
+                    <TextView
+                        android:id="@+id/tvMovieWatchingCount"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:textColor="?android:textColorSecondary"
+                        android:layout_marginBottom="4dp"
+                        android:layout_marginStart="12dp"
+                        tools:text="Movies: 3 watched" />
+
+                    <TextView
+                        android:id="@+id/tvMovieWatchingConfidence"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:textColor="?android:textColorSecondary"
+                        android:layout_marginBottom="4dp"
+                        android:layout_marginStart="12dp"
+                        tools:text="Confidence: 95% (HIGH)" />
+
+                    <TextView
+                        android:id="@+id/tvMovieWatchingMovies"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:textColor="?android:textColorSecondary"
+                        android:layout_marginStart="12dp"
+                        tools:text="Movies: The Matrix, Inception" />
 
                 </LinearLayout>
 

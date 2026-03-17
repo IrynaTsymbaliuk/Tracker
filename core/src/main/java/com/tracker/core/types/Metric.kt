@@ -5,6 +5,7 @@ package com.tracker.core.types
  */
 enum class Metric {
     LANGUAGE_LEARNING,
-    READING
-    // Future: WORKOUT, SLEEP, STEPS, WEIGHT, WATCHING
+    READING,
+    MOVIE_WATCHING
+    // Future: WORKOUT, SLEEP, STEPS, WEIGHT
 }

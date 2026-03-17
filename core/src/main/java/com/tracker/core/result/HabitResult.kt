@@ -11,13 +11,15 @@ import com.tracker.core.types.DataSource
  * @property confidenceLevel Categorical representation of confidence
  * @property durationMinutes Total duration in minutes (nullable)
  * @property source The primary/winning data source
+ * @property count Total count of discrete events (nullable, e.g., number of movies watched)
  */
 abstract class HabitResult(
     open val occurred: Boolean,
     open val confidence: Float,
     open val confidenceLevel: ConfidenceLevel,
     open val durationMinutes: Int?,
-    open val source: DataSource
+    open val source: DataSource,
+    open val count: Int?
 ) {
     init {
         require(confidence in 0.0f..1.0f) { "Confidence must be between 0.0 and 1.0" }

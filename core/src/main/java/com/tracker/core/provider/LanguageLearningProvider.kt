@@ -40,17 +40,22 @@ class LanguageLearningProvider internal constructor(
             LANGUAGE_LEARNING_MIN_SESSION_MINUTES
         )?.ifEmpty { return null } ?: return null
 
-        var combinedConfidence = combineProbabilities(evidenceList.map { it.confidence })
-        val totalDuration = evidenceList.mapNotNull { it.durationMinutes }.sum()
+        // Filter out invalid sessions with duration <= 0
+        val validEvidenceList = evidenceList.filter {
+            (it.durationMinutes ?: 0) > 0
+        }.ifEmpty { return null }
 
-        if (evidenceList.all { it.confidence < minConfidence }) {
+        var combinedConfidence = combineProbabilities(validEvidenceList.map { it.confidence })
+        val totalDuration = validEvidenceList.mapNotNull { it.durationMinutes }.sum()
+
+        if (validEvidenceList.all { it.confidence < minConfidence }) {
             combinedConfidence = max(0f, combinedConfidence - WEAK_ONLY_PENALTY)
         }
 
         val occurred = combinedConfidence.toOccurred(minConfidence)
         val confidenceLevel = combinedConfidence.toConfidenceLevel()
 
-        val apps = evidenceList.mapNotNull { ev ->
+        val apps = validEvidenceList.mapNotNull { ev ->
             val packageName = ev.metadata["packageName"] as? String
             val appName = ev.metadata["appName"] as? String
             if (packageName != null && appName != null) {
@@ -66,8 +71,8 @@ class LanguageLearningProvider internal constructor(
             occurred = occurred,
             confidence = combinedConfidence,
             confidenceLevel = confidenceLevel,
-            durationMinutes = if (totalDuration > 0) totalDuration else null,
-            sessionCount = evidenceList.size,
+            durationMinutes = if (occurred) totalDuration else null,
+            sessionCount = validEvidenceList.size,
             source = primarySource,
             apps = apps
         )

@@ -1,9 +1,11 @@
 package com.tracker.core.engine
 
 import android.content.Context
+import com.tracker.core.collector.LetterboxdCollector
 import com.tracker.core.permission.PermissionManager
 import com.tracker.core.provider.LanguageLearningProvider
 import com.tracker.core.provider.MetricProvider
+import com.tracker.core.provider.MovieWatchingProvider
 import com.tracker.core.provider.ReadingProvider
 import com.tracker.core.collector.UsageStateCollector
 import com.tracker.core.result.HabitResult
@@ -26,13 +28,15 @@ class HabitEngine internal constructor(
 
         fun create(
             context: Context,
-            minConfidence: Float
+            minConfidence: Float,
+            letterboxdUsername: String? = null
         ): HabitEngine {
             val permissionManager = PermissionManager(context)
 
-            val providers = mapOf(
+            val providers = mutableMapOf(
                 Metric.LANGUAGE_LEARNING to LanguageLearningProvider(UsageStateCollector(context, permissionManager)),
-                Metric.READING to ReadingProvider(UsageStateCollector(context, permissionManager))
+                Metric.READING to ReadingProvider(UsageStateCollector(context, permissionManager)),
+                Metric.MOVIE_WATCHING to MovieWatchingProvider(LetterboxdCollector(context), letterboxdUsername)
             )
 
             return HabitEngine(minConfidence, providers)

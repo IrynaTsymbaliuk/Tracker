@@ -1,8 +1,8 @@
 # Tracker
 
-**Detect user habits from Android system data — no user input required.**
+**Detect user habits from Android system data and third-party services — no user input required.**
 
-Tracker is an Android library that automatically identifies user behaviors (like language learning and reading) by analyzing device usage patterns. Your app gets reliable habit data without asking users to manually track anything.
+Tracker is an Android library that automatically identifies user behaviors (like language learning, reading, and movie watching) by analyzing device usage patterns and third-party RSS feeds. Your app gets reliable habit data without asking users to manually track anything.
 
 ## Do You Need This?
 
@@ -17,34 +17,35 @@ Tracker is an Android library that automatically identifies user behaviors (like
 ## What It Does
 
 ```kotlin
-// 1. Build tracker (no need to declare metrics upfront)
+// 1. Build tracker
 val tracker = Tracker.Builder(context)
     .setMinConfidence(0.50f)  // 50% confidence threshold
+    .setLetterboxdUsername("your_username")  // Optional: for movie watching tracking
     .build()
 
-// 2. Request permissions (opens Settings)
-if (!tracker.hasAllRequiredAccess(Metric.LANGUAGE_LEARNING)) {
-    tracker.requestMissingAccess(this, Metric.LANGUAGE_LEARNING)
-}
-
-// 3. Query individual metrics for the last 24 hours
+// 2. Query individual metrics for the last 24 hours
 val llResult = tracker.queryLanguageLearning()
 val readingResult = tracker.queryReading()
+val movieResult = tracker.queryMovieWatching()
 
-// Language Learning result contains:
-llResult.result?.occurred              // Whether language learning was detected
-llResult.result?.durationMinutes       // Total time spent
-llResult.result?.confidence            // Confidence score (0.0-1.0)
-llResult.result?.confidenceLevel       // LOW/MEDIUM/HIGH
-llResult.result?.apps                  // Apps used
-llResult.dataQuality                   // What data sources are available/missing
+// Language Learning result:
+llResult?.occurred              // Whether language learning was detected
+llResult?.durationMinutes       // Total time spent
+llResult?.confidence            // Confidence score (0.0-1.0)
+llResult?.confidenceLevel       // LOW/MEDIUM/HIGH
+llResult?.apps                  // Apps used (List<AppInfo>)
 
-// Reading result contains:
-readingResult.result?.occurred         // Whether reading was detected
-readingResult.result?.durationMinutes  // Total time spent
-readingResult.result?.confidence       // Confidence score (0.0-1.0)
-readingResult.result?.apps             // Apps used
-readingResult.dataQuality              // What data sources are available/missing
+// Reading result:
+readingResult?.occurred         // Whether reading was detected
+readingResult?.durationMinutes  // Total time spent
+readingResult?.confidence       // Confidence score (0.0-1.0)
+readingResult?.apps             // Apps used (List<AppInfo>)
+
+// Movie Watching result:
+movieResult?.occurred           // Whether movies were watched
+movieResult?.count              // Number of movies watched
+movieResult?.confidence         // Confidence score (0.0-1.0)
+movieResult?.movies             // Movies watched (List<MovieInfo>)
 ```
 
 **Output example (last 24 hours):**
@@ -52,13 +53,16 @@ readingResult.dataQuality              // What data sources are available/missin
   - Apps: Duolingo, Anki
 - **Reading**: "30 minutes detected with 75% confidence (MEDIUM)"
   - Apps: Kindle
+- **Movie Watching**: "3 movies watched with 95% confidence (HIGH)"
+  - Movies: The Matrix, Inception, Interstellar
 
 ## Supported Metrics
 
-| Metric | Data Source | Detected Apps | Permission Required |
-|--------|-------------|---------------|---------------------|
+| Metric | Data Source | Detected Apps/Data | Permission Required |
+|--------|-------------|-------------------|---------------------|
 | **LANGUAGE_LEARNING** | App usage stats | Duolingo, Anki, LingoDeer, Drops, Kanji Study, and 8 more | PACKAGE_USAGE_STATS |
 | **READING** | App usage stats | Kindle, Google Play Books | PACKAGE_USAGE_STATS |
+| **MOVIE_WATCHING** | Letterboxd RSS | Movie titles and watch dates from public RSS feed | INTERNET (no user permission required) |
 
 *More metrics coming: Exercise (Health Connect), Sleep, Social Activity*
 
@@ -72,11 +76,15 @@ dependencies {
 }
 ```
 
-Add permission to `AndroidManifest.xml`:
+Add permissions to `AndroidManifest.xml`:
 
 ```xml
+<!-- Required for language learning and reading tracking -->
 <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
     tools:ignore="ProtectedPermissions" />
+
+<!-- Required for movie watching tracking (Letterboxd RSS) -->
+<uses-permission android:name="android.permission.INTERNET" />
 ```
 
 ## Key Features
@@ -114,45 +122,69 @@ val tracker = Tracker.Builder(context)
     .build()
 ```
 
-### Check Detected Apps
+### Check Detected Apps and Movies
 
 ```kotlin
 val llResult = tracker.queryLanguageLearning()
 val readingResult = tracker.queryReading()
+val movieResult = tracker.queryMovieWatching()
 
 // Language learning apps
-llResult.result?.apps?.forEach { app ->
+llResult?.apps?.forEach { app ->
     println("${app.appName}: ${app.durationMinutes} minutes")
 }
 
 // Reading apps
-readingResult.result?.apps?.forEach { app ->
+readingResult?.apps?.forEach { app ->
     println("${app.appName}: ${app.durationMinutes} minutes")
+}
+
+// Movies watched
+movieResult?.movies?.forEach { movie ->
+    println("${movie.title} watched on ${movie.watchedDate}")
+}
+```
+
+### Using Callbacks Instead of Coroutines
+
+```kotlin
+// Query with callback (Java-friendly)
+tracker.queryLanguageLearning { result ->
+    println("Language learning: ${result?.occurred}")
+}
+
+tracker.queryMovieWatching { result ->
+    println("Movies watched: ${result?.count}")
 }
 ```
 
 ## How It Works
 
-1. **Data Collection**: Queries Android system APIs (UsageStatsManager, Health Connect, etc.)
+1. **Data Collection**: Queries Android system APIs (UsageStatsManager) and third-party RSS feeds (Letterboxd)
 2. **Evidence Gathering**: Collects timestamped evidence from the last 24 hours
-3. **Smart Aggregation**: Removes duplicates, calculates confidence scores
-4. **Result Building**: Returns structured data with quality metrics
+3. **Smart Aggregation**: Filters invalid sessions (duration ≤ 0), calculates confidence scores
+4. **Result Building**: Returns structured data with confidence metrics
 
-**Privacy**: All processing happens on-device. No data leaves the user's phone.
+**Privacy**:
+- System data processing happens entirely on-device
+- Letterboxd data is fetched from public RSS feeds (requires INTERNET permission)
+- No data is sent to any servers beyond the third-party services you configure
 
 ## Architecture
 
 ```
 Tracker (public API)
   └─> HabitEngine (orchestration)
-       ├─> Collectors (gather evidence from system APIs)
-       ├─> Aggregators (process evidence into habits)
-       └─> PermissionManager (check/request access)
+       └─> MetricProviders (one per metric)
+            ├─> LanguageLearningProvider (UsageStats collection + aggregation)
+            ├─> ReadingProvider (UsageStats collection + aggregation)
+            └─> MovieWatchingProvider (Letterboxd RSS parsing)
 ```
 
-- **Collectors** are self-describing (declare their own requirements)
-- **Aggregators** handle metric-specific logic (confidence scoring, deduplication)
-- **PermissionManager** provides unified access checking across all sources
+- **MetricProviders** encapsulate all logic for their metric (collection, aggregation, confidence scoring)
+- Each provider filters invalid data (e.g., sessions with duration ≤ 0)
+- Providers return null when no valid data is available
+- Network operations run on IO dispatcher for non-blocking execution
 
 ## Requirements
 
@@ -170,10 +202,12 @@ Run the included sample app to see the library in action:
 
 The sample demonstrates:
 - Permission request flow
-- Querying multiple metrics (Language Learning + Reading)
+- Querying multiple metrics (Language Learning, Reading, Movie Watching)
 - Displaying activity results for the last 24 hours
-- Showing confidence scores and detected apps
-- Data quality information
+- Showing confidence scores and detected apps/movies
+- Handling null values and missing data gracefully
+
+**Note:** To enable movie watching in the sample app, set your Letterboxd username in `MainActivity.kt`
 
 ## Contributing
 
@@ -186,5 +220,6 @@ Apache 2.0 — see [LICENSE](LICENSE) for details.
 ## Roadmap
 
 - [ ] Health Connect integration (exercise, sleep)
-- [ ] OAuth support for third-party APIs (Goodreads, Kindle API, etc.)
+- [ ] OAuth support for third-party APIs (Goodreads, Strava, etc.)
 - [ ] Additional metrics (Social Activity, Screen Time)
+- [ ] Support for more movie tracking services (Trakt, IMDb)

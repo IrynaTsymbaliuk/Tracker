@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
  * ```
  * val tracker = Tracker.Builder(context)
  *     .setMinConfidence(0.50)
+ *     .setLetterboxdUsername("username")
  *     .build()
  *
  * // Query language learning with coroutines (last 24 hours)
@@ -33,17 +34,27 @@ import kotlinx.coroutines.launch
  * tracker.queryReading { result ->
  *     // Handle result
  * }
+ *
+ * // Query movie watching with coroutines (last 24 hours)
+ * val result = tracker.queryMovieWatching()
+ *
+ * // Query movie watching with callback (last 24 hours)
+ * tracker.queryMovieWatching { result ->
+ *     // Handle result
+ * }
  * ```
  */
 class Tracker private constructor(
     private val context: Context,
     private val minConfidence: Float,
+    private val letterboxdUsername: String?,
     internal val timeProvider: TimeProvider = TimeProvider { System.currentTimeMillis() }
 ) {
 
     private val habitEngine = HabitEngine.create(
         context,
-        minConfidence
+        minConfidence,
+        letterboxdUsername
     )
 
     /**
@@ -104,10 +115,38 @@ class Tracker private constructor(
     }
 
     /**
+     * Query movie watching metric asynchronously using coroutines.
+     * Returns data for the last 24 hours from current time.
+     * Requires Letterboxd username to be set via Builder.setLetterboxdUsername().
+     * @return HabitResult
+     */
+    suspend fun queryMovieWatching(): HabitResult? {
+        val now = timeProvider.now()
+        val toMillis = now
+        val fromMillis = now - 86_400_000L // 24 hours in milliseconds
+        return habitEngine.queryMetric(Metric.MOVIE_WATCHING, fromMillis, toMillis)
+    }
+
+    /**
+     * Query movie watching metric using callback.
+     * Returns data for the last 24 hours from current time.
+     * Requires Letterboxd username to be set via Builder.setLetterboxdUsername().
+     * Callback is invoked on the Main dispatcher.
+     * @param callback Called when results are ready
+     */
+    fun queryMovieWatching(callback: (HabitResult?) -> Unit) {
+        CoroutineScope(Dispatchers.Main).launch {
+            val result = queryMovieWatching()
+            callback(result)
+        }
+    }
+
+    /**
      * Builder for creating Tracker instances.
      */
     class Builder(private val context: Context) {
         private var minConfidence: Float = 0.50f
+        private var letterboxdUsername: String? = null
         internal var timeProvider: TimeProvider = TimeProvider { System.currentTimeMillis() }
 
         /**
@@ -122,6 +161,17 @@ class Tracker private constructor(
         }
 
         /**
+         * Set Letterboxd username for movie watching tracking.
+         * Required for queryMovieWatching() to work.
+         * @param username Letterboxd username
+         * @return This builder for chaining
+         */
+        fun setLetterboxdUsername(username: String?): Builder {
+            this.letterboxdUsername = username
+            return this
+        }
+
+        /**
          * Build the Tracker instance.
          * @return Configured Tracker instance
          */
@@ -129,6 +179,7 @@ class Tracker private constructor(
             return Tracker(
                 context = context.applicationContext,
                 minConfidence = minConfidence,
+                letterboxdUsername = letterboxdUsername,
                 timeProvider = timeProvider
             )
         }
