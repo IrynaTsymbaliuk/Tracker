@@ -17,15 +17,14 @@ import java.util.Locale
 import java.util.TimeZone
 
 class LetterboxdCollector(
-    private val dispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val rssFetcher: RssFetcher = HttpRssFetcher()
 ) {
 
     companion object {
         private const val TAG = "LetterboxdCollector"
         private const val BASE_URL = "https://letterboxd.com"
         private const val LETTERBOXD_CONFIDENCE = 0.95f
-        private const val CONNECTION_TIMEOUT_MS = 10000
-        private const val READ_TIMEOUT_MS = 10000
     }
 
     private val watchedDatePattern = Regex("Watched on [A-Za-z]+, ([A-Za-z]+ \\d+, \\d{4})")
@@ -56,7 +55,7 @@ class LetterboxdCollector(
         val rssUrl = "$BASE_URL/$id/rss/"
         Log.d(TAG, "Fetching RSS feed from: $rssUrl")
 
-        val rssContent = fetchRssFeed(rssUrl)
+        val rssContent = rssFetcher.fetch(rssUrl)
         Log.d(TAG, "RSS feed fetched successfully, size: ${rssContent.length} bytes")
 
         val allMovies = parseRssFeed(rssContent)
@@ -90,35 +89,7 @@ class LetterboxdCollector(
         }
     }
 
-    private fun fetchRssFeed(urlString: String): String {
-        var connection: HttpURLConnection? = null
-        try {
-            val url = URL(urlString)
-            connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = CONNECTION_TIMEOUT_MS
-            connection.readTimeout = READ_TIMEOUT_MS
-            connection.requestMethod = "GET"
-            connection.setRequestProperty("User-Agent", "TrackerApp/1.0")
-
-            val responseCode = connection.responseCode
-            if (responseCode != HttpURLConnection.HTTP_OK) {
-                Log.e(TAG, "HTTP error while fetching RSS feed: $responseCode from $urlString")
-                throw NetworkException("HTTP error code: $responseCode")
-            }
-
-            return connection.inputStream.bufferedReader().use { it.readText() }
-        } catch (e: NetworkException) {
-            Log.e(TAG, "HTTP error while fetching RSS feed from $urlString: ${e.message}", e)
-            throw NetworkException("HTTP error while fetching RSS feed: ${e.message}", e)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to fetch RSS feed from $urlString: ${e.message}", e)
-            throw NetworkException("Failed to fetch RSS feed: ${e.message}", e)
-        } finally {
-            connection?.disconnect()
-        }
-    }
-
-    private fun parseRssFeed(rssContent: String): List<MovieInfo> {
+    internal fun parseRssFeed(rssContent: String): List<MovieInfo> {
         val movies = mutableListOf<MovieInfo>()
 
         val rssDateFormat = SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.getDefault()).apply {
@@ -200,7 +171,7 @@ class LetterboxdCollector(
         return movies
     }
 
-    private fun extractWatchedDate(description: String?): Long? {
+    internal fun extractWatchedDate(description: String?): Long? {
         if (description == null) return null
 
         val match = watchedDatePattern.find(description) ?: return null
