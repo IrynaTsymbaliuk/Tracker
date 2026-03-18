@@ -11,14 +11,9 @@ import java.net.UnknownHostException
 import kotlin.collections.contains
 
 /**
- * Functional interface for fetching RSS feed content from URLs.
- * This abstraction allows for easy testing by mocking network calls
- * and enables reuse across different RSS-based collectors (Letterboxd, Goodreads, etc.).
+ * Fetches RSS feed content from URLs.
  *
- * The fetch function is suspending to allow non-blocking delays during retries
- * and to support coroutine cancellation.
- *
- * Use SAM conversion for simple test mocks:
+ * Example:
  * ```
  * val fetcher = RssFetcher { url -> "<rss>test data</rss>" }
  * ```
@@ -26,34 +21,23 @@ import kotlin.collections.contains
 fun interface RssFetcher {
     /**
      * Fetches content from the given URL.
-     * This is a suspending function that can be cancelled and supports non-blocking delays.
      *
-     * @param url The URL to fetch from
-     * @return The content as a String
      * @throws NetworkException if the fetch fails
-     * @throws kotlinx.coroutines.CancellationException if the coroutine is cancelled
      */
     suspend fun fetch(url: String): String
 }
 
 /**
- * Default implementation of RssFetcher using HttpURLConnection.
- * Can be shared across multiple collectors for consistent network behavior.
+ * Fetches RSS feeds using HttpURLConnection with retry logic.
  *
- * Features:
- * - Configurable timeouts and retry logic
- * - Optional network connectivity pre-checking
- * - Automatic retry for transient failures (timeouts, 5xx errors)
- * - Exponential backoff between retries (1s, 2s, 4s, ...)
- * - Non-blocking delays (coroutine-based)
+ * Retries transient failures (timeouts, 5xx errors) with exponential backoff.
  *
- * @param connectTimeoutMs Connection timeout in milliseconds (default: 10 seconds)
- * @param readTimeoutMs Read timeout in milliseconds (default: 10 seconds)
- * @param userAgent User-Agent header value (defaults to "Tracker/2.0.0 (Android XX)")
- * @param maxRetries Maximum number of retry attempts for transient failures (default: 3)
- * @param retryDelayMs Initial delay between retries in milliseconds (default: 1000ms, increases exponentially)
- * @param networkChecker Optional network connectivity checker (default: null, no pre-checking)
- *                       Pass AndroidNetworkConnectivityChecker(context) to enable pre-flight checks
+ * @param connectTimeoutMs Connection timeout (default: 10000)
+ * @param readTimeoutMs Read timeout (default: 10000)
+ * @param userAgent User-Agent header (default: "Tracker/2.0.0 (Android XX)")
+ * @param maxRetries Maximum retry attempts (default: 3)
+ * @param retryDelayMs Initial retry delay, increases exponentially (default: 1000)
+ * @param networkChecker Optional pre-flight connectivity check (default: null)
  */
 class HttpRssFetcher(
     private val connectTimeoutMs: Int = 10000,
@@ -66,15 +50,8 @@ class HttpRssFetcher(
 
     companion object {
         private const val TAG = "HttpRssFetcher"
-
-        // HTTP status codes that should be retried
         private val RETRYABLE_STATUS_CODES = setOf(408, 429, 500, 502, 503, 504)
 
-        /**
-         * Builds the default User-Agent string using library name and version from BuildConfig.
-         * Format: "LibraryName/Version (Android API_LEVEL)"
-         * Example: "Tracker/2.0.0 (Android 33)"
-         */
         private fun defaultUserAgent(): String {
             return "${BuildConfig.LIBRARY_NAME}/${BuildConfig.LIBRARY_VERSION} (Android ${Build.VERSION.SDK_INT})"
         }
@@ -89,13 +66,9 @@ class HttpRssFetcher(
         while (attempt <= maxRetries) {
             try {
                 if (attempt > 0) {
-                    val delayTime =
-                        retryDelayMs * (1 shl (attempt - 1)) // Exponential backoff: 1s, 2s, 4s
-                    Log.d(
-                        TAG,
-                        "Retrying request (attempt $attempt/$maxRetries) after ${delayTime}ms delay"
-                    )
-                    delay(delayTime) // Non-blocking, cancellable delay
+                    val delayTime = retryDelayMs * (1 shl (attempt - 1)) // Exponential backoff
+                    Log.d(TAG, "Retrying request (attempt $attempt/$maxRetries) after ${delayTime}ms delay")
+                    delay(delayTime)
                 }
 
                 return performFetch(url)
@@ -129,17 +102,14 @@ class HttpRssFetcher(
 
     private fun getShouldRetry(e: Exception): Boolean {
         return when (e) {
-            is SocketTimeoutException -> true // Retry on timeout
-            is UnknownHostException -> false // Don't retry DNS failures
+            is SocketTimeoutException -> true
+            is UnknownHostException -> false // DNS failures not retryable
             is NetworkException -> {
-                // Retry for specific HTTP status codes (server errors, rate limiting)
                 val statusCode = e.message?.let { msg ->
-                    "HTTP error code: (\\d+)".toRegex().find(msg)?.groupValues?.get(1)
-                        ?.toIntOrNull()
+                    "HTTP error code: (\\d+)".toRegex().find(msg)?.groupValues?.get(1)?.toIntOrNull()
                 }
                 statusCode in RETRYABLE_STATUS_CODES
             }
-
             else -> false
         }
     }

@@ -17,56 +17,28 @@ import java.util.Locale
 import java.util.TimeZone
 
 /**
- * Collector for gathering movie watching evidence from Letterboxd RSS feeds.
+ * Collects movie watching evidence from Letterboxd RSS feeds.
  *
- * All public methods are safe to call from any thread, including the main thread.
- * Network operations are automatically performed on the IO dispatcher.
+ * Safe to call from any thread. Uses retry logic with exponential backoff for network failures.
  *
- * **Required Permissions:**
- * - `android.permission.INTERNET` - Required for network requests
+ * **Permissions:**
+ * - `android.permission.INTERNET` (required)
+ * - `android.permission.ACCESS_NETWORK_STATE` (optional, only if using AndroidNetworkConnectivityChecker)
  *
- * **Optional Permissions:**
- * - `android.permission.ACCESS_NETWORK_STATE` - Only needed if using AndroidNetworkConnectivityChecker
- *
- * **Network Connectivity Checking:**
- * By default, the collector does NOT check network connectivity before making requests.
- * Instead, it relies on retry logic with exponential backoff to handle network failures.
- * This works well for most use cases and doesn't require additional permissions.
- *
- * You can optionally enable pre-flight connectivity checking by injecting AndroidNetworkConnectivityChecker
- * (requires ACCESS_NETWORK_STATE permission in your app's manifest).
- *
- * **Example usage:**
+ * **Example:**
  * ```
- * // Basic usage (recommended - no pre-check, uses retry logic)
+ * // Basic usage
  * val collector = LetterboxdCollector()
  * val evidence = collector.collect(fromMillis, toMillis, "username")
  *
- * // Access type-safe metadata
- * evidence.forEach { counterEvidence ->
- *     val metadata = LetterboxdMetadata.fromMap(counterEvidence.metadata)
- *     if (metadata != null) {
- *         println("Movie: ${metadata.title}")
- *         println("Watched: ${Date(metadata.watchedDate)}")
- *     }
- * }
+ * // Access metadata
+ * val metadata = LetterboxdMetadata.fromMap(evidence.first().metadata)
+ * println("Movie: ${metadata?.title}")
  *
- * // With network connectivity pre-checking (requires ACCESS_NETWORK_STATE permission)
- * val fetcher = HttpRssFetcher(
- *     networkChecker = AndroidNetworkConnectivityChecker(context)
- * )
- * val collector = LetterboxdCollector(rssFetcher = fetcher)
- *
- * // With custom retry configuration
- * val fetcher = HttpRssFetcher(
- *     maxRetries = 5,
- *     retryDelayMs = 2000
- * )
+ * // Custom configuration
+ * val fetcher = HttpRssFetcher(maxRetries = 5, retryDelayMs = 2000)
  * val collector = LetterboxdCollector(rssFetcher = fetcher)
  * ```
- *
- * @property dispatcher The coroutine dispatcher to use for IO operations (injectable for testing)
- * @property rssFetcher The RSS fetcher implementation (injectable for testing/customization)
  */
 class LetterboxdCollector(
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
@@ -79,24 +51,16 @@ class LetterboxdCollector(
         private const val LETTERBOXD_CONFIDENCE = 0.95f
     }
 
-    private val watchedDatePattern = Regex("Watched on [A-Za-z]+, ([A-Za-z]+ \\d+, \\d{4})")
-
     /**
-     * Collects movie watching evidence from Letterboxd RSS feed within the specified time range.
+     * Collects movie watching evidence from Letterboxd RSS feed.
      *
-     * This function is safe to call from any thread, including the main thread.
-     * Network operations are automatically performed on IO dispatcher.
-     *
-     * The operation is cancellable - if the coroutine is cancelled, the operation will stop gracefully.
-     *
-     * @param fromMillis Start of time range in milliseconds (inclusive)
-     * @param toMillis End of time range in milliseconds (inclusive)
-     * @param id Letterboxd username (e.g., "johndoe")
-     * @return List of evidence for movies watched/published in the time range
-     * @throws InvalidLetterboxdIdException if username is empty or blank
-     * @throws NetworkException if network request fails (e.g., timeout, no connection, HTTP error)
-     * @throws RssParseException if RSS feed parsing fails (e.g., malformed XML, unexpected format)
-     * @throws kotlinx.coroutines.CancellationException if the coroutine is cancelled
+     * @param fromMillis Start of time range (inclusive, milliseconds)
+     * @param toMillis End of time range (inclusive, milliseconds)
+     * @param letterboxdUsername Letterboxd username
+     * @return List of movie evidence in the time range
+     * @throws InvalidLetterboxdIdException if username is blank
+     * @throws NetworkException if network request fails
+     * @throws RssParseException if RSS parsing fails
      */
     suspend fun collect(
         fromMillis: Long,
@@ -153,118 +117,21 @@ class LetterboxdCollector(
     }
 
     internal fun parseRssFeed(rssContent: String): List<MovieInfo> {
-        val movies = mutableListOf<MovieInfo>()
-
-        val rssDateFormat =
-            SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.getDefault()).apply {
-                timeZone = TimeZone.getTimeZone("UTC")
-            }
-
-        try {
-            val factory = XmlPullParserFactory.newInstance()
-            val parser = factory.newPullParser()
-            parser.setInput(StringReader(rssContent))
-
-            var eventType = parser.eventType
-            var currentTitle: String? = null
-            var currentPubDate: Long? = null
-            var currentDescription: String? = null
-            var inItem = false
-
-            while (eventType != XmlPullParser.END_DOCUMENT) {
-                when (eventType) {
-                    XmlPullParser.START_TAG -> {
-                        when (parser.name) {
-                            "item" -> {
-                                inItem = true
-                                currentTitle = null
-                                currentPubDate = null
-                                currentDescription = null
-                            }
-
-                            "title" -> {
-                                if (inItem) {
-                                    currentTitle = parser.nextText()
-                                }
-                            }
-
-                            "pubDate" -> {
-                                if (inItem) {
-                                    val dateText = parser.nextText()
-                                    currentPubDate = try {
-                                        rssDateFormat.parse(dateText)?.time
-                                    } catch (e: Exception) {
-                                        Log.w(TAG, "Failed to parse pubDate: $dateText", e)
-                                        null
-                                    }
-                                }
-                            }
-
-                            "description" -> {
-                                if (inItem) {
-                                    currentDescription = parser.nextText()
-                                }
-                            }
-                        }
-                    }
-
-                    XmlPullParser.END_TAG -> {
-                        if (parser.name == "item" && inItem) {
-                            if (currentTitle != null && currentPubDate != null) {
-                                val watchedDate =
-                                    extractWatchedDate(currentDescription) ?: currentPubDate
-                                movies.add(
-                                    MovieInfo(
-                                        title = currentTitle,
-                                        publishedDate = currentPubDate,
-                                        watchedDate = watchedDate
-                                    )
-                                )
-                            }
-                            inItem = false
-                        }
-                    }
-                }
-                eventType = parser.next()
-            }
+        return try {
+            RssParser().parse(rssContent)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to parse RSS feed: ${e.message}", e)
             throw RssParseException("Failed to parse RSS feed: ${e.message}", e)
         }
-
-        return movies
     }
 
-    internal fun extractWatchedDate(description: String?): Long? {
-        if (description == null) return null
-
-        val match = watchedDatePattern.find(description) ?: return null
-        val dateString = match.groupValues[1] // "Jan 15, 2024"
-
-        val watchedDateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).apply {
-            timeZone = TimeZone.getTimeZone("UTC")
-        }
-
-        return try {
-            watchedDateFormat.parse(dateString)?.time
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to parse watched date: $dateString", e)
-            null
-        }
-    }
 }
 
-/**
- * Exception thrown when a Letterboxd username is invalid.
- */
+/** Thrown when Letterboxd username is invalid. */
 class InvalidLetterboxdIdException(message: String) : Exception(message)
 
-/**
- * Exception thrown when network request fails.
- */
+/** Thrown when network request fails. */
 class NetworkException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
-/**
- * Exception thrown when RSS feed parsing fails.
- */
+/** Thrown when RSS feed parsing fails. */
 class RssParseException(message: String, cause: Throwable? = null) : Exception(message, cause)

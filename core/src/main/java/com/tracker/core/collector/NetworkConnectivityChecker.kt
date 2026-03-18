@@ -5,37 +5,22 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
 
-/**
- * Interface for checking network connectivity.
- * Allows for easy testing and dependency injection.
- */
+/** Checks network connectivity. */
 fun interface NetworkConnectivityChecker {
-    /**
-     * Checks if network is available.
-     * @return true if network is available, false otherwise
-     */
+    /** @return true if network is available */
     fun isNetworkAvailable(): Boolean
 }
 
 /**
- * Default implementation of NetworkConnectivityChecker using ConnectivityManager.
+ * Checks network connectivity using ConnectivityManager.
  *
- * Requires permission: `android.permission.ACCESS_NETWORK_STATE`
+ * Requires `android.permission.ACCESS_NETWORK_STATE`.
  *
- * **Behavior:**
- * - API 23+: Checks for validated internet connectivity (actual working internet)
- * - API 21-22: Always returns true (connectivity check is unreliable on these versions)
- *
- * On older API levels, the library relies on retry logic to handle network failures
- * rather than pre-checking connectivity, as the old API cannot reliably determine
- * if internet is actually working (only if device is connected to a network).
- *
- * @param context Android context for accessing system services
+ * - API 23+: Checks for validated internet connectivity
+ * - API 21-22: Always returns true (relies on retry logic instead)
  */
 class AndroidNetworkConnectivityChecker(private val context: Context) : NetworkConnectivityChecker {
     override fun isNetworkAvailable(): Boolean {
-        // Only perform validated connectivity check on API 23+
-        // On older versions, let the fetch fail naturally with retry logic
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             return true
         }
