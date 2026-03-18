@@ -9,33 +9,22 @@ import com.tracker.core.types.DataSource
  * @property occurred Whether reading was detected for this day
  * @property confidence Combined confidence score (0.0 to 1.0)
  * @property confidenceLevel Categorical confidence level
+ * @property source Primary data source
  * @property durationMinutes Total time spent reading across all apps (nullable)
  * @property sessionCount Number of distinct reading sessions (where duration > 0 and packageName exists)
- * @property source Primary data source
  * @property apps List of apps that contributed to this result
- * @property title The book title being read (nullable, reserved for future OAuth integration)
- *
- * Note: title is currently always null. It will be populated when OAuth integration
- * is added (e.g., Google Play Books API, Kindle API) to provide richer reading context.
+// * @property title The book title being read (nullable, reserved for future OAuth integration)
+// *
+// * Note: title is currently always null. It will be populated when OAuth integration
+// * is added (e.g., Google Play Books API, Kindle API) to provide richer reading context.
  */
 data class ReadingResult(
     override val occurred: Boolean,
+    override val source: DataSource,
     override val confidence: Float,
     override val confidenceLevel: ConfidenceLevel,
-    override val durationMinutes: Int?,
+    override val timeRange: TimeRange,
+    val durationMinutes: Int?,
     val sessionCount: Int?,
-    override val source: DataSource,
-    val apps: List<AppInfo> = emptyList(),
-    val title: String? = null
-) : HabitResult(
-    occurred = occurred,
-    confidence = confidence,
-    confidenceLevel = confidenceLevel,
-    durationMinutes = durationMinutes,
-    source = source,
-    count = sessionCount
-) {
-    init {
-        require(confidence in 0.0f..1.0f) { "Confidence must be between 0.0 and 1.0" }
-    }
-}
+    val apps: List<AppInfo> = emptyList()
+) : HabitResult()

@@ -1,16 +1,15 @@
 package com.tracker.core.provider
 
-import com.tracker.core.collector.UsageStateCollector
+import com.tracker.core.collector.UsageStatsCollector
 import com.tracker.core.config.KnownApps
 import com.tracker.core.result.AppInfo
 import com.tracker.core.result.LanguageLearningResult
+import com.tracker.core.result.TimeRange
 import com.tracker.core.result.toConfidenceLevel
-import com.tracker.core.result.toOccurred
 import com.tracker.core.types.DataSource
-import kotlin.math.max
 
 class LanguageLearningProvider internal constructor(
-    private val usageStateCollector: UsageStateCollector
+    private val usageStatsCollector: UsageStatsCollector
 ) : MetricProvider<LanguageLearningResult> {
 
     private companion object {
@@ -19,12 +18,6 @@ class LanguageLearningProvider internal constructor(
          * Sessions shorter than this are filtered out.
          */
         const val LANGUAGE_LEARNING_MIN_SESSION_MINUTES = 5
-
-        /**
-         * Penalty applied to combined confidence when all evidence is below minConfidence threshold.
-         * This reduces confidence for cases where only weak signals exist.
-         */
-        const val WEAK_ONLY_PENALTY = 0.15f
     }
 
     override suspend fun query(
@@ -33,27 +26,18 @@ class LanguageLearningProvider internal constructor(
         minConfidence: Float
     ): LanguageLearningResult? {
 
-        val evidenceList = usageStateCollector.collect(
+        val evidenceList = usageStatsCollector.collect(
             fromMillis,
             toMillis,
             KnownApps.languageLearning,
             LANGUAGE_LEARNING_MIN_SESSION_MINUTES
         )?.ifEmpty { return null } ?: return null
 
-        // Filter out invalid sessions with duration <= 0
-        val validEvidenceList = evidenceList.filter {
-            (it.durationMinutes ?: 0) > 0
-        }.ifEmpty { return null }
+        val validEvidenceList = evidenceList.filter { it.durationMinutes > 0 }.ifEmpty { return null }
 
-        var combinedConfidence = combineProbabilities(validEvidenceList.map { it.confidence })
-        val totalDuration = validEvidenceList.mapNotNull { it.durationMinutes }.sum()
+        val combinedConfidence = weightedAverage(validEvidenceList)
 
-        if (validEvidenceList.all { it.confidence < minConfidence }) {
-            combinedConfidence = max(0f, combinedConfidence - WEAK_ONLY_PENALTY)
-        }
-
-        val occurred = combinedConfidence.toOccurred(minConfidence)
-        val confidenceLevel = combinedConfidence.toConfidenceLevel()
+        val totalDuration = validEvidenceList.sumOf { it.durationMinutes }
 
         val apps = validEvidenceList.mapNotNull { ev ->
             val packageName = ev.metadata["packageName"] as? String
@@ -65,35 +49,15 @@ class LanguageLearningProvider internal constructor(
             }
         }.distinctBy { it.packageName }
 
-        val primarySource = DataSource.USAGE_STATS
-
         return LanguageLearningResult(
-            occurred = occurred,
+            occurred = validEvidenceList.isNotEmpty(),
+            source = DataSource.USAGE_STATS,
             confidence = combinedConfidence,
-            confidenceLevel = confidenceLevel,
-            durationMinutes = if (occurred) totalDuration else null,
+            confidenceLevel = combinedConfidence.toConfidenceLevel(),
+            timeRange = TimeRange(fromMillis, toMillis),
+            durationMinutes = totalDuration,
             sessionCount = validEvidenceList.size,
-            source = primarySource,
             apps = apps
         )
-    }
-
-    /**
-     * Combine independent probabilities using the formula:
-     * combined = 1 - ∏(1 - p_i)
-     *
-     * This represents the probability that at least one of the independent
-     * events is true (i.e., at least one session was genuine).
-     */
-    private fun combineProbabilities(confidences: List<Float>): Float {
-        if (confidences.isEmpty()) return 0f
-        if (confidences.size == 1) return confidences.first()
-
-        var product = 1.0f
-        for (confidence in confidences) {
-            product *= (1.0f - confidence)
-        }
-
-        return 1.0f - product
     }
 }

@@ -1,16 +1,17 @@
 package com.tracker.core.provider
 
-import com.tracker.core.collector.UsageStateCollector
+import com.tracker.core.collector.UsageStatsCollector
 import com.tracker.core.config.KnownApps
 import com.tracker.core.result.AppInfo
 import com.tracker.core.result.ReadingResult
+import com.tracker.core.result.TimeRange
 import com.tracker.core.result.toConfidenceLevel
 import com.tracker.core.result.toOccurred
 import com.tracker.core.types.DataSource
 import kotlin.math.max
 
 class ReadingProvider internal constructor(
-    private val usageStateCollector: UsageStateCollector
+    private val usageStatsCollector: UsageStatsCollector
 ) : MetricProvider<ReadingResult> {
 
     private companion object {
@@ -33,7 +34,7 @@ class ReadingProvider internal constructor(
         minConfidence: Float
     ): ReadingResult? {
 
-        val evidenceList = usageStateCollector.collect(
+        val evidenceList = usageStatsCollector.collect(
             fromMillis,
             toMillis,
             KnownApps.reading,
@@ -65,15 +66,14 @@ class ReadingProvider internal constructor(
             }
         }.distinctBy { it.packageName }
 
-        val primarySource = DataSource.USAGE_STATS
-
         return ReadingResult(
             occurred = occurred,
+            source = DataSource.USAGE_STATS,
             confidence = combinedConfidence,
             confidenceLevel = confidenceLevel,
-            durationMinutes = if (occurred) totalDuration else null,
+            timeRange = TimeRange(fromMillis, toMillis),
+            durationMinutes = totalDuration,
             sessionCount = validEvidenceList.size,
-            source = primarySource,
             apps = apps
         )
     }

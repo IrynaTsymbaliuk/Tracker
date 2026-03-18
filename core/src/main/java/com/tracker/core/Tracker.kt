@@ -1,7 +1,12 @@
 package com.tracker.core
 
 import android.content.Context
-import com.tracker.core.engine.HabitEngine
+import com.tracker.core.collector.LetterboxdCollector
+import com.tracker.core.collector.UsageStatsCollector
+import com.tracker.core.permission.PermissionManager
+import com.tracker.core.provider.LanguageLearningProvider
+import com.tracker.core.provider.MovieWatchingProvider
+import com.tracker.core.provider.ReadingProvider
 import com.tracker.core.result.HabitResult
 import com.tracker.core.types.Metric
 import kotlinx.coroutines.CoroutineScope
@@ -45,17 +50,12 @@ import kotlinx.coroutines.launch
  * ```
  */
 class Tracker private constructor(
-    private val context: Context,
     private val minConfidence: Float,
-    private val letterboxdUsername: String?,
+    private val readingProvider: ReadingProvider?,
+    private val languageLearningProvider: LanguageLearningProvider?,
+    private val movieWatchingProvider: MovieWatchingProvider?,
     internal val timeProvider: TimeProvider = TimeProvider { System.currentTimeMillis() }
 ) {
-
-    private val habitEngine = HabitEngine.create(
-        context,
-        minConfidence,
-        letterboxdUsername
-    )
 
     /**
      * Get the configured minimum confidence threshold.
@@ -73,7 +73,7 @@ class Tracker private constructor(
         val now = timeProvider.now()
         val toMillis = now
         val fromMillis = now - 86_400_000L // 24 hours in milliseconds
-        return habitEngine.queryMetric(Metric.LANGUAGE_LEARNING, fromMillis, toMillis)
+        return languageLearningProvider?.query(fromMillis, toMillis, minConfidence)
     }
 
     /**
@@ -98,7 +98,7 @@ class Tracker private constructor(
         val now = timeProvider.now()
         val toMillis = now
         val fromMillis = now - 86_400_000L // 24 hours in milliseconds
-        return habitEngine.queryMetric(Metric.READING, fromMillis, toMillis)
+        return readingProvider?.query(fromMillis, toMillis, minConfidence)
     }
 
     /**
@@ -124,7 +124,7 @@ class Tracker private constructor(
         val now = timeProvider.now()
         val toMillis = now
         val fromMillis = now - 86_400_000L // 24 hours in milliseconds
-        return habitEngine.queryMetric(Metric.MOVIE_WATCHING, fromMillis, toMillis)
+        return movieWatchingProvider?.query(fromMillis, toMillis, minConfidence)
     }
 
     /**
@@ -146,8 +146,23 @@ class Tracker private constructor(
      */
     class Builder(private val context: Context) {
         private var minConfidence: Float = 0.50f
-        private var letterboxdUsername: String? = null
         internal var timeProvider: TimeProvider = TimeProvider { System.currentTimeMillis() }
+
+        private var enableReading = false
+        private var enableLanguageLearning = false
+        private var letterboxdUsername: String? = null
+
+        fun enableReading() {
+            enableReading = true
+        }
+
+        fun enableLanguageLearning() {
+            enableLanguageLearning = true
+        }
+
+        fun enableMovieWatching(username: String) {
+            letterboxdUsername = username
+        }
 
         /**
          * Set minimum confidence threshold for results.
@@ -176,10 +191,24 @@ class Tracker private constructor(
          * @return Configured Tracker instance
          */
         fun build(): Tracker {
+            val permissionManager = PermissionManager(context)
             return Tracker(
-                context = context.applicationContext,
                 minConfidence = minConfidence,
-                letterboxdUsername = letterboxdUsername,
+                readingProvider = if (enableReading) ReadingProvider(
+                    UsageStatsCollector(
+                        context,
+                        permissionManager
+                    )
+                ) else null,
+                languageLearningProvider = if (enableLanguageLearning) LanguageLearningProvider(
+                    UsageStatsCollector(context, permissionManager)
+                ) else null,
+                movieWatchingProvider = letterboxdUsername?.let {
+                    MovieWatchingProvider(
+                        LetterboxdCollector(),
+                        it
+                    )
+                },
                 timeProvider = timeProvider
             )
         }

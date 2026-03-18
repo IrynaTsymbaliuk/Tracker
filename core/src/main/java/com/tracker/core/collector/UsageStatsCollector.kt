@@ -6,25 +6,21 @@ import android.content.Context
 import android.content.pm.PackageManager
 import com.tracker.core.config.AppMetadata
 import com.tracker.core.config.KnownApps
-import com.tracker.core.collector.NoMonitorableAppsException
-import com.tracker.core.collector.PackageManagerException
-import com.tracker.core.collector.PermissionDeniedException
-import com.tracker.core.collector.SystemServiceUnavailableException
-import com.tracker.core.model.Evidence
+import com.tracker.core.model.DurationEvidence
 import com.tracker.core.permission.Permission
 import com.tracker.core.permission.PermissionManager
 import com.tracker.core.permission.PermissionStatus
 import com.tracker.core.types.DataSource
 import java.util.concurrent.TimeUnit
 
-class UsageStateCollector(private val context: Context, private val permissionManager: PermissionManager) {
+class UsageStatsCollector(private val context: Context, private val permissionManager: PermissionManager) {
 
     fun collect(
         fromMillis: Long,
         toMillis: Long,
         knownApps: Map<String, AppMetadata>,
         minSessionMinutes: Int
-    ): List<Evidence>? {
+    ): List<DurationEvidence>? {
 
         checkPermissions()
 
@@ -83,7 +79,7 @@ class UsageStateCollector(private val context: Context, private val permissionMa
         minSessionMinutes: Int,
         usageStatsList: List<UsageStats?>?,
         installedApps: Set<String>
-    ): List<Evidence>? {
+    ): List<DurationEvidence>? {
         return usageStatsList?.mapNotNull { usageStats ->
             usageStats?.let {
                 val packageName = usageStats.packageName ?: return@mapNotNull null
@@ -96,9 +92,8 @@ class UsageStateCollector(private val context: Context, private val permissionMa
 
                 if (totalTimeMinutes < 0 || totalTimeMinutes < minSessionMinutes) null
 
-                Evidence(
+                DurationEvidence(
                     source = DataSource.USAGE_STATS,
-                    timestampMillis = usageStats.firstTimeStamp,
                     confidence = appMetadata.confidenceMultiplier,
                     durationMinutes = totalTimeMinutes,
                     startTimeMillis = usageStats.firstTimeStamp,

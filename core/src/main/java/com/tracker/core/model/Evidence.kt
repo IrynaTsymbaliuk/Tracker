@@ -14,16 +14,24 @@ import com.tracker.core.types.DataSource
  * @property endTimeMillis When the activity ended in milliseconds since epoch (nullable)
  * @property metadata Source-specific additional data (app name, package, language, etc.)
  */
-data class Evidence(
-    val source: DataSource,
-    val timestampMillis: Long,
-    val confidence: Float,
-    val durationMinutes: Int? = null,
-    val startTimeMillis: Long? = null,
-    val endTimeMillis: Long? = null,
-    val metadata: Map<String, Any> = emptyMap()
-) {
-    init {
-        require(confidence in 0.0f..1.0f) { "Confidence must be between 0.0 and 1.0" }
-    }
+sealed class Evidence {
+    abstract val source: DataSource
+    abstract val confidence: Float
+    abstract val metadata: Map<String, Any>
 }
+
+data class DurationEvidence(
+    override val source: DataSource,
+    override val confidence: Float,
+    override val metadata: Map<String, Any>,
+    val durationMinutes: Int,
+    val startTimeMillis: Long,
+    val endTimeMillis: Long
+) : Evidence()
+
+data class CounterEvidence(
+    override val source: DataSource,
+    override val confidence: Float,
+    override val metadata: Map<String, Any>,
+    val counter: Int
+) : Evidence()

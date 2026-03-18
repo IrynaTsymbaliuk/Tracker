@@ -1,5 +1,6 @@
 package com.tracker.core.provider
 
+import com.tracker.core.model.DurationEvidence
 import com.tracker.core.result.HabitResult
 
 interface MetricProvider<T : HabitResult> {
@@ -24,4 +25,9 @@ interface MetricProvider<T : HabitResult> {
         toMillis: Long,
         minConfidence: Float
     ): T?
+}
+
+fun weightedAverage(usages: List<DurationEvidence>): Float {
+    val totalDuration: Double = usages.sumOf { it.durationMinutes }.toDouble()
+    return usages.sumOf { it.durationMinutes.toDouble() / totalDuration * it.confidence }.toFloat()
 }

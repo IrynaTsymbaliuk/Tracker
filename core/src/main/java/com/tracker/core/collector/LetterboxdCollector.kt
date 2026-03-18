@@ -1,10 +1,12 @@
 package com.tracker.core.collector
 
-import android.content.Context
+import android.util.Log
+import com.tracker.core.model.CounterEvidence
 import com.tracker.core.result.MovieInfo
-import com.tracker.core.result.MovieWatchingResult
-import com.tracker.core.result.toConfidenceLevel
 import com.tracker.core.types.DataSource
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 import java.io.StringReader
@@ -14,109 +16,80 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
 
-/**
- * Collects movie watching data from Letterboxd RSS feeds.
- *
- * Parses a user's public Letterboxd RSS feed to extract watched/logged movies
- * within a specified time range.
- *
- * RSS Feed Format: https://letterboxd.com/{username}/rss/
- */
-class LetterboxdCollector(private val context: Context) {
+class LetterboxdCollector(
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO
+) {
 
     companion object {
+        private const val TAG = "LetterboxdCollector"
         private const val BASE_URL = "https://letterboxd.com"
-        private const val LETTERBOXD_CONFIDENCE = 0.95f // High confidence - direct user logging
+        private const val LETTERBOXD_CONFIDENCE = 0.95f
         private const val CONNECTION_TIMEOUT_MS = 10000
         private const val READ_TIMEOUT_MS = 10000
-
-        // Letterboxd RSS date format: "Mon, 15 Jan 2024 12:34:56 +0000"
-        private val RSS_DATE_FORMAT = SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.US).apply {
-            timeZone = TimeZone.getTimeZone("UTC")
-        }
-
-        // Letterboxd watched date format in description: "Watched on Monday, Jan 15, 2024"
-        private val WATCHED_DATE_PATTERN = Regex("Watched on [A-Za-z]+, ([A-Za-z]+ \\d+, \\d{4})")
-        private val WATCHED_DATE_FORMAT = SimpleDateFormat("MMM dd, yyyy", Locale.US).apply {
-            timeZone = TimeZone.getTimeZone("UTC")
-        }
     }
 
+    private val watchedDatePattern = Regex("Watched on [A-Za-z]+, ([A-Za-z]+ \\d+, \\d{4})")
+
     /**
-     * Collects movie watching data from Letterboxd RSS feed.
+     * Collects movie watching evidence from Letterboxd RSS feed within the specified time range.
      *
-     * @param fromMillis Start time in milliseconds since epoch (inclusive)
-     * @param toMillis End time in milliseconds since epoch (inclusive)
-     * @param id Letterboxd username
-     * @return MovieWatchingResult with movies watched in the time range, or null if error
-     * @throws InvalidLetterboxdIdException if the username is invalid
-     * @throws NetworkException if network request fails
+     * This function is safe to call from any thread, including the main thread.
+     * Network operations are automatically performed on IO dispatcher.
+     *
+     * @param fromMillis Start of time range in milliseconds (inclusive)
+     * @param toMillis End of time range in milliseconds (inclusive)
+     * @param id Letterboxd username (e.g., "johndoe")
+     * @return List of evidence for movies watched/published in the time range
+     * @throws InvalidLetterboxdIdException if username is empty or blank
+     * @throws NetworkException if network request fails (e.g., timeout, no connection, HTTP error)
+     * @throws RssParseException if RSS feed parsing fails (e.g., malformed XML, unexpected format)
      */
-    fun collect(
+    suspend fun collect(
         fromMillis: Long,
         toMillis: Long,
         id: String
-    ): MovieWatchingResult? {
+    ): List<CounterEvidence> = withContext(dispatcher) {
+        Log.d(TAG, "Starting collection for user: $id, range: $fromMillis-$toMillis")
+
         checkId(id)
 
-        return try {
-            val rssUrl = "$BASE_URL/$id/rss/"
-            val rssContent = fetchRssFeed(rssUrl)
-            val allMovies = parseRssFeed(rssContent)
+        val rssUrl = "$BASE_URL/$id/rss/"
+        Log.d(TAG, "Fetching RSS feed from: $rssUrl")
 
-            // Filter movies by date range
-            val moviesInRange = allMovies.filter { movie ->
-                movie.watchedDate in fromMillis..toMillis
-            }
+        val rssContent = fetchRssFeed(rssUrl)
+        Log.d(TAG, "RSS feed fetched successfully, size: ${rssContent.length} bytes")
 
-            if (moviesInRange.isEmpty()) {
-                // No movies in this time range
-                MovieWatchingResult(
-                    occurred = false,
-                    confidence = LETTERBOXD_CONFIDENCE,
-                    confidenceLevel = LETTERBOXD_CONFIDENCE.toConfidenceLevel(),
-                    source = DataSource.LETTERBOXD_RSS,
-                    count = 0,
-                    movies = emptyList()
-                )
-            } else {
-                MovieWatchingResult(
-                    occurred = true,
-                    confidence = LETTERBOXD_CONFIDENCE,
-                    confidenceLevel = LETTERBOXD_CONFIDENCE.toConfidenceLevel(),
-                    source = DataSource.LETTERBOXD_RSS,
-                    count = moviesInRange.size,
-                    movies = moviesInRange
-                )
-            }
-        } catch (e: Exception) {
-            // Return null on error (network issues, parsing errors, etc.)
-            null
+        val allMovies = parseRssFeed(rssContent)
+        Log.d(TAG, "Parsed ${allMovies.size} movies from RSS feed")
+
+        val filtered = allMovies.filter { movie ->
+            movie.watchedDate in fromMillis..toMillis ||
+                    movie.publishedDate in fromMillis..toMillis
+        }
+
+        Log.d(TAG, "Filtered to ${filtered.size} movies in time range")
+
+        filtered.map { movie ->
+            CounterEvidence(
+                source = DataSource.LETTERBOXD_RSS,
+                confidence = LETTERBOXD_CONFIDENCE,
+                metadata = mapOf(
+                    "title" to movie.title,
+                    "publishedDate" to movie.publishedDate,
+                    "watchedDate" to movie.watchedDate
+                ),
+                counter = 1
+            )
         }
     }
 
-    /**
-     * Validates a Letterboxd username.
-     *
-     * Valid usernames:
-     * - Must not be empty or blank
-     *
-     * @param id The Letterboxd username to validate
-     * @throws InvalidLetterboxdIdException if the username is invalid
-     */
     private fun checkId(id: String) {
-        if (id.isEmpty() || id.isBlank()) {
+        if (id.isBlank()) {
+            Log.e(TAG, "Invalid Letterboxd username: empty or blank")
             throw InvalidLetterboxdIdException("Letterboxd username cannot be empty")
         }
     }
 
-    /**
-     * Fetches RSS feed content from the given URL.
-     *
-     * @param urlString The RSS feed URL
-     * @return RSS feed content as string
-     * @throws NetworkException if the request fails
-     */
     private fun fetchRssFeed(urlString: String): String {
         var connection: HttpURLConnection? = null
         try {
@@ -129,36 +102,28 @@ class LetterboxdCollector(private val context: Context) {
 
             val responseCode = connection.responseCode
             if (responseCode != HttpURLConnection.HTTP_OK) {
+                Log.e(TAG, "HTTP error while fetching RSS feed: $responseCode from $urlString")
                 throw NetworkException("HTTP error code: $responseCode")
             }
 
             return connection.inputStream.bufferedReader().use { it.readText() }
+        } catch (e: NetworkException) {
+            Log.e(TAG, "HTTP error while fetching RSS feed from $urlString: ${e.message}", e)
+            throw NetworkException("HTTP error while fetching RSS feed: ${e.message}", e)
         } catch (e: Exception) {
+            Log.e(TAG, "Failed to fetch RSS feed from $urlString: ${e.message}", e)
             throw NetworkException("Failed to fetch RSS feed: ${e.message}", e)
         } finally {
             connection?.disconnect()
         }
     }
 
-    /**
-     * Parses Letterboxd RSS feed XML and extracts movie information.
-     *
-     * RSS feed structure:
-     * <rss>
-     *   <channel>
-     *     <item>
-     *       <title>Film Title</title>
-     *       <pubDate>Mon, 15 Jan 2024 12:34:56 +0000</pubDate>
-     *       <description>Watched on Monday, Jan 15, 2024...</description>
-     *     </item>
-     *   </channel>
-     * </rss>
-     *
-     * @param rssContent RSS feed XML content
-     * @return List of MovieInfo objects
-     */
     private fun parseRssFeed(rssContent: String): List<MovieInfo> {
         val movies = mutableListOf<MovieInfo>()
+
+        val rssDateFormat = SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.getDefault()).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
 
         try {
             val factory = XmlPullParserFactory.newInstance()
@@ -181,21 +146,25 @@ class LetterboxdCollector(private val context: Context) {
                                 currentPubDate = null
                                 currentDescription = null
                             }
+
                             "title" -> {
                                 if (inItem) {
                                     currentTitle = parser.nextText()
                                 }
                             }
+
                             "pubDate" -> {
                                 if (inItem) {
                                     val dateText = parser.nextText()
                                     currentPubDate = try {
-                                        RSS_DATE_FORMAT.parse(dateText)?.time
+                                        rssDateFormat.parse(dateText)?.time
                                     } catch (e: Exception) {
+                                        Log.w(TAG, "Failed to parse pubDate: $dateText", e)
                                         null
                                     }
                                 }
                             }
+
                             "description" -> {
                                 if (inItem) {
                                     currentDescription = parser.nextText()
@@ -203,11 +172,12 @@ class LetterboxdCollector(private val context: Context) {
                             }
                         }
                     }
+
                     XmlPullParser.END_TAG -> {
                         if (parser.name == "item" && inItem) {
-                            // End of item - create MovieInfo
                             if (currentTitle != null && currentPubDate != null) {
-                                val watchedDate = extractWatchedDate(currentDescription) ?: currentPubDate
+                                val watchedDate =
+                                    extractWatchedDate(currentDescription) ?: currentPubDate
                                 movies.add(
                                     MovieInfo(
                                         title = currentTitle,
@@ -223,29 +193,27 @@ class LetterboxdCollector(private val context: Context) {
                 eventType = parser.next()
             }
         } catch (e: Exception) {
+            Log.e(TAG, "Failed to parse RSS feed: ${e.message}", e)
             throw RssParseException("Failed to parse RSS feed: ${e.message}", e)
         }
 
         return movies
     }
 
-    /**
-     * Extracts the watched date from the Letterboxd description field.
-     *
-     * Description format: "Watched on Monday, Jan 15, 2024..."
-     *
-     * @param description The item description text
-     * @return Watched date in milliseconds, or null if not found
-     */
     private fun extractWatchedDate(description: String?): Long? {
         if (description == null) return null
 
-        val match = WATCHED_DATE_PATTERN.find(description) ?: return null
+        val match = watchedDatePattern.find(description) ?: return null
         val dateString = match.groupValues[1] // "Jan 15, 2024"
 
+        val watchedDateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+
         return try {
-            WATCHED_DATE_FORMAT.parse(dateString)?.time
+            watchedDateFormat.parse(dateString)?.time
         } catch (e: Exception) {
+            Log.w(TAG, "Failed to parse watched date: $dateString", e)
             null
         }
     }

@@ -22,20 +22,10 @@ import com.tracker.core.types.DataSource
  */
 data class MovieWatchingResult(
     override val occurred: Boolean,
+    override val source: DataSource,
     override val confidence: Float,
     override val confidenceLevel: ConfidenceLevel,
-    override val source: DataSource,
-    override val count: Int?,
+    override val timeRange: TimeRange,
+    val count: Int?,
     val movies: List<MovieInfo> = emptyList()
-) : HabitResult(
-    occurred = occurred,
-    confidence = confidence,
-    confidenceLevel = confidenceLevel,
-    durationMinutes = null, // Not applicable for movie count
-    source = source,
-    count = count
-) {
-    init {
-        require(confidence in 0.0f..1.0f) { "Confidence must be between 0.0 and 1.0" }
-    }
-}
+) : HabitResult()
