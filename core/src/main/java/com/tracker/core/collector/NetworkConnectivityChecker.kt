@@ -9,7 +9,7 @@ import android.os.Build
  * Interface for checking network connectivity.
  * Allows for easy testing and dependency injection.
  */
-interface NetworkConnectivityChecker {
+fun interface NetworkConnectivityChecker {
     /**
      * Checks if network is available.
      * @return true if network is available, false otherwise

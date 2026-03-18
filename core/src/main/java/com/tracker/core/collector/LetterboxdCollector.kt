@@ -42,6 +42,15 @@ import java.util.TimeZone
  * val collector = LetterboxdCollector()
  * val evidence = collector.collect(fromMillis, toMillis, "username")
  *
+ * // Access type-safe metadata
+ * evidence.forEach { counterEvidence ->
+ *     val metadata = LetterboxdMetadata.fromMap(counterEvidence.metadata)
+ *     if (metadata != null) {
+ *         println("Movie: ${metadata.title}")
+ *         println("Watched: ${Date(metadata.watchedDate)}")
+ *     }
+ * }
+ *
  * // With network connectivity pre-checking (requires ACCESS_NETWORK_STATE permission)
  * val fetcher = HttpRssFetcher(
  *     networkChecker = AndroidNetworkConnectivityChecker(context)
@@ -92,13 +101,13 @@ class LetterboxdCollector(
     suspend fun collect(
         fromMillis: Long,
         toMillis: Long,
-        id: String
+        letterboxdUsername: String
     ): List<CounterEvidence> = withContext(dispatcher) {
-        Log.d(TAG, "Starting collection for user: $id, range: $fromMillis-$toMillis")
+        Log.d(TAG, "Starting collection for user: $letterboxdUsername, range: $fromMillis-$toMillis")
 
-        checkId(id)
+        checkId(letterboxdUsername)
 
-        val rssUrl = "$BASE_URL/$id/rss/"
+        val rssUrl = "$BASE_URL/$letterboxdUsername/rss/"
         Log.d(TAG, "Fetching RSS feed from: $rssUrl")
 
         // Check for cancellation before expensive network call
@@ -121,14 +130,16 @@ class LetterboxdCollector(
         Log.d(TAG, "Filtered to ${filtered.size} movies in time range")
 
         filtered.map { movie ->
+            val metadata = LetterboxdMetadata(
+                title = movie.title,
+                publishedDate = movie.publishedDate,
+                watchedDate = movie.watchedDate
+            )
+
             CounterEvidence(
                 source = DataSource.LETTERBOXD_RSS,
                 confidence = LETTERBOXD_CONFIDENCE,
-                metadata = mapOf(
-                    "title" to movie.title,
-                    "publishedDate" to movie.publishedDate,
-                    "watchedDate" to movie.watchedDate
-                ),
+                metadata = metadata.toMap(),
                 counter = 1
             )
         }
