@@ -15,6 +15,13 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
+
+        buildConfigField("String", "LIBRARY_VERSION", "\"2.0.0\"")
+        buildConfigField("String", "LIBRARY_NAME", "\"Tracker\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {

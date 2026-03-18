@@ -1,6 +1,8 @@
 package com.tracker.core
 
 import android.content.Context
+import com.tracker.core.collector.AndroidNetworkConnectivityChecker
+import com.tracker.core.collector.HttpRssFetcher
 import com.tracker.core.collector.LetterboxdCollector
 import com.tracker.core.collector.UsageStatsCollector
 import com.tracker.core.permission.PermissionManager
@@ -8,7 +10,6 @@ import com.tracker.core.provider.LanguageLearningProvider
 import com.tracker.core.provider.MovieWatchingProvider
 import com.tracker.core.provider.ReadingProvider
 import com.tracker.core.result.HabitResult
-import com.tracker.core.types.Metric
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -205,7 +206,13 @@ class Tracker private constructor(
                 ) else null,
                 movieWatchingProvider = letterboxdUsername?.let {
                     MovieWatchingProvider(
-                        LetterboxdCollector(),
+                        LetterboxdCollector(
+                            rssFetcher = HttpRssFetcher(
+                                networkChecker = AndroidNetworkConnectivityChecker(
+                                    context
+                                )
+                            )
+                        ),
                         it
                     )
                 },

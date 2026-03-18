@@ -1,24 +1,67 @@
 package com.tracker.core.collector
 
+import android.content.Context
 import android.util.Log
 import com.tracker.core.model.CounterEvidence
 import com.tracker.core.result.MovieInfo
 import com.tracker.core.types.DataSource
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 import java.io.StringReader
-import java.net.HttpURLConnection
-import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
 
+/**
+ * Collector for gathering movie watching evidence from Letterboxd RSS feeds.
+ *
+ * All public methods are safe to call from any thread, including the main thread.
+ * Network operations are automatically performed on the IO dispatcher.
+ *
+ * **Required Permissions:**
+ * - `android.permission.INTERNET` - Required for network requests
+ *
+ * **Optional Permissions:**
+ * - `android.permission.ACCESS_NETWORK_STATE` - Only needed if using AndroidNetworkConnectivityChecker
+ *
+ * **Network Connectivity Checking:**
+ * By default, the collector does NOT check network connectivity before making requests.
+ * Instead, it relies on retry logic with exponential backoff to handle network failures.
+ * This works well for most use cases and doesn't require additional permissions.
+ *
+ * You can optionally enable pre-flight connectivity checking by injecting AndroidNetworkConnectivityChecker
+ * (requires ACCESS_NETWORK_STATE permission in your app's manifest).
+ *
+ * **Example usage:**
+ * ```
+ * // Basic usage (recommended - no pre-check, uses retry logic)
+ * val collector = LetterboxdCollector()
+ * val evidence = collector.collect(fromMillis, toMillis, "username")
+ *
+ * // With network connectivity pre-checking (requires ACCESS_NETWORK_STATE permission)
+ * val fetcher = HttpRssFetcher(
+ *     networkChecker = AndroidNetworkConnectivityChecker(context)
+ * )
+ * val collector = LetterboxdCollector(rssFetcher = fetcher)
+ *
+ * // With custom retry configuration
+ * val fetcher = HttpRssFetcher(
+ *     maxRetries = 5,
+ *     retryDelayMs = 2000
+ * )
+ * val collector = LetterboxdCollector(rssFetcher = fetcher)
+ * ```
+ *
+ * @property dispatcher The coroutine dispatcher to use for IO operations (injectable for testing)
+ * @property rssFetcher The RSS fetcher implementation (injectable for testing/customization)
+ */
 class LetterboxdCollector(
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val rssFetcher: RssFetcher = HttpRssFetcher()
+    private val rssFetcher: RssFetcher
 ) {
 
     companion object {
@@ -35,6 +78,8 @@ class LetterboxdCollector(
      * This function is safe to call from any thread, including the main thread.
      * Network operations are automatically performed on IO dispatcher.
      *
+     * The operation is cancellable - if the coroutine is cancelled, the operation will stop gracefully.
+     *
      * @param fromMillis Start of time range in milliseconds (inclusive)
      * @param toMillis End of time range in milliseconds (inclusive)
      * @param id Letterboxd username (e.g., "johndoe")
@@ -42,6 +87,7 @@ class LetterboxdCollector(
      * @throws InvalidLetterboxdIdException if username is empty or blank
      * @throws NetworkException if network request fails (e.g., timeout, no connection, HTTP error)
      * @throws RssParseException if RSS feed parsing fails (e.g., malformed XML, unexpected format)
+     * @throws kotlinx.coroutines.CancellationException if the coroutine is cancelled
      */
     suspend fun collect(
         fromMillis: Long,
@@ -55,8 +101,14 @@ class LetterboxdCollector(
         val rssUrl = "$BASE_URL/$id/rss/"
         Log.d(TAG, "Fetching RSS feed from: $rssUrl")
 
+        // Check for cancellation before expensive network call
+        coroutineContext.ensureActive()
+
         val rssContent = rssFetcher.fetch(rssUrl)
         Log.d(TAG, "RSS feed fetched successfully, size: ${rssContent.length} bytes")
+
+        // Check for cancellation before parsing
+        coroutineContext.ensureActive()
 
         val allMovies = parseRssFeed(rssContent)
         Log.d(TAG, "Parsed ${allMovies.size} movies from RSS feed")
@@ -92,9 +144,10 @@ class LetterboxdCollector(
     internal fun parseRssFeed(rssContent: String): List<MovieInfo> {
         val movies = mutableListOf<MovieInfo>()
 
-        val rssDateFormat = SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.getDefault()).apply {
-            timeZone = TimeZone.getTimeZone("UTC")
-        }
+        val rssDateFormat =
+            SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.getDefault()).apply {
+                timeZone = TimeZone.getTimeZone("UTC")
+            }
 
         try {
             val factory = XmlPullParserFactory.newInstance()
