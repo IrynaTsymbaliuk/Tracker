@@ -39,15 +39,15 @@ class ReadingProvider internal constructor(
             toMillis,
             KnownApps.reading,
             READING_MIN_SESSION_MINUTES
-        )?.ifEmpty { return null } ?: return null
+        ).ifEmpty { return null }
 
         // Filter out invalid sessions with duration <= 0
         val validEvidenceList = evidenceList.filter {
-            (it.durationMinutes ?: 0) > 0
+            it.durationMinutes > 0
         }.ifEmpty { return null }
 
         var combinedConfidence = combineProbabilities(validEvidenceList.map { it.confidence })
-        val totalDuration = validEvidenceList.mapNotNull { it.durationMinutes }.sum()
+        val totalDuration = validEvidenceList.sumOf { it.durationMinutes }
 
         if (validEvidenceList.all { it.confidence < minConfidence }) {
             combinedConfidence = max(0f, combinedConfidence - WEAK_ONLY_PENALTY)

@@ -31,7 +31,7 @@ class LanguageLearningProvider internal constructor(
             toMillis,
             KnownApps.languageLearning,
             LANGUAGE_LEARNING_MIN_SESSION_MINUTES
-        )?.ifEmpty { return null } ?: return null
+        ).ifEmpty { return null }
 
         val validEvidenceList = evidenceList.filter { it.durationMinutes > 0 }.ifEmpty { return null }
 

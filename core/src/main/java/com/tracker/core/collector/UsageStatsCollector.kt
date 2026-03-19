@@ -5,7 +5,6 @@ import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.pm.PackageManager
 import com.tracker.core.config.AppMetadata
-import com.tracker.core.config.KnownApps
 import com.tracker.core.model.DurationEvidence
 import com.tracker.core.permission.Permission
 import com.tracker.core.permission.PermissionManager
@@ -20,24 +19,15 @@ class UsageStatsCollector(private val context: Context, private val permissionMa
         toMillis: Long,
         knownApps: Map<String, AppMetadata>,
         minSessionMinutes: Int
-    ): List<DurationEvidence>? {
+    ): List<DurationEvidence> {
 
         checkPermissions()
 
-        val installedApps = getInstalledApps()
+        val installedApps = getInstalledApps(knownApps)
 
         val usageStatsList = getUsageStats(fromMillis, toMillis)
 
-        val evidenceList =
-            getEvidenceList(
-                knownApps,
-                minSessionMinutes,
-                usageStatsList,
-                installedApps
-            )?.ifEmpty { return null } ?: return null
-
-        return evidenceList
-
+        return getEvidenceList(knownApps, minSessionMinutes, usageStatsList, installedApps)
     }
 
     private fun checkPermissions() {
@@ -46,24 +36,24 @@ class UsageStatsCollector(private val context: Context, private val permissionMa
         }
     }
 
-    private fun getInstalledApps(): Set<String> {
-        try {
-            val allInstalledPackages =
-                context.packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
-                    .map { it.packageName }.toSet()
-            val installedReadingApps =
-                KnownApps.reading.keys.filter { it in allInstalledPackages }.toSet()
-
-            if (installedReadingApps.isEmpty()) {
-                throw NoMonitorableAppsException()
-            }
-            return installedReadingApps
+    private fun getInstalledApps(knownApps: Map<String, AppMetadata>): Set<String> {
+        val allInstalledPackages = try {
+            context.packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
+                .map { it.packageName }.toSet()
         } catch (e: Exception) {
             throw PackageManagerException(e)
         }
+
+        val installedKnownApps = knownApps.keys.filter { it in allInstalledPackages }.toSet()
+
+        if (installedKnownApps.isEmpty()) {
+            throw NoMonitorableAppsException()
+        }
+
+        return installedKnownApps
     }
 
-    private fun getUsageStats(fromMillis: Long, toMillis: Long): List<UsageStats?>? {
+    private fun getUsageStats(fromMillis: Long, toMillis: Long): List<UsageStats> {
         val usageStatsManager =
             context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
                 ?: throw SystemServiceUnavailableException("UsageStatsManager")
@@ -71,39 +61,36 @@ class UsageStatsCollector(private val context: Context, private val permissionMa
             UsageStatsManager.INTERVAL_DAILY,
             fromMillis,
             toMillis
-        )
+        ) ?: emptyList()
     }
 
     private fun getEvidenceList(
         knownApps: Map<String, AppMetadata>,
         minSessionMinutes: Int,
-        usageStatsList: List<UsageStats?>?,
+        usageStatsList: List<UsageStats>,
         installedApps: Set<String>
-    ): List<DurationEvidence>? {
-        return usageStatsList?.mapNotNull { usageStats ->
-            usageStats?.let {
-                val packageName = usageStats.packageName ?: return@mapNotNull null
-                val appMetadata = knownApps[packageName] ?: return@mapNotNull null
+    ): List<DurationEvidence> {
+        return usageStatsList.mapNotNull { usageStats ->
+            val packageName = usageStats.packageName ?: return@mapNotNull null
+            val appMetadata = knownApps[packageName] ?: return@mapNotNull null
 
-                if (packageName !in installedApps) null
+            if (packageName !in installedApps) return@mapNotNull null
 
-                val totalTimeMillis = usageStats.totalTimeInForeground
-                val totalTimeMinutes = TimeUnit.MILLISECONDS.toMinutes(totalTimeMillis).toInt()
+            val totalTimeMinutes = TimeUnit.MILLISECONDS.toMinutes(usageStats.totalTimeInForeground)
 
-                if (totalTimeMinutes < 0 || totalTimeMinutes < minSessionMinutes) null
+            if (totalTimeMinutes < minSessionMinutes) return@mapNotNull null
 
-                DurationEvidence(
-                    source = DataSource.USAGE_STATS,
-                    confidence = appMetadata.confidenceMultiplier,
-                    durationMinutes = totalTimeMinutes,
-                    startTimeMillis = usageStats.firstTimeStamp,
-                    endTimeMillis = usageStats.lastTimeStamp,
-                    metadata = mapOf(
-                        "packageName" to packageName,
-                        "appName" to getAppName(context.packageManager, packageName)
-                    )
+            DurationEvidence(
+                source = DataSource.USAGE_STATS,
+                confidence = appMetadata.confidenceMultiplier,
+                durationMinutes = totalTimeMinutes.toInt(),
+                startTimeMillis = usageStats.firstTimeStamp,
+                endTimeMillis = usageStats.lastTimeStamp,
+                metadata = mapOf(
+                    "packageName" to packageName,
+                    "appName" to getAppName(context.packageManager, packageName)
                 )
-            }
+            )
         }
     }
 
@@ -118,38 +105,4 @@ class UsageStatsCollector(private val context: Context, private val permissionMa
             packageName
         }
     }
-
 }
-
-/**
- * Base exception for collector failures.
- */
-sealed class CollectorException(message: String) : Exception(message)
-
-/**
- * Thrown when required permission is not granted.
- */
-class PermissionDeniedException(
-    val permission: String
-) : CollectorException("Permission denied: $permission")
-
-/**
- * Thrown when a required system service is unavailable.
- */
-class SystemServiceUnavailableException(
-    val serviceName: String
-) : CollectorException("System service unavailable: $serviceName")
-
-/**
- * Thrown when no monitorable apps are installed.
- */
-class NoMonitorableAppsException : CollectorException(
-    "No known language learning apps are installed"
-)
-
-/**
- * Thrown when PackageManager operations fail.
- */
-class PackageManagerException(
-    cause: Throwable
-) : CollectorException("Failed to query installed applications: ${cause.message}")
