@@ -7,11 +7,7 @@ import com.tracker.core.types.DataSource
  * Collectors return Evidence objects, which are then aggregated to produce final results.
  *
  * @property source Where the data came from
- * @property timestampMillis Timestamp in milliseconds since epoch (for date grouping)
  * @property confidence How confident we are in this evidence (0.0 to 1.0)
- * @property durationMinutes Duration of the activity in minutes (nullable)
- * @property startTimeMillis When the activity started in milliseconds since epoch (nullable)
- * @property endTimeMillis When the activity ended in milliseconds since epoch (nullable)
  * @property metadata Source-specific additional data (app name, package, language, etc.)
  */
 sealed class Evidence {

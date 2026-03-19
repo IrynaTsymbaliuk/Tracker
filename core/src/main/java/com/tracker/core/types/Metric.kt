@@ -7,5 +7,4 @@ enum class Metric {
     LANGUAGE_LEARNING,
     READING,
     MOVIE_WATCHING
-    // Future: WORKOUT, SLEEP, STEPS, WEIGHT
 }

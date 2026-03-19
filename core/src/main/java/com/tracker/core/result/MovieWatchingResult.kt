@@ -7,9 +7,10 @@ import com.tracker.core.types.DataSource
  * Result for movie watching habit detection via Letterboxd RSS feed.
  *
  * @property occurred Whether movie watching was detected for this day (true if count > 0)
+ * @property source Data source (LETTERBOXD_RSS)
  * @property confidence Confidence score from the data source (0.0 to 1.0, typically 0.95 for Letterboxd RSS)
  * @property confidenceLevel Categorical confidence level
- * @property source Data source (LETTERBOXD_RSS)
+ * @property timeRange
  * @property count Number of movies watched on this day (nullable)
  * @property movies List of movies watched on this day with title and dates
  *
