@@ -69,9 +69,9 @@ override fun onDestroy() {
 
 ## Installation
 
-```gradle
+```kotlin
 dependencies {
-    implementation 'com.tracker:core:2.0.0'
+    implementation("com.tracker:core:3.0.0")
 }
 ```
 
@@ -120,7 +120,7 @@ Callbacks are invoked on the Main dispatcher.
 ## Requirements
 
 - **Min SDK**: 21 (Android 5.0)
-- **Target SDK**: 34+
+- **Target SDK**: 36
 - **Kotlin**: 1.9+
 
 ## Sample App

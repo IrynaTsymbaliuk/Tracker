@@ -1,6 +1,5 @@
 package com.tracker.core.collector
 
-import android.content.Context
 import android.util.Log
 import com.tracker.core.model.CounterEvidence
 import com.tracker.core.result.MovieInfo
@@ -9,12 +8,6 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
-import org.xmlpull.v1.XmlPullParser
-import org.xmlpull.v1.XmlPullParserFactory
-import java.io.StringReader
-import java.text.SimpleDateFormat
-import java.util.Locale
-import java.util.TimeZone
 
 /**
  * Collects movie watching evidence from Letterboxd RSS feeds.
@@ -27,17 +20,10 @@ import java.util.TimeZone
  *
  * **Example:**
  * ```
- * // Basic usage
- * val collector = LetterboxdCollector()
+ * val collector = LetterboxdCollector(rssFetcher = HttpRssFetcher(networkChecker = checker))
  * val evidence = collector.collect(fromMillis, toMillis, "username")
- *
- * // Access metadata
  * val metadata = LetterboxdMetadata.fromMap(evidence.first().metadata)
  * println("Movie: ${metadata?.title}")
- *
- * // Custom configuration
- * val fetcher = HttpRssFetcher(maxRetries = 5, retryDelayMs = 2000)
- * val collector = LetterboxdCollector(rssFetcher = fetcher)
  * ```
  */
 class LetterboxdCollector(
@@ -67,7 +53,10 @@ class LetterboxdCollector(
         toMillis: Long,
         letterboxdUsername: String
     ): List<CounterEvidence> = withContext(dispatcher) {
-        Log.d(TAG, "Starting collection for user: $letterboxdUsername, range: $fromMillis-$toMillis")
+        Log.d(
+            TAG,
+            "Starting collection for user: $letterboxdUsername, range: $fromMillis-$toMillis"
+        )
 
         checkId(letterboxdUsername)
 
