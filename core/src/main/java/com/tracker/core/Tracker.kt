@@ -9,19 +9,22 @@ import com.tracker.core.permission.PermissionManager
 import com.tracker.core.provider.LanguageLearningProvider
 import com.tracker.core.provider.MovieWatchingProvider
 import com.tracker.core.provider.ReadingProvider
-import com.tracker.core.result.HabitResult
+import com.tracker.core.result.LanguageLearningResult
+import com.tracker.core.result.MovieWatchingResult
+import com.tracker.core.result.ReadingResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /**
- * Tracker - Main entry point for the library.
- * This is the only class the host app needs to interact with.
+ * Main entry point for the library. This is the only class the host app needs to interact with.
  *
  * Usage:
  * ```
  * val tracker = Tracker.Builder(context)
- *     .setMinConfidence(0.50)
+ *     .setMinConfidence(0.50f)
  *     .setLetterboxdUsername("username")
  *     .build()
  *
@@ -51,123 +54,92 @@ import kotlinx.coroutines.launch
  * ```
  */
 class Tracker private constructor(
-    private val minConfidence: Float,
+    val minConfidence: Float,
     private val readingProvider: ReadingProvider?,
     private val languageLearningProvider: LanguageLearningProvider?,
     private val movieWatchingProvider: MovieWatchingProvider?,
-    internal val timeProvider: TimeProvider = TimeProvider { System.currentTimeMillis() }
+    internal val timeProvider: TimeProvider // internal for testing
 ) {
 
-    /**
-     * Get the configured minimum confidence threshold.
-     *
-     * @return Minimum confidence value (0.0 to 1.0)
-     */
-    fun getMinConfidence(): Float = minConfidence
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
+    companion object {
+        private const val LAST_24_HOURS_MS = 86_400_000L
+    }
+
+    /** Cancels all pending callback-based queries. */
+    fun cancel() = scope.cancel()
 
     /**
-     * Query language learning metric asynchronously using coroutines.
-     * Returns data for the last 24 hours from current time.
-     * @return HabitResult
+     * @return Language learning data for the last 24 hours, or null if not available
      */
-    suspend fun queryLanguageLearning(): HabitResult? {
+    suspend fun queryLanguageLearning(): LanguageLearningResult? {
         val now = timeProvider.now()
-        val toMillis = now
-        val fromMillis = now - 86_400_000L // 24 hours in milliseconds
-        return languageLearningProvider?.query(fromMillis, toMillis, minConfidence)
+        return languageLearningProvider?.query(now - LAST_24_HOURS_MS, now, minConfidence)
     }
 
     /**
-     * Query language learning metric using callback.
-     * Returns data for the last 24 hours from current time.
-     * Callback is invoked on the Main dispatcher.
-     * @param callback Called when results are ready
+     * Callback-based variant of [queryLanguageLearning]. Callback is invoked on the Main dispatcher.
      */
-    fun queryLanguageLearning(callback: (HabitResult?) -> Unit) {
-        CoroutineScope(Dispatchers.Main).launch {
-            val result = queryLanguageLearning()
-            callback(result)
-        }
+    fun queryLanguageLearning(callback: (LanguageLearningResult?) -> Unit) {
+        scope.launch { callback(queryLanguageLearning()) }
     }
 
     /**
-     * Query reading metric asynchronously using coroutines.
-     * Returns data for the last 24 hours from current time.
-     * @return HabitResult
+     * @return Reading data for the last 24 hours, or null if not available
      */
-    suspend fun queryReading(): HabitResult? {
+    suspend fun queryReading(): ReadingResult? {
         val now = timeProvider.now()
-        val toMillis = now
-        val fromMillis = now - 86_400_000L // 24 hours in milliseconds
-        return readingProvider?.query(fromMillis, toMillis, minConfidence)
+        return readingProvider?.query(now - LAST_24_HOURS_MS, now, minConfidence)
     }
 
     /**
-     * Query reading metric using callback.
-     * Returns data for the last 24 hours from current time.
-     * Callback is invoked on the Main dispatcher.
-     * @param callback Called when results are ready
+     * Callback-based variant of [queryReading]. Callback is invoked on the Main dispatcher.
      */
-    fun queryReading(callback: (HabitResult?) -> Unit) {
-        CoroutineScope(Dispatchers.Main).launch {
-            val result = queryReading()
-            callback(result)
-        }
+    fun queryReading(callback: (ReadingResult?) -> Unit) {
+        scope.launch { callback(queryReading()) }
     }
 
     /**
-     * Query movie watching metric asynchronously using coroutines.
-     * Returns data for the last 24 hours from current time.
-     * Requires Letterboxd username to be set via Builder.setLetterboxdUsername().
-     * @return HabitResult
+     * Requires Letterboxd username to be set via [Builder.setLetterboxdUsername].
+     * @return Movie watching data for the last 24 hours, or null if username not set or feed unavailable
      */
-    suspend fun queryMovieWatching(): HabitResult? {
+    suspend fun queryMovieWatching(): MovieWatchingResult? {
         val now = timeProvider.now()
-        val toMillis = now
-        val fromMillis = now - 86_400_000L // 24 hours in milliseconds
-        return movieWatchingProvider?.query(fromMillis, toMillis, minConfidence)
+        return movieWatchingProvider?.query(now - LAST_24_HOURS_MS, now, minConfidence)
     }
 
     /**
-     * Query movie watching metric using callback.
-     * Returns data for the last 24 hours from current time.
-     * Requires Letterboxd username to be set via Builder.setLetterboxdUsername().
-     * Callback is invoked on the Main dispatcher.
-     * @param callback Called when results are ready
+     * Callback-based variant of [queryMovieWatching]. Callback is invoked on the Main dispatcher.
      */
-    fun queryMovieWatching(callback: (HabitResult?) -> Unit) {
-        CoroutineScope(Dispatchers.Main).launch {
-            val result = queryMovieWatching()
-            callback(result)
-        }
+    fun queryMovieWatching(callback: (MovieWatchingResult?) -> Unit) {
+        scope.launch { callback(queryMovieWatching()) }
     }
 
     /**
-     * Builder for creating Tracker instances.
+     * Builder for creating [Tracker] instances.
      */
     class Builder(private val context: Context) {
         private var minConfidence: Float = 0.50f
-        internal var timeProvider: TimeProvider = TimeProvider { System.currentTimeMillis() }
+        internal var timeProvider: TimeProvider =
+            TimeProvider { System.currentTimeMillis() } // internal for testing
 
         private var enableReading = false
         private var enableLanguageLearning = false
         private var letterboxdUsername: String? = null
 
-        fun enableReading() {
+        fun enableReading(): Builder {
             enableReading = true
+            return this
         }
 
-        fun enableLanguageLearning() {
+        fun enableLanguageLearning(): Builder {
             enableLanguageLearning = true
-        }
-
-        fun enableMovieWatching(username: String) {
-            letterboxdUsername = username
+            return this
         }
 
         /**
-         * Set minimum confidence threshold for results.
-         * @param confidence Minimum confidence (0.0 to 1.0, default: 0.50)
+         * @param confidence Minimum confidence threshold (0.0 to 1.0, default: 0.50)
          * @return This builder for chaining
          */
         fun setMinConfidence(confidence: Float): Builder {
@@ -177,8 +149,7 @@ class Tracker private constructor(
         }
 
         /**
-         * Set Letterboxd username for movie watching tracking.
-         * Required for queryMovieWatching() to work.
+         * Required for [Tracker.queryMovieWatching] to return data.
          * @param username Letterboxd username
          * @return This builder for chaining
          */
@@ -188,29 +159,22 @@ class Tracker private constructor(
         }
 
         /**
-         * Build the Tracker instance.
-         * @return Configured Tracker instance
+         * @return Configured [Tracker] instance
          */
         fun build(): Tracker {
             val permissionManager = PermissionManager(context)
+            val usageStatsCollector = UsageStatsCollector(context, permissionManager)
             return Tracker(
                 minConfidence = minConfidence,
-                readingProvider = if (enableReading) ReadingProvider(
-                    UsageStatsCollector(
-                        context,
-                        permissionManager
-                    )
-                ) else null,
+                readingProvider = if (enableReading) ReadingProvider(usageStatsCollector) else null,
                 languageLearningProvider = if (enableLanguageLearning) LanguageLearningProvider(
-                    UsageStatsCollector(context, permissionManager)
+                    usageStatsCollector
                 ) else null,
                 movieWatchingProvider = letterboxdUsername?.let {
                     MovieWatchingProvider(
                         LetterboxdCollector(
                             rssFetcher = HttpRssFetcher(
-                                networkChecker = AndroidNetworkConnectivityChecker(
-                                    context
-                                )
+                                networkChecker = AndroidNetworkConnectivityChecker(context)
                             )
                         ),
                         it
