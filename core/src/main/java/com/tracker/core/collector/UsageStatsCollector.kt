@@ -12,8 +12,22 @@ import com.tracker.core.permission.PermissionStatus
 import com.tracker.core.types.DataSource
 import java.util.concurrent.TimeUnit
 
+/**
+ * Collects app foreground time from [android.app.usage.UsageStatsManager].
+ *
+ * Requires the user to grant `PACKAGE_USAGE_STATS` via Settings > Apps > Special app access > Usage access.
+ */
 class UsageStatsCollector(private val context: Context, private val permissionManager: PermissionManager) {
 
+    /**
+     * Returns [DurationEvidence] for known, installed apps with foreground time >= [minSessionMinutes]
+     * within the given time range.
+     *
+     * @throws PermissionDeniedException if `PACKAGE_USAGE_STATS` is not granted.
+     * @throws SystemServiceUnavailableException if [android.app.usage.UsageStatsManager] is unavailable.
+     * @throws PackageManagerException if querying installed apps fails.
+     * @throws NoMonitorableAppsException if none of the [knownApps] are installed.
+     */
     fun collect(
         fromMillis: Long,
         toMillis: Long,
@@ -94,9 +108,6 @@ class UsageStatsCollector(private val context: Context, private val permissionMa
         }
     }
 
-    /**
-     * Get human-readable app name from package name.
-     */
     private fun getAppName(packageManager: PackageManager, packageName: String): String {
         return try {
             val appInfo = packageManager.getApplicationInfo(packageName, 0)
