@@ -11,7 +11,7 @@ import com.tracker.core.types.DataSource
  * @property confidence Confidence score from the data source (0.0 to 1.0, typically 0.95 for Letterboxd RSS)
  * @property confidenceLevel Categorical confidence level
  * @property timeRange
- * @property count Number of movies watched on this day (nullable)
+ * @property count Number of movies watched on this day
  * @property movies List of movies watched on this day with title and dates
  *
  * **Important null distinction:**
@@ -27,6 +27,6 @@ data class MovieWatchingResult(
     override val confidence: Float,
     override val confidenceLevel: ConfidenceLevel,
     override val timeRange: TimeRange,
-    val count: Int?,
+    val count: Int,
     val movies: List<MovieInfo> = emptyList()
 ) : HabitResult()

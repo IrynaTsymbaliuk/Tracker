@@ -11,8 +11,8 @@ import com.tracker.core.types.DataSource
  * @property confidence Combined confidence score
  * @property confidenceLevel Categorical confidence level
  * @property timeRange
- * @property durationMinutes Total time spent in language learning apps (nullable)
- * @property sessionCount Number of distinct learning sessions (nullable)
+ * @property durationMinutes Total time spent in language learning apps
+ * @property sessionCount Number of distinct learning sessions
  * @property apps List of apps that contributed to this result
  */
 
@@ -22,7 +22,7 @@ data class LanguageLearningResult(
     override val confidence: Float,
     override val confidenceLevel: ConfidenceLevel,
     override val timeRange: TimeRange,
-    val durationMinutes: Int?,
-    val sessionCount: Int? = null,
+    val durationMinutes: Int,
+    val sessionCount: Int,
     val apps: List<AppInfo> = emptyList()
 ) : HabitResult()

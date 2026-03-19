@@ -1,16 +1,11 @@
 package com.tracker.core.provider
 
 import com.tracker.core.collector.LetterboxdCollector
-import com.tracker.core.result.AppInfo
-import com.tracker.core.result.LanguageLearningResult
 import com.tracker.core.result.MovieInfo
 import com.tracker.core.result.MovieWatchingResult
 import com.tracker.core.result.TimeRange
 import com.tracker.core.result.toConfidenceLevel
-import com.tracker.core.types.ConfidenceLevel
 import com.tracker.core.types.DataSource
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 class MovieWatchingProvider internal constructor(
     private val letterboxdCollector: LetterboxdCollector,
@@ -39,11 +34,13 @@ class MovieWatchingProvider internal constructor(
             }
         }
 
+        val confidence = evidenceList.first().confidence
+
         return MovieWatchingResult(
-            occurred = evidenceList.isNotEmpty(),
-            source = DataSource.USAGE_STATS,
-            confidence = evidenceList.first().confidence,
-            confidenceLevel = evidenceList.first().confidence.toConfidenceLevel(),
+            occurred = totalCounter > 0,
+            source = DataSource.LETTERBOXD_RSS,
+            confidence = confidence,
+            confidenceLevel = confidence.toConfidenceLevel(),
             timeRange = TimeRange(fromMillis, toMillis),
             count = totalCounter,
             movies = movies

@@ -6,6 +6,7 @@ import com.tracker.core.result.AppInfo
 import com.tracker.core.result.LanguageLearningResult
 import com.tracker.core.result.TimeRange
 import com.tracker.core.result.toConfidenceLevel
+import com.tracker.core.result.toOccurred
 import com.tracker.core.types.DataSource
 
 class LanguageLearningProvider internal constructor(
@@ -50,7 +51,7 @@ class LanguageLearningProvider internal constructor(
         }.distinctBy { it.packageName }
 
         return LanguageLearningResult(
-            occurred = validEvidenceList.isNotEmpty(),
+            occurred = combinedConfidence.toOccurred(minConfidence),
             source = DataSource.USAGE_STATS,
             confidence = combinedConfidence,
             confidenceLevel = combinedConfidence.toConfidenceLevel(),

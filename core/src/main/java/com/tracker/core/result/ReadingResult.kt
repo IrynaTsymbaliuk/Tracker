@@ -11,7 +11,7 @@ import com.tracker.core.types.DataSource
  * @property confidence Combined confidence score (0.0 to 1.0)
  * @property confidenceLevel Categorical confidence level
  * @property timeRange
- * @property durationMinutes Total time spent reading across all apps (nullable)
+ * @property durationMinutes Total time spent reading across all apps
  * @property sessionCount Number of distinct reading sessions (where duration > 0 and packageName exists)
  * @property apps List of apps that contributed to this result
  */
@@ -21,7 +21,7 @@ data class ReadingResult(
     override val confidence: Float,
     override val confidenceLevel: ConfidenceLevel,
     override val timeRange: TimeRange,
-    val durationMinutes: Int?,
-    val sessionCount: Int?,
+    val durationMinutes: Int,
+    val sessionCount: Int,
     val apps: List<AppInfo> = emptyList()
 ) : HabitResult()
