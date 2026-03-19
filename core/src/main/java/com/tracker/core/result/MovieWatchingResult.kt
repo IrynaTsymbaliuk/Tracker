@@ -10,16 +10,13 @@ import com.tracker.core.types.DataSource
  * @property source Data source (LETTERBOXD_RSS)
  * @property confidence Confidence score from the data source (0.0 to 1.0, typically 0.95 for Letterboxd RSS)
  * @property confidenceLevel Categorical confidence level
- * @property timeRange
- * @property count Number of movies watched on this day
- * @property movies List of movies watched on this day with title and dates
+ * @property timeRange The queried time range
+ * @property count Number of movies watched in the time range
+ * @property movies List of movies watched in the time range with title and dates
  *
  * **Important null distinction:**
  * - `MovieWatchingResult = null` → no data available (username not provided, feed unavailable, or network error)
- * - `MovieWatchingResult(count = 0, occurred = false)` → data collected successfully but no films watched that day
- *
- * Note: durationMinutes is always null for movie watching as the RSS feed only provides watch dates, not durations.
- * The count field represents the number of discrete movie watch events for the day.
+ * - `MovieWatchingResult(count = 0, occurred = false)` → feed was read successfully but no films were logged in this range
  */
 data class MovieWatchingResult(
     override val occurred: Boolean,

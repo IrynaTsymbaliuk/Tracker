@@ -10,9 +10,9 @@ import com.tracker.core.types.DataSource
  * @property source Primary data source
  * @property confidence Combined confidence score (0.0 to 1.0)
  * @property confidenceLevel Categorical confidence level
- * @property timeRange
+ * @property timeRange The queried time range
  * @property durationMinutes Total time spent reading across all apps
- * @property sessionCount Number of distinct reading sessions (where duration > 0 and packageName exists)
+ * @property sessionCount Number of distinct reading sessions
  * @property apps List of apps that contributed to this result
  */
 data class ReadingResult(

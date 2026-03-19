@@ -10,7 +10,7 @@ import com.tracker.core.types.DataSource
  * @property source Primary data source
  * @property confidence Combined confidence score
  * @property confidenceLevel Categorical confidence level
- * @property timeRange
+ * @property timeRange The queried time range
  * @property durationMinutes Total time spent in language learning apps
  * @property sessionCount Number of distinct learning sessions
  * @property apps List of apps that contributed to this result
