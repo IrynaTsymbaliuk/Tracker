@@ -4,49 +4,56 @@ import com.tracker.core.collector.UsageStatsCollector
 import com.tracker.core.collector.UsageStatsMetadata
 import com.tracker.core.config.KnownApps
 import com.tracker.core.result.AppInfo
-import com.tracker.core.result.ReadingResult
+import com.tracker.core.result.SocialMediaResult
 import com.tracker.core.result.TimeRange
 import com.tracker.core.result.UsageSession
 import com.tracker.core.result.toConfidenceLevel
 import com.tracker.core.result.toOccurred
 import com.tracker.core.types.DataSource
-import kotlin.math.max
 
-class ReadingProvider internal constructor(
+/**
+ * Detects social media usage from app foreground time.
+ *
+ * Uses UsageStatsCollector to track time in social networking apps.
+ *
+ * **Confidence scoring**:
+ * - Traditional social apps (Facebook, Instagram, TikTok): 0.90-0.95
+ * - Professional/borderline (LinkedIn, Reddit): 0.80-0.85
+ * - Messaging apps (WhatsApp, Telegram): 0.75
+ *
+ * Combined confidence uses weighted average by duration.
+ */
+class SocialMediaProvider internal constructor(
     private val usageStatsCollector: UsageStatsCollector
-) : MetricProvider<ReadingResult> {
+) : MetricProvider<SocialMediaResult> {
 
     private companion object {
         /**
-         * Minimum session duration for reading to count as evidence.
+         * Minimum session duration for social media to count as evidence.
          * Sessions shorter than this are filtered out.
          */
-        const val READING_MIN_SESSION_MINUTES = 5
+        const val SOCIAL_MEDIA_MIN_SESSION_MINUTES = 2
     }
 
     override suspend fun query(
         fromMillis: Long,
         toMillis: Long,
         minConfidence: Float
-    ): ReadingResult? {
+    ): SocialMediaResult? {
 
         val evidenceList = usageStatsCollector.collect(
             fromMillis,
             toMillis,
-            KnownApps.reading,
-            READING_MIN_SESSION_MINUTES
+            KnownApps.socialMedia,
+            SOCIAL_MEDIA_MIN_SESSION_MINUTES
         ).ifEmpty { return null }
 
-        // Filter out invalid sessions with duration <= 0
-        val validEvidenceList = evidenceList.filter {
-            it.durationMinutes > 0
-        }.ifEmpty { return null }
+        val validEvidenceList =
+            evidenceList.filter { it.durationMinutes > 0 }.ifEmpty { return null }
 
-        val combinedConfidence = combineProbabilities(validEvidenceList.map { it.confidence })
+        val combinedConfidence = weightedAverage(validEvidenceList)
+
         val totalDuration = validEvidenceList.sumOf { it.durationMinutes }
-
-        val occurred = combinedConfidence.toOccurred(minConfidence)
-        val confidenceLevel = combinedConfidence.toConfidenceLevel()
 
         val apps = validEvidenceList.mapNotNull { ev ->
             val metadata = UsageStatsMetadata.fromMap(ev.metadata) ?: return@mapNotNull null
@@ -64,35 +71,16 @@ class ReadingProvider internal constructor(
             )
         }
 
-        return ReadingResult(
-            occurred = occurred,
+        return SocialMediaResult(
+            occurred = combinedConfidence.toOccurred(minConfidence),
             source = DataSource.USAGE_STATS,
             confidence = combinedConfidence,
-            confidenceLevel = confidenceLevel,
+            confidenceLevel = combinedConfidence.toConfidenceLevel(),
             timeRange = TimeRange(fromMillis, toMillis),
             durationMinutes = totalDuration,
             sessionCount = validEvidenceList.size,
             apps = apps,
             sessions = sessions
         )
-    }
-
-    /**
-     * Combine independent probabilities using the formula:
-     * combined = 1 - ∏(1 - p_i)
-     *
-     * This represents the probability that at least one of the independent
-     * events is true (i.e., at least one session was genuine).
-     */
-    private fun combineProbabilities(confidences: List<Float>): Float {
-        if (confidences.isEmpty()) return 0f
-        if (confidences.size == 1) return confidences.first()
-
-        var product = 1.0f
-        for (confidence in confidences) {
-            product *= (1.0f - confidence)
-        }
-
-        return 1.0f - product
     }
 }

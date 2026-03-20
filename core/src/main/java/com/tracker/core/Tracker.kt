@@ -9,9 +9,11 @@ import com.tracker.core.permission.PermissionManager
 import com.tracker.core.provider.LanguageLearningProvider
 import com.tracker.core.provider.MovieWatchingProvider
 import com.tracker.core.provider.ReadingProvider
+import com.tracker.core.provider.SocialMediaProvider
 import com.tracker.core.result.LanguageLearningResult
 import com.tracker.core.result.MovieWatchingResult
 import com.tracker.core.result.ReadingResult
+import com.tracker.core.result.SocialMediaResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -51,6 +53,14 @@ import kotlinx.coroutines.launch
  * tracker.queryMovieWatching { result ->
  *     // Handle result
  * }
+ *
+ * // Query social media with coroutines (last 24 hours)
+ * val result = tracker.querySocialMedia()
+ *
+ * // Query social media with callback (last 24 hours)
+ * tracker.querySocialMedia { result ->
+ *     // Handle result
+ * }
  * ```
  */
 class Tracker private constructor(
@@ -58,6 +68,7 @@ class Tracker private constructor(
     private val readingProvider: ReadingProvider?,
     private val languageLearningProvider: LanguageLearningProvider?,
     private val movieWatchingProvider: MovieWatchingProvider?,
+    private val socialMediaProvider: SocialMediaProvider?,
     internal val timeProvider: TimeProvider // internal for testing
 ) {
 
@@ -117,6 +128,21 @@ class Tracker private constructor(
     }
 
     /**
+     * @return Social media usage data for the last 24 hours, or null if not available
+     */
+    suspend fun querySocialMedia(): SocialMediaResult? {
+        val now = timeProvider.now()
+        return socialMediaProvider?.query(now - LAST_24_HOURS_MS, now, minConfidence)
+    }
+
+    /**
+     * Callback-based variant of [querySocialMedia]. Callback is invoked on the Main dispatcher.
+     */
+    fun querySocialMedia(callback: (SocialMediaResult?) -> Unit) {
+        scope.launch { callback(querySocialMedia()) }
+    }
+
+    /**
      * Builder for creating [Tracker] instances.
      */
     class Builder(private val context: Context) {
@@ -126,6 +152,7 @@ class Tracker private constructor(
 
         private var enableReading = false
         private var enableLanguageLearning = false
+        private var enableSocialMedia = false
         private var letterboxdUsername: String? = null
 
         fun enableReading(): Builder {
@@ -135,6 +162,11 @@ class Tracker private constructor(
 
         fun enableLanguageLearning(): Builder {
             enableLanguageLearning = true
+            return this
+        }
+
+        fun enableSocialMedia(): Builder {
+            enableSocialMedia = true
             return this
         }
 
@@ -180,6 +212,7 @@ class Tracker private constructor(
                         it
                     )
                 },
+                socialMediaProvider = if (enableSocialMedia) SocialMediaProvider(usageStatsCollector) else null,
                 timeProvider = timeProvider
             )
         }

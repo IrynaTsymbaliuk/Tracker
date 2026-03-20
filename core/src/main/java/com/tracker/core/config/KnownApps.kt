@@ -87,4 +87,72 @@ object KnownApps {
         )
     )
 
+    /**
+     * Map of known social media apps.
+     * Key: package name
+     * Value: app metadata
+     */
+    val socialMedia: Map<String, AppMetadata> = mapOf(
+        "com.facebook.katana" to AppMetadata(
+            packageName = "com.facebook.katana",
+            confidenceMultiplier = 0.95f
+        ),
+        "com.instagram.android" to AppMetadata(
+            packageName = "com.instagram.android",
+            confidenceMultiplier = 0.95f
+        ),
+        "com.twitter.android" to AppMetadata(
+            packageName = "com.twitter.android",
+            confidenceMultiplier = 0.90f
+        ),
+        "com.zhiliaoapp.musically" to AppMetadata(
+            packageName = "com.zhiliaoapp.musically",
+            confidenceMultiplier = 0.95f
+        ),
+        "com.snapchat.android" to AppMetadata(
+            packageName = "com.snapchat.android",
+            confidenceMultiplier = 0.90f
+        ),
+        "com.linkedin.android" to AppMetadata(
+            packageName = "com.linkedin.android",
+            confidenceMultiplier = 0.85f
+        ),
+        "com.reddit.frontpage" to AppMetadata(
+            packageName = "com.reddit.frontpage",
+            confidenceMultiplier = 0.85f
+        ),
+        "com.pinterest" to AppMetadata(
+            packageName = "com.pinterest",
+            confidenceMultiplier = 0.80f
+        ),
+        "com.whatsapp" to AppMetadata(
+            packageName = "com.whatsapp",
+            confidenceMultiplier = 0.75f
+        ),
+        "org.telegram.messenger" to AppMetadata(
+            packageName = "org.telegram.messenger",
+            confidenceMultiplier = 0.75f
+        ),
+        "com.discord" to AppMetadata(
+            packageName = "com.discord",
+            confidenceMultiplier = 0.80f
+        ),
+        "com.instagram.barcelona" to AppMetadata(
+            packageName = "com.instagram.barcelona",
+            confidenceMultiplier = 0.90f
+        ),
+        "org.joinmastodon.android" to AppMetadata(
+            packageName = "org.joinmastodon.android",
+            confidenceMultiplier = 0.85f
+        ),
+        "xyz.blueskyweb.app" to AppMetadata(
+            packageName = "xyz.blueskyweb.app",
+            confidenceMultiplier = 0.85f
+        ),
+        "com.tumblr" to AppMetadata(
+            packageName = "com.tumblr",
+            confidenceMultiplier = 0.80f
+        )
+    )
+
 }

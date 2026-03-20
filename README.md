@@ -2,7 +2,7 @@
 
 **Detect user habits from Android system data and third-party services — no user input required.**
 
-Tracker is an Android library that automatically identifies behaviors like language learning, reading, and movie watching by analyzing device usage and third-party feeds. Your app gets structured habit data with confidence scores, without asking users to log anything manually.
+Tracker is an Android library that automatically identifies behaviors like language learning, reading, movie watching, and social media usage by analyzing device usage and third-party feeds. Your app gets structured habit data with confidence scores, without asking users to log anything manually.
 
 ## Is This for You?
 
@@ -20,6 +20,7 @@ Tracker is an Android library that automatically identifies behaviors like langu
 val tracker = Tracker.Builder(context)
     .enableReading()
     .enableLanguageLearning()
+    .enableSocialMedia()
     .setLetterboxdUsername("your_username") // optional, for movie tracking
     .setMinConfidence(0.50f)
     .build()
@@ -28,6 +29,7 @@ lifecycleScope.launch {
     val reading = tracker.queryReading()
     val learning = tracker.queryLanguageLearning()
     val movies = tracker.queryMovieWatching()
+    val social = tracker.querySocialMedia()
 
     // Reading
     reading?.occurred          // true if reading was detected
@@ -47,6 +49,12 @@ lifecycleScope.launch {
     movies?.occurred
     movies?.count              // number of films logged
     movies?.movies             // List<MovieInfo> — title, watchedDate, publishedDate
+
+    // Social media
+    social?.occurred
+    social?.durationMinutes    // total time spent
+    social?.apps               // List<AppInfo> — apps used
+    social?.sessions           // List<UsageSession> — detailed session timeline
 }
 
 // Cancel in-flight callback queries when the component is destroyed
@@ -60,10 +68,11 @@ override fun onDestroy() {
 - Reading: 30 min · Kindle · 75% confidence (MEDIUM)
 - Language Learning: 45 min · Duolingo, Anki · 85% confidence (HIGH)
 - Movie Watching: 3 films · The Matrix, Inception, Interstellar · 95% confidence (HIGH)
+- Social Media: 120 min · Instagram, Reddit, WhatsApp · 88% confidence (HIGH)
 
 ### Session Details
 
-View individual usage sessions for reading and language learning:
+View individual usage sessions for reading, language learning, and social media:
 
 ```kotlin
 reading?.sessions?.forEach { session ->
@@ -85,6 +94,9 @@ reading?.sessions?.forEach { session ->
 | **LANGUAGE_LEARNING** | App usage stats | Duolingo, Anki, LingoDeer, Drops, Kanji Study, Renshuu, and 8 more | `PACKAGE_USAGE_STATS` |
 | **READING** | App usage stats | Kindle, Google Play Books | `PACKAGE_USAGE_STATS` |
 | **MOVIE_WATCHING** | Letterboxd RSS | Film titles and watch dates from public feed | `INTERNET` (no user prompt) |
+| **SOCIAL_MEDIA_USAGE** | App usage stats | Facebook, Instagram, Twitter, TikTok, Reddit, WhatsApp, and 9 more | `PACKAGE_USAGE_STATS` |
+
+**Note on Social Media**: Includes messaging apps (WhatsApp, Telegram) with lower confidence scores as they may be used for work/family communication. Minimum session duration is 2 minutes (shorter than reading's 5 minutes) to capture typical social media browsing patterns.
 
 ## Installation
 
@@ -97,7 +109,7 @@ dependencies {
 Add to `AndroidManifest.xml`:
 
 ```xml
-<!-- Required for language learning and reading -->
+<!-- Required for language learning, reading, and social media -->
 <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
     tools:ignore="ProtectedPermissions" />
 
@@ -124,6 +136,10 @@ tracker.queryMovieWatching { result ->
     result?.movies?.forEach { println(it.title) }
 }
 
+tracker.querySocialMedia { result ->
+    println("Social: ${result?.durationMinutes} min across ${result?.apps?.size} apps")
+}
+
 // Always call cancel() to clean up when done
 tracker.cancel()
 ```
@@ -148,7 +164,7 @@ Callbacks are invoked on the Main dispatcher.
 ./gradlew :app:installDebug
 ```
 
-Demonstrates the full flow: permission request, querying all three metrics, and displaying results. To enable movie watching, set your Letterboxd username in `MainActivity.kt`.
+Demonstrates the full flow: permission request, querying all metrics (language learning, reading, movie watching, social media), and displaying results. To enable movie watching, set your Letterboxd username in `MainActivity.kt`.
 
 ## License
 
