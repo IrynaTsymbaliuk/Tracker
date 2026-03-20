@@ -16,14 +16,6 @@ class ReadingProvider internal constructor(
     private val usageStatsCollector: UsageStatsCollector
 ) : MetricProvider<ReadingResult> {
 
-    private companion object {
-        /**
-         * Minimum session duration for reading to count as evidence.
-         * Sessions shorter than this are filtered out.
-         */
-        const val READING_MIN_SESSION_MINUTES = 5
-    }
-
     override suspend fun query(
         fromMillis: Long,
         toMillis: Long,
@@ -33,11 +25,9 @@ class ReadingProvider internal constructor(
         val evidenceList = usageStatsCollector.collect(
             fromMillis,
             toMillis,
-            KnownApps.reading,
-            READING_MIN_SESSION_MINUTES
+            KnownApps.reading
         ).ifEmpty { return null }
 
-        // Filter out invalid sessions with duration <= 0
         val validEvidenceList = evidenceList.filter {
             it.durationMinutes > 0
         }.ifEmpty { return null }

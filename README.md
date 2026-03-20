@@ -96,7 +96,7 @@ reading?.sessions?.forEach { session ->
 | **MOVIE_WATCHING** | Letterboxd RSS | Film titles and watch dates from public feed | `INTERNET` (no user prompt) |
 | **SOCIAL_MEDIA_USAGE** | App usage stats | Facebook, Instagram, Twitter, TikTok, Reddit, WhatsApp, and 9 more | `PACKAGE_USAGE_STATS` |
 
-**Note on Social Media**: Includes messaging apps (WhatsApp, Telegram) with lower confidence scores as they may be used for work/family communication. Minimum session duration is 2 minutes (shorter than reading's 5 minutes) to capture typical social media browsing patterns.
+**Note on Social Media**: Includes messaging apps (WhatsApp, Telegram) with lower confidence scores as they may be used for work/family communication.
 
 ## Installation
 

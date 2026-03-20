@@ -14,8 +14,6 @@ import com.tracker.core.types.DataSource
 /**
  * Detects social media usage from app foreground time.
  *
- * Uses UsageStatsCollector to track time in social networking apps.
- *
  * **Confidence scoring**:
  * - Traditional social apps (Facebook, Instagram, TikTok): 0.90-0.95
  * - Professional/borderline (LinkedIn, Reddit): 0.80-0.85
@@ -27,14 +25,6 @@ class SocialMediaProvider internal constructor(
     private val usageStatsCollector: UsageStatsCollector
 ) : MetricProvider<SocialMediaResult> {
 
-    private companion object {
-        /**
-         * Minimum session duration for social media to count as evidence.
-         * Sessions shorter than this are filtered out.
-         */
-        const val SOCIAL_MEDIA_MIN_SESSION_MINUTES = 2
-    }
-
     override suspend fun query(
         fromMillis: Long,
         toMillis: Long,
@@ -44,8 +34,7 @@ class SocialMediaProvider internal constructor(
         val evidenceList = usageStatsCollector.collect(
             fromMillis,
             toMillis,
-            KnownApps.socialMedia,
-            SOCIAL_MEDIA_MIN_SESSION_MINUTES
+            KnownApps.socialMedia
         ).ifEmpty { return null }
 
         val validEvidenceList =

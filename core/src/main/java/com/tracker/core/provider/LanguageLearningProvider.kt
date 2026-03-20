@@ -15,14 +15,6 @@ class LanguageLearningProvider internal constructor(
     private val usageStatsCollector: UsageStatsCollector
 ) : MetricProvider<LanguageLearningResult> {
 
-    private companion object {
-        /**
-         * Minimum session duration for language learning to count as evidence.
-         * Sessions shorter than this are filtered out.
-         */
-        const val LANGUAGE_LEARNING_MIN_SESSION_MINUTES = 5
-    }
-
     override suspend fun query(
         fromMillis: Long,
         toMillis: Long,
@@ -32,8 +24,7 @@ class LanguageLearningProvider internal constructor(
         val evidenceList = usageStatsCollector.collect(
             fromMillis,
             toMillis,
-            KnownApps.languageLearning,
-            LANGUAGE_LEARNING_MIN_SESSION_MINUTES
+            KnownApps.languageLearning
         ).ifEmpty { return null }
 
         val validEvidenceList =

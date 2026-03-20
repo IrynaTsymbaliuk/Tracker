@@ -20,8 +20,7 @@ import java.util.concurrent.TimeUnit
 class UsageStatsCollector(private val context: Context, private val permissionManager: PermissionManager) {
 
     /**
-     * Returns [DurationEvidence] for known, installed apps with foreground time >= [minSessionMinutes]
-     * within the given time range.
+     * Returns [DurationEvidence] for known, installed apps within the given time range.
      *
      * @throws PermissionDeniedException if `PACKAGE_USAGE_STATS` is not granted.
      * @throws SystemServiceUnavailableException if [android.app.usage.UsageStatsManager] is unavailable.
@@ -31,8 +30,7 @@ class UsageStatsCollector(private val context: Context, private val permissionMa
     fun collect(
         fromMillis: Long,
         toMillis: Long,
-        knownApps: Map<String, AppMetadata>,
-        minSessionMinutes: Int
+        knownApps: Map<String, AppMetadata>
     ): List<DurationEvidence> {
 
         checkPermissions()
@@ -41,7 +39,7 @@ class UsageStatsCollector(private val context: Context, private val permissionMa
 
         val usageStatsList = getUsageStats(fromMillis, toMillis)
 
-        return getEvidenceList(knownApps, minSessionMinutes, usageStatsList, installedApps)
+        return getEvidenceList(knownApps, usageStatsList, installedApps)
     }
 
     private fun checkPermissions() {
@@ -80,7 +78,6 @@ class UsageStatsCollector(private val context: Context, private val permissionMa
 
     private fun getEvidenceList(
         knownApps: Map<String, AppMetadata>,
-        minSessionMinutes: Int,
         usageStatsList: List<UsageStats>,
         installedApps: Set<String>
     ): List<DurationEvidence> {
@@ -91,8 +88,6 @@ class UsageStatsCollector(private val context: Context, private val permissionMa
             if (packageName !in installedApps) return@mapNotNull null
 
             val totalTimeMinutes = TimeUnit.MILLISECONDS.toMinutes(usageStats.totalTimeInForeground)
-
-            if (totalTimeMinutes < minSessionMinutes) return@mapNotNull null
 
             val metadata = UsageStatsMetadata(
                 packageName = packageName,

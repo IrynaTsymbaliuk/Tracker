@@ -6,8 +6,6 @@ package com.tracker.core.config
  * Each app has:
  * - Package name for identification
  * - Confidence multiplier (base confidence when detected)
- *
- * Note: Minimum session duration is defined per-habit in HabitConfig, not per-app.
  */
 object KnownApps {
 
