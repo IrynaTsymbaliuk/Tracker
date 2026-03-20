@@ -1,6 +1,7 @@
 package com.tracker.core.provider
 
 import com.tracker.core.collector.LetterboxdCollector
+import com.tracker.core.collector.LetterboxdMetadata
 import com.tracker.core.result.MovieInfo
 import com.tracker.core.result.MovieWatchingResult
 import com.tracker.core.result.TimeRange
@@ -24,14 +25,8 @@ class MovieWatchingProvider internal constructor(
         val totalCounter = evidenceList.sumOf { it.counter }
 
         val movies = evidenceList.mapNotNull { ev ->
-            val title = ev.metadata["title"] as? String
-            val publishedDate = ev.metadata["publishedDate"] as? Long
-            val watchedDate = ev.metadata["watchedDate"] as? Long
-            if (title != null && publishedDate != null && watchedDate != null) {
-                MovieInfo(title, publishedDate, watchedDate)
-            } else {
-                null
-            }
+            val metadata = LetterboxdMetadata.fromMap(ev.metadata) ?: return@mapNotNull null
+            MovieInfo(metadata.title, metadata.publishedDate, metadata.watchedDate)
         }
 
         val confidence = evidenceList.first().confidence

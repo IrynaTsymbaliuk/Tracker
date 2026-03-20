@@ -1,8 +1,8 @@
 package com.tracker.core.provider
 
 import com.tracker.core.collector.UsageStatsCollector
+import com.tracker.core.collector.UsageStatsMetadata
 import com.tracker.core.config.KnownApps
-import com.tracker.core.model.DurationEvidence
 import com.tracker.core.result.AppInfo
 import com.tracker.core.result.ReadingResult
 import com.tracker.core.result.TimeRange
@@ -59,30 +59,19 @@ class ReadingProvider internal constructor(
         val confidenceLevel = combinedConfidence.toConfidenceLevel()
 
         val apps = validEvidenceList.mapNotNull { ev ->
-            val packageName = ev.metadata["packageName"] as? String
-            val appName = ev.metadata["appName"] as? String
-            if (packageName != null && appName != null) {
-                AppInfo(packageName, appName)
-            } else {
-                null
-            }
+            val metadata = UsageStatsMetadata.fromMap(ev.metadata) ?: return@mapNotNull null
+            AppInfo(metadata.packageName, metadata.appName)
         }.distinctBy { it.packageName }
 
         val sessions = validEvidenceList.mapNotNull { ev ->
-            if (ev !is DurationEvidence) return@mapNotNull null
-            val packageName = ev.metadata["packageName"] as? String
-            val appName = ev.metadata["appName"] as? String
-            if (packageName != null && appName != null) {
-                UsageSession(
-                    startTime = ev.startTimeMillis,
-                    endTime = ev.endTimeMillis,
-                    durationMinutes = ev.durationMinutes,
-                    packageName = packageName,
-                    appName = appName
-                )
-            } else {
-                null
-            }
+            val metadata = UsageStatsMetadata.fromMap(ev.metadata) ?: return@mapNotNull null
+            UsageSession(
+                startTime = ev.startTimeMillis,
+                endTime = ev.endTimeMillis,
+                durationMinutes = ev.durationMinutes,
+                packageName = metadata.packageName,
+                appName = metadata.appName
+            )
         }
 
         return ReadingResult(

@@ -94,16 +94,18 @@ class UsageStatsCollector(private val context: Context, private val permissionMa
 
             if (totalTimeMinutes < minSessionMinutes) return@mapNotNull null
 
+            val metadata = UsageStatsMetadata(
+                packageName = packageName,
+                appName = getAppName(context.packageManager, packageName)
+            )
+
             DurationEvidence(
                 source = DataSource.USAGE_STATS,
                 confidence = appMetadata.confidenceMultiplier,
                 durationMinutes = totalTimeMinutes.toInt(),
                 startTimeMillis = usageStats.firstTimeStamp,
                 endTimeMillis = usageStats.lastTimeStamp,
-                metadata = mapOf(
-                    "packageName" to packageName,
-                    "appName" to getAppName(context.packageManager, packageName)
-                )
+                metadata = metadata.toMap()
             )
         }
     }
