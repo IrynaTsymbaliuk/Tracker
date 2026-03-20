@@ -42,7 +42,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Track your language learning, reading, and movie watching habits with the Tracker library."
+                    android:text="Track your language learning, reading, social media usage, and movie watching habits with the Tracker library."
                     android:textSize="14sp"
                     android:textColor="?android:textColorSecondary"
                     android:gravity="center"
@@ -214,9 +214,20 @@
                         android:layout_height="wrap_content"
                         android:textSize="14sp"
                         android:textColor="?android:textColorSecondary"
-                        android:layout_marginBottom="16dp"
+                        android:layout_marginBottom="4dp"
                         android:layout_marginStart="12dp"
                         tools:text="Apps: Duolingo, Memrise" />
+
+                    <TextView
+                        android:id="@+id/tvLanguageLearningSessions"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="12sp"
+                        android:textColor="?android:textColorTertiary"
+                        android:layout_marginBottom="16dp"
+                        android:layout_marginStart="12dp"
+                        android:fontFamily="monospace"
+                        tools:text="Sessions:\n  09:00-09:15 Duolingo (15 min)\n  14:30-15:00 Anki (30 min)" />
 
                     <!-- Reading Section -->
                     <TextView
@@ -265,8 +276,80 @@
                         android:textSize="14sp"
                         android:textColor="?android:textColorSecondary"
                         android:layout_marginStart="12dp"
-                        android:layout_marginBottom="16dp"
+                        android:layout_marginBottom="4dp"
                         tools:text="Apps: Kindle, Google Books" />
+
+                    <TextView
+                        android:id="@+id/tvReadingSessions"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="12sp"
+                        android:textColor="?android:textColorTertiary"
+                        android:layout_marginBottom="16dp"
+                        android:layout_marginStart="12dp"
+                        android:fontFamily="monospace"
+                        tools:text="Sessions:\n  10:00-10:25 Kindle (25 min)" />
+
+                    <!-- Social Media Section -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="📱 Social Media"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:textColor="?android:textColorPrimary"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:id="@+id/tvSocialMediaStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:textColor="?android:textColorSecondary"
+                        android:layout_marginBottom="4dp"
+                        android:layout_marginStart="12dp"
+                        tools:text="✓ Activity Detected" />
+
+                    <TextView
+                        android:id="@+id/tvSocialMediaDuration"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:textColor="?android:textColorSecondary"
+                        android:layout_marginBottom="4dp"
+                        android:layout_marginStart="12dp"
+                        tools:text="Duration: 120 minutes" />
+
+                    <TextView
+                        android:id="@+id/tvSocialMediaConfidence"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:textColor="?android:textColorSecondary"
+                        android:layout_marginBottom="4dp"
+                        android:layout_marginStart="12dp"
+                        tools:text="Confidence: 88% (HIGH)" />
+
+                    <TextView
+                        android:id="@+id/tvSocialMediaApps"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:textColor="?android:textColorSecondary"
+                        android:layout_marginStart="12dp"
+                        android:layout_marginBottom="4dp"
+                        tools:text="Apps: Instagram, Reddit, WhatsApp" />
+
+                    <TextView
+                        android:id="@+id/tvSocialMediaSessions"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="12sp"
+                        android:textColor="?android:textColorTertiary"
+                        android:layout_marginBottom="16dp"
+                        android:layout_marginStart="12dp"
+                        android:fontFamily="monospace"
+                        tools:text="Sessions:\n  11:00-11:30 Instagram (30 min)\n  15:00-15:45 Reddit (45 min)" />
 
                     <!-- Movie Watching Section -->
                     <TextView

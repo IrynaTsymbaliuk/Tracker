@@ -29,6 +29,23 @@
         <!-- Reading Apps -->
         <package android:name="com.google.android.apps.books" />
         <package android:name="com.amazon.kindle" />
+
+        <!-- Social Media Apps -->
+        <package android:name="com.facebook.katana" />
+        <package android:name="com.instagram.android" />
+        <package android:name="com.twitter.android" />
+        <package android:name="com.zhiliaoapp.musically" />
+        <package android:name="com.snapchat.android" />
+        <package android:name="com.linkedin.android" />
+        <package android:name="com.reddit.frontpage" />
+        <package android:name="com.pinterest" />
+        <package android:name="com.whatsapp" />
+        <package android:name="org.telegram.messenger" />
+        <package android:name="com.discord" />
+        <package android:name="com.instagram.barcelona" />
+        <package android:name="org.joinmastodon.android" />
+        <package android:name="xyz.blueskyweb.app" />
+        <package android:name="com.tumblr" />
     </queries>
 
 </manifest>

@@ -12,22 +12,26 @@ import com.tracker.core.Tracker
 import com.tracker.core.result.LanguageLearningResult
 import com.tracker.core.result.MovieWatchingResult
 import com.tracker.core.result.ReadingResult
+import com.tracker.core.result.SocialMediaResult
 import com.tracker.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * Demonstrates Tracker library integration:
  * 1. Build a Tracker instance with the Builder
  * 2. Check and request PACKAGE_USAGE_STATS permission
  * 3. Query individual metrics for the last 24 hours
- * 4. Display results — occurred state, duration, confidence level, and contributing apps
+ * 4. Display results — occurred state, duration, confidence level, contributing apps, and sessions
  *
  * Movie watching: set LETTERBOXD_USERNAME to your Letterboxd username to enable.
  */
 class MainActivity : AppCompatActivity() {
 
     // Set your Letterboxd username here to enable movie watching tracking
-    private val letterboxdUsername: String? = null
+    private val letterboxdUsername: String? = "Ts_Irena"
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var tracker: Tracker
@@ -37,9 +41,10 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        tracker = Tracker.Builder(this)
+        tracker = Tracker.Builder(this.applicationContext)
             .enableReading()
             .enableLanguageLearning()
+            .enableSocialMedia()
             .enableMovieWatching()
             .setLetterboxdUsername(letterboxdUsername)
             .setMinConfidence(0.50f)
@@ -77,8 +82,9 @@ class MainActivity : AppCompatActivity() {
             try {
                 val learning = tracker.queryLanguageLearning()
                 val reading = tracker.queryReading()
+                val social = tracker.querySocialMedia()
                 val movies = tracker.queryMovieWatching()
-                displayResults(learning, reading, movies)
+                displayResults(learning, reading, social, movies)
             } catch (e: Exception) {
                 Toast.makeText(this@MainActivity, "Query failed: ${e.message}", Toast.LENGTH_LONG)
                     .show()
@@ -92,6 +98,7 @@ class MainActivity : AppCompatActivity() {
     private fun displayResults(
         learning: LanguageLearningResult?,
         reading: ReadingResult?,
+        social: SocialMediaResult?,
         movies: MovieWatchingResult?
     ) {
         with(binding) {
@@ -104,6 +111,7 @@ class MainActivity : AppCompatActivity() {
                     tvLanguageLearningDuration.text = ""
                     tvLanguageLearningConfidence.text = ""
                     tvLanguageLearningApps.text = ""
+                    tvLanguageLearningSessions.text = ""
                 }
 
                 !learning.occurred -> {
@@ -112,15 +120,17 @@ class MainActivity : AppCompatActivity() {
                     tvLanguageLearningConfidence.text =
                         "Confidence: ${formatConfidence(learning.confidence)} (${learning.confidenceLevel})"
                     tvLanguageLearningApps.text = ""
+                    tvLanguageLearningSessions.text = ""
                 }
 
                 else -> {
                     tvLanguageLearningStatus.text = "✓ Detected"
-                    tvLanguageLearningDuration.text = "Duration: ${learning.durationMinutes} min"
+                    tvLanguageLearningDuration.text = "Duration: ${learning.durationMinutes} min (${learning.sessionCount} sessions)"
                     tvLanguageLearningConfidence.text =
                         "Confidence: ${formatConfidence(learning.confidence)} (${learning.confidenceLevel})"
                     tvLanguageLearningApps.text =
                         "Apps: ${learning.apps.joinToString(", ") { it.appName }}"
+                    tvLanguageLearningSessions.text = formatSessions(learning.sessions)
                 }
             }
 
@@ -131,6 +141,7 @@ class MainActivity : AppCompatActivity() {
                     tvReadingDuration.text = ""
                     tvReadingConfidence.text = ""
                     tvReadingApps.text = ""
+                    tvReadingSessions.text = ""
                 }
 
                 !reading.occurred -> {
@@ -139,14 +150,45 @@ class MainActivity : AppCompatActivity() {
                     tvReadingConfidence.text =
                         "Confidence: ${formatConfidence(reading.confidence)} (${reading.confidenceLevel})"
                     tvReadingApps.text = ""
+                    tvReadingSessions.text = ""
                 }
 
                 else -> {
                     tvReadingStatus.text = "✓ Detected"
-                    tvReadingDuration.text = "Duration: ${reading.durationMinutes} min"
+                    tvReadingDuration.text = "Duration: ${reading.durationMinutes} min (${reading.sessionCount} sessions)"
                     tvReadingConfidence.text =
                         "Confidence: ${formatConfidence(reading.confidence)} (${reading.confidenceLevel})"
                     tvReadingApps.text = "Apps: ${reading.apps.joinToString(", ") { it.appName }}"
+                    tvReadingSessions.text = formatSessions(reading.sessions)
+                }
+            }
+
+            // Social Media
+            when {
+                social == null -> {
+                    tvSocialMediaStatus.text = "No data"
+                    tvSocialMediaDuration.text = ""
+                    tvSocialMediaConfidence.text = ""
+                    tvSocialMediaApps.text = ""
+                    tvSocialMediaSessions.text = ""
+                }
+
+                !social.occurred -> {
+                    tvSocialMediaStatus.text = "No activity detected"
+                    tvSocialMediaDuration.text = "Duration: 0 min"
+                    tvSocialMediaConfidence.text =
+                        "Confidence: ${formatConfidence(social.confidence)} (${social.confidenceLevel})"
+                    tvSocialMediaApps.text = ""
+                    tvSocialMediaSessions.text = ""
+                }
+
+                else -> {
+                    tvSocialMediaStatus.text = "✓ Detected"
+                    tvSocialMediaDuration.text = "Duration: ${social.durationMinutes} min (${social.sessionCount} sessions)"
+                    tvSocialMediaConfidence.text =
+                        "Confidence: ${formatConfidence(social.confidence)} (${social.confidenceLevel})"
+                    tvSocialMediaApps.text = "Apps: ${social.apps.joinToString(", ") { it.appName }}"
+                    tvSocialMediaSessions.text = formatSessions(social.sessions)
                 }
             }
 
@@ -191,6 +233,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun formatConfidence(confidence: Float) = String.format("%.0f%%", confidence * 100)
+
+    private fun formatSessions(sessions: List<com.tracker.core.result.UsageSession>): String {
+        if (sessions.isEmpty()) return ""
+
+        val dateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+        return "Sessions:\n" + sessions.take(5).joinToString("\n") { session ->
+            val start = dateFormat.format(Date(session.startTime))
+            val end = dateFormat.format(Date(session.endTime))
+            "  $start-$end ${session.appName} (${session.durationMinutes} min)"
+        } + if (sessions.size > 5) "\n  ... and ${sessions.size - 5} more" else ""
+    }
 
     private fun hasUsageStatsPermission(): Boolean {
         val appOpsManager = getSystemService(APP_OPS_SERVICE) as AppOpsManager

@@ -39,16 +39,17 @@ class LanguageLearningProvider internal constructor(
             AppInfo(metadata.packageName, metadata.appName)
         }.distinctBy { it.packageName }
 
-        val sessions = validEvidenceList.mapNotNull { ev ->
-            val metadata = UsageStatsMetadata.fromMap(ev.metadata) ?: return@mapNotNull null
-            UsageSession(
-                startTime = ev.startTimeMillis,
-                endTime = ev.endTimeMillis,
-                durationMinutes = ev.durationMinutes,
-                packageName = metadata.packageName,
-                appName = metadata.appName
-            )
-        }
+        val sessions = validEvidenceList
+            .mapNotNull { ev ->
+                val metadata = UsageStatsMetadata.fromMap(ev.metadata) ?: return@mapNotNull null
+                UsageSession(
+                    startTime = ev.startTimeMillis,
+                    endTime = ev.endTimeMillis,
+                    durationMinutes = ev.durationMinutes,
+                    packageName = metadata.packageName,
+                    appName = metadata.appName
+                )
+            }
 
         return LanguageLearningResult(
             occurred = combinedConfidence.toOccurred(minConfidence),

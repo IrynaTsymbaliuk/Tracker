@@ -17,7 +17,10 @@ import java.util.concurrent.TimeUnit
  *
  * Requires the user to grant `PACKAGE_USAGE_STATS` via Settings > Apps > Special app access > Usage access.
  */
-class UsageStatsCollector(private val context: Context, private val permissionManager: PermissionManager) {
+class UsageStatsCollector(
+    private val context: Context,
+    private val permissionManager: PermissionManager
+) {
 
     /**
      * Returns [DurationEvidence] for known, installed apps within the given time range.
@@ -49,14 +52,18 @@ class UsageStatsCollector(private val context: Context, private val permissionMa
     }
 
     private fun getInstalledApps(knownApps: Map<String, AppMetadata>): Set<String> {
-        val allInstalledPackages = try {
-            context.packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
-                .map { it.packageName }.toSet()
+        val installedKnownApps = try {
+            knownApps.keys.filter { packageName ->
+                try {
+                    context.packageManager.getPackageInfo(packageName, 0)
+                    true
+                } catch (e: PackageManager.NameNotFoundException) {
+                    false
+                }
+            }.toSet()
         } catch (e: Exception) {
             throw PackageManagerException(e)
         }
-
-        val installedKnownApps = knownApps.keys.filter { it in allInstalledPackages }.toSet()
 
         if (installedKnownApps.isEmpty()) {
             throw NoMonitorableAppsException()
@@ -88,6 +95,8 @@ class UsageStatsCollector(private val context: Context, private val permissionMa
             if (packageName !in installedApps) return@mapNotNull null
 
             val totalTimeMinutes = TimeUnit.MILLISECONDS.toMinutes(usageStats.totalTimeInForeground)
+
+            if (totalTimeMinutes < 1) return@mapNotNull null
 
             val metadata = UsageStatsMetadata(
                 packageName = packageName,
