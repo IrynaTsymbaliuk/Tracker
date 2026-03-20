@@ -21,7 +21,8 @@ val tracker = Tracker.Builder(context)
     .enableReading()
     .enableLanguageLearning()
     .enableSocialMedia()
-    .setLetterboxdUsername("your_username") // optional, for movie tracking
+    .enableMovieWatching()
+    .setLetterboxdUsername("your_username")  // Optional: can also be set later
     .setMinConfidence(0.50f)
     .build()
 

@@ -26,9 +26,15 @@ import kotlinx.coroutines.launch
  * Usage:
  * ```
  * val tracker = Tracker.Builder(context)
+ *     .enableReading()
+ *     .enableLanguageLearning()
+ *     .enableMovieWatching()
+ *     .setLetterboxdUsername("username")  // Optional: can also be set later
  *     .setMinConfidence(0.50f)
- *     .setLetterboxdUsername("username")
  *     .build()
+ *
+ * // Or set/update username later
+ * // tracker.setLetterboxdUsername("username")
  *
  * // Query language learning with coroutines (last 24 hours)
  * val result = tracker.queryLanguageLearning()
@@ -82,6 +88,16 @@ class Tracker private constructor(
     fun cancel() = scope.cancel()
 
     /**
+     * Sets the Letterboxd username for movie watching queries.
+     * Can be called at any time to enable or update movie tracking.
+     *
+     * @param username Letterboxd username
+     */
+    fun setLetterboxdUsername(username: String?) {
+        movieWatchingProvider?.setUsername(username)
+    }
+
+    /**
      * @return Language learning data for the last 24 hours, or null if not available
      */
     suspend fun queryLanguageLearning(): LanguageLearningResult? {
@@ -112,7 +128,7 @@ class Tracker private constructor(
     }
 
     /**
-     * Requires Letterboxd username to be set via [Builder.setLetterboxdUsername].
+     * Requires Letterboxd username to be set via [setLetterboxdUsername].
      * @return Movie watching data for the last 24 hours, or null if username not set or feed unavailable
      */
     suspend fun queryMovieWatching(): MovieWatchingResult? {
@@ -153,6 +169,7 @@ class Tracker private constructor(
         private var enableReading = false
         private var enableLanguageLearning = false
         private var enableSocialMedia = false
+        private var enableMovieWatching = false
         private var letterboxdUsername: String? = null
 
         fun enableReading(): Builder {
@@ -170,6 +187,11 @@ class Tracker private constructor(
             return this
         }
 
+        fun enableMovieWatching(): Builder {
+            enableMovieWatching = true
+            return this
+        }
+
         /**
          * @param confidence Minimum confidence threshold (0.0 to 1.0, default: 0.50)
          * @return This builder for chaining
@@ -181,7 +203,9 @@ class Tracker private constructor(
         }
 
         /**
-         * Required for [Tracker.queryMovieWatching] to return data.
+         * Sets Letterboxd username for movie watching queries.
+         * Can also be set later via [Tracker.setLetterboxdUsername].
+         *
          * @param username Letterboxd username
          * @return This builder for chaining
          */
@@ -196,22 +220,26 @@ class Tracker private constructor(
         fun build(): Tracker {
             val permissionManager = PermissionManager(context)
             val usageStatsCollector = UsageStatsCollector(context, permissionManager)
+
+            val movieProvider = if (enableMovieWatching) {
+                MovieWatchingProvider(
+                    LetterboxdCollector(
+                        rssFetcher = HttpRssFetcher(
+                            networkChecker = AndroidNetworkConnectivityChecker(context)
+                        )
+                    )
+                ).apply {
+                    letterboxdUsername?.let { setUsername(it) }
+                }
+            } else null
+
             return Tracker(
                 minConfidence = minConfidence,
                 readingProvider = if (enableReading) ReadingProvider(usageStatsCollector) else null,
                 languageLearningProvider = if (enableLanguageLearning) LanguageLearningProvider(
                     usageStatsCollector
                 ) else null,
-                movieWatchingProvider = letterboxdUsername?.let {
-                    MovieWatchingProvider(
-                        LetterboxdCollector(
-                            rssFetcher = HttpRssFetcher(
-                                networkChecker = AndroidNetworkConnectivityChecker(context)
-                            )
-                        ),
-                        it
-                    )
-                },
+                movieWatchingProvider = movieProvider,
                 socialMediaProvider = if (enableSocialMedia) SocialMediaProvider(usageStatsCollector) else null,
                 timeProvider = timeProvider
             )

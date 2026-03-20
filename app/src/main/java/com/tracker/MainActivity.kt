@@ -40,6 +40,7 @@ class MainActivity : AppCompatActivity() {
         tracker = Tracker.Builder(this)
             .enableReading()
             .enableLanguageLearning()
+            .enableMovieWatching()
             .setLetterboxdUsername(letterboxdUsername)
             .setMinConfidence(0.50f)
             .build()

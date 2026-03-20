@@ -9,9 +9,14 @@ import com.tracker.core.result.toConfidenceLevel
 import com.tracker.core.types.DataSource
 
 class MovieWatchingProvider internal constructor(
-    private val letterboxdCollector: LetterboxdCollector,
-    private val letterboxdUsername: String?
+    private val letterboxdCollector: LetterboxdCollector
 ) : MetricProvider<MovieWatchingResult> {
+
+    private var letterboxdUsername: String? = null
+
+    fun setUsername(username: String?) {
+        letterboxdUsername = username
+    }
 
     override suspend fun query(
         fromMillis: Long,
@@ -20,7 +25,8 @@ class MovieWatchingProvider internal constructor(
     ): MovieWatchingResult? {
         if (letterboxdUsername.isNullOrBlank()) return null
 
-        val evidenceList = letterboxdCollector.collect(fromMillis, toMillis, letterboxdUsername)?.ifEmpty { return null } ?: return null
+        val evidenceList = letterboxdCollector.collect(fromMillis, toMillis, letterboxdUsername)
+            ?.ifEmpty { return null } ?: return null
 
         val totalCounter = evidenceList.sumOf { it.counter }
 

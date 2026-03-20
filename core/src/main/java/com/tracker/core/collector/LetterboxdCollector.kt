@@ -51,7 +51,7 @@ class LetterboxdCollector(
     suspend fun collect(
         fromMillis: Long,
         toMillis: Long,
-        letterboxdUsername: String
+        letterboxdUsername: String?
     ): List<CounterEvidence> = withContext(dispatcher) {
         Log.d(
             TAG,
@@ -98,8 +98,8 @@ class LetterboxdCollector(
         }
     }
 
-    private fun checkId(id: String) {
-        if (id.isBlank()) {
+    private fun checkId(id: String?) {
+        if (id.isNullOrBlank()) {
             Log.e(TAG, "Invalid Letterboxd username: empty or blank")
             throw InvalidLetterboxdIdException("Letterboxd username cannot be empty")
         }
