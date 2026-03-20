@@ -2,9 +2,11 @@ package com.tracker.core.provider
 
 import com.tracker.core.collector.UsageStatsCollector
 import com.tracker.core.config.KnownApps
+import com.tracker.core.model.DurationEvidence
 import com.tracker.core.result.AppInfo
 import com.tracker.core.result.ReadingResult
 import com.tracker.core.result.TimeRange
+import com.tracker.core.result.UsageSession
 import com.tracker.core.result.toConfidenceLevel
 import com.tracker.core.result.toOccurred
 import com.tracker.core.types.DataSource
@@ -66,6 +68,23 @@ class ReadingProvider internal constructor(
             }
         }.distinctBy { it.packageName }
 
+        val sessions = validEvidenceList.mapNotNull { ev ->
+            if (ev !is DurationEvidence) return@mapNotNull null
+            val packageName = ev.metadata["packageName"] as? String
+            val appName = ev.metadata["appName"] as? String
+            if (packageName != null && appName != null) {
+                UsageSession(
+                    startTime = ev.startTimeMillis,
+                    endTime = ev.endTimeMillis,
+                    durationMinutes = ev.durationMinutes,
+                    packageName = packageName,
+                    appName = appName
+                )
+            } else {
+                null
+            }
+        }
+
         return ReadingResult(
             occurred = occurred,
             source = DataSource.USAGE_STATS,
@@ -74,7 +93,8 @@ class ReadingProvider internal constructor(
             timeRange = TimeRange(fromMillis, toMillis),
             durationMinutes = totalDuration,
             sessionCount = validEvidenceList.size,
-            apps = apps
+            apps = apps,
+            sessions = sessions
         )
     }
 

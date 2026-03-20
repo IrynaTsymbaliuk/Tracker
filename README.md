@@ -35,11 +35,13 @@ lifecycleScope.launch {
     reading?.confidence        // 0.0–1.0
     reading?.confidenceLevel   // LOW / MEDIUM / HIGH
     reading?.apps              // List<AppInfo> — apps that contributed
+    reading?.sessions          // List<UsageSession> — detailed session timeline
 
     // Language learning
     learning?.occurred
     learning?.durationMinutes
     learning?.apps
+    learning?.sessions         // List<UsageSession> — detailed session timeline
 
     // Movie watching
     movies?.occurred
@@ -58,6 +60,23 @@ override fun onDestroy() {
 - Reading: 30 min · Kindle · 75% confidence (MEDIUM)
 - Language Learning: 45 min · Duolingo, Anki · 85% confidence (HIGH)
 - Movie Watching: 3 films · The Matrix, Inception, Interstellar · 95% confidence (HIGH)
+
+### Session Details
+
+View individual usage sessions for reading and language learning:
+
+```kotlin
+reading?.sessions?.forEach { session ->
+    println("${session.appName}: ${session.durationMinutes} min")
+    println("  ${Date(session.startTime)} - ${Date(session.endTime)}")
+}
+
+// Example output:
+// Kindle: 15 min
+//   Mon Mar 20 09:00:00 2026 - Mon Mar 20 09:15:00 2026
+// Kindle: 20 min
+//   Mon Mar 20 14:30:00 2026 - Mon Mar 20 14:50:00 2026
+```
 
 ## Metrics
 

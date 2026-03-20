@@ -14,8 +14,8 @@ import com.tracker.core.types.DataSource
  * @property durationMinutes Total time spent in language learning apps
  * @property sessionCount Number of distinct learning sessions
  * @property apps List of apps that contributed to this result
+ * @property sessions Detailed list of individual learning sessions
  */
-
 data class LanguageLearningResult(
     override val occurred: Boolean,
     override val source: DataSource,
@@ -24,5 +24,6 @@ data class LanguageLearningResult(
     override val timeRange: TimeRange,
     val durationMinutes: Int,
     val sessionCount: Int,
-    val apps: List<AppInfo> = emptyList()
+    val apps: List<AppInfo> = emptyList(),
+    val sessions: List<UsageSession> = emptyList()
 ) : HabitResult()

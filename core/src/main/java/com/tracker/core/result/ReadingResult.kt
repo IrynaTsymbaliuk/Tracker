@@ -14,6 +14,7 @@ import com.tracker.core.types.DataSource
  * @property durationMinutes Total time spent reading across all apps
  * @property sessionCount Number of distinct reading sessions
  * @property apps List of apps that contributed to this result
+ * @property sessions Detailed list of individual reading sessions
  */
 data class ReadingResult(
     override val occurred: Boolean,
@@ -23,5 +24,6 @@ data class ReadingResult(
     override val timeRange: TimeRange,
     val durationMinutes: Int,
     val sessionCount: Int,
-    val apps: List<AppInfo> = emptyList()
+    val apps: List<AppInfo> = emptyList(),
+    val sessions: List<UsageSession> = emptyList()
 ) : HabitResult()
