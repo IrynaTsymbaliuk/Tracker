@@ -25,20 +25,11 @@ if (!tracker.hasAllRequiredAccess(Metric.LANGUAGE_LEARNING)) {
 
 ### 3. **Querying Metrics**
 ```kotlin
-// Using coroutines (recommended) - query each metric individually
+// Query each metric individually using coroutines
 lifecycleScope.launch {
     val llResult = tracker.queryLanguageLearning()
     val readingResult = tracker.queryReading()
     displayResults(llResult, readingResult)
-}
-
-// Using callbacks (alternative)
-tracker.queryLanguageLearning { result ->
-    // Handle language learning result
-}
-
-tracker.queryReading { result ->
-    // Handle reading result
 }
 ```
 
@@ -96,9 +87,9 @@ MainActivity.kt
 ## Key Learnings
 
 1. **Builder Pattern**: Configure the Tracker with fluent API
-2. **Coroutines**: Use `queryAsync()` for modern async handling
+2. **Coroutines**: Use suspend functions for modern async handling
 3. **Permission Flow**: Proper permission request and handling
-4. **Result Structure**: Access summary, days, and data quality
+4. **Result Structure**: Access result data with confidence scores and session details
 5. **Error Handling**: Handle permission denied and query errors
 
 ## Testing

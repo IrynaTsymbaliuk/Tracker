@@ -69,10 +69,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        tracker.cancel()
-    }
 
     private fun queryMetrics() {
         binding.progressBar.visibility = View.VISIBLE

@@ -57,12 +57,6 @@ lifecycleScope.launch {
     social?.apps               // List<AppInfo> — apps used
     social?.sessions           // List<UsageSession> — detailed session timeline
 }
-
-// Cancel in-flight callback queries when the component is destroyed
-override fun onDestroy() {
-    super.onDestroy()
-    tracker.cancel()
-}
 ```
 
 **Example output (last 24 hours):**
@@ -119,33 +113,6 @@ Add to `AndroidManifest.xml`:
 ```
 
 `PACKAGE_USAGE_STATS` is a protected permission — the user must grant it manually via **Settings → Apps → Special app access → Usage access**.
-
-## Callbacks
-
-A callback API is available for Java interop or non-coroutine contexts:
-
-```kotlin
-tracker.queryReading { result ->
-    println("Reading: ${result?.occurred}, ${result?.durationMinutes} min")
-}
-
-tracker.queryLanguageLearning { result ->
-    println("Learning: ${result?.confidence}")
-}
-
-tracker.queryMovieWatching { result ->
-    result?.movies?.forEach { println(it.title) }
-}
-
-tracker.querySocialMedia { result ->
-    println("Social: ${result?.durationMinutes} min across ${result?.apps?.size} apps")
-}
-
-// Always call cancel() to clean up when done
-tracker.cancel()
-```
-
-Callbacks are invoked on the Main dispatcher.
 
 ## Privacy
 

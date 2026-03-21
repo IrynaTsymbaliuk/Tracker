@@ -14,11 +14,6 @@ import com.tracker.core.result.LanguageLearningResult
 import com.tracker.core.result.MovieWatchingResult
 import com.tracker.core.result.ReadingResult
 import com.tracker.core.result.SocialMediaResult
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
 
 /**
  * Main entry point for the library. This is the only class the host app needs to interact with.
@@ -36,37 +31,11 @@ import kotlinx.coroutines.launch
  * // Or set/update username later
  * // tracker.setLetterboxdUsername("username")
  *
- * // Query language learning with coroutines (last 24 hours)
- * val result = tracker.queryLanguageLearning()
- *
- * // Query language learning with callback (last 24 hours)
- * tracker.queryLanguageLearning { result ->
- *     // Handle result
- * }
- *
- * // Query reading with coroutines (last 24 hours)
- * val result = tracker.queryReading()
- *
- * // Query reading with callback (last 24 hours)
- * tracker.queryReading { result ->
- *     // Handle result
- * }
- *
- * // Query movie watching with coroutines (last 24 hours)
- * val result = tracker.queryMovieWatching()
- *
- * // Query movie watching with callback (last 24 hours)
- * tracker.queryMovieWatching { result ->
- *     // Handle result
- * }
- *
- * // Query social media with coroutines (last 24 hours)
- * val result = tracker.querySocialMedia()
- *
- * // Query social media with callback (last 24 hours)
- * tracker.querySocialMedia { result ->
- *     // Handle result
- * }
+ * // Query metrics (last 24 hours)
+ * val languageLearning = tracker.queryLanguageLearning()
+ * val reading = tracker.queryReading()
+ * val movieWatching = tracker.queryMovieWatching()
+ * val socialMedia = tracker.querySocialMedia()
  * ```
  */
 class Tracker private constructor(
@@ -78,14 +47,9 @@ class Tracker private constructor(
     internal val timeProvider: TimeProvider // internal for testing
 ) {
 
-    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-
     companion object {
         private const val LAST_24_HOURS_MS = 86_400_000L
     }
-
-    /** Cancels all pending callback-based queries. */
-    fun cancel() = scope.cancel()
 
     /**
      * Sets the Letterboxd username for movie watching queries.
@@ -106,25 +70,11 @@ class Tracker private constructor(
     }
 
     /**
-     * Callback-based variant of [queryLanguageLearning]. Callback is invoked on the Main dispatcher.
-     */
-    fun queryLanguageLearning(callback: (LanguageLearningResult?) -> Unit) {
-        scope.launch { callback(queryLanguageLearning()) }
-    }
-
-    /**
      * @return Reading data for the last 24 hours, or null if not available
      */
     suspend fun queryReading(): ReadingResult? {
         val now = timeProvider.now()
         return readingProvider?.query(now - LAST_24_HOURS_MS, now, minConfidence)
-    }
-
-    /**
-     * Callback-based variant of [queryReading]. Callback is invoked on the Main dispatcher.
-     */
-    fun queryReading(callback: (ReadingResult?) -> Unit) {
-        scope.launch { callback(queryReading()) }
     }
 
     /**
@@ -137,25 +87,11 @@ class Tracker private constructor(
     }
 
     /**
-     * Callback-based variant of [queryMovieWatching]. Callback is invoked on the Main dispatcher.
-     */
-    fun queryMovieWatching(callback: (MovieWatchingResult?) -> Unit) {
-        scope.launch { callback(queryMovieWatching()) }
-    }
-
-    /**
      * @return Social media usage data for the last 24 hours, or null if not available
      */
     suspend fun querySocialMedia(): SocialMediaResult? {
         val now = timeProvider.now()
         return socialMediaProvider?.query(now - LAST_24_HOURS_MS, now, minConfidence)
-    }
-
-    /**
-     * Callback-based variant of [querySocialMedia]. Callback is invoked on the Main dispatcher.
-     */
-    fun querySocialMedia(callback: (SocialMediaResult?) -> Unit) {
-        scope.launch { callback(querySocialMedia()) }
     }
 
     /**
