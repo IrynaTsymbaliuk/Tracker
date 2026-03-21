@@ -48,7 +48,16 @@ The app shows results for the last 24 hours:
   - Confidence score and level (HIGH/MEDIUM/LOW)
   - Apps used (e.g., "Kindle, Google Play Books")
 
-- **Data Quality**: Reliability level, available/missing sources, recommendations
+- **Social Media Section**:
+  - Activity status (detected or not)
+  - Duration (in minutes)
+  - Confidence score and level (HIGH/MEDIUM/LOW)
+  - Apps used (e.g., "Instagram, Reddit, WhatsApp")
+
+- **Movie Watching Section**:
+  - Activity status (detected or not)
+  - Number of films logged
+  - Film titles
 
 ## How to Run
 

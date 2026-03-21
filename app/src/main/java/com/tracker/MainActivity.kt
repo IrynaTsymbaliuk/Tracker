@@ -15,9 +15,6 @@ import com.tracker.core.result.ReadingResult
 import com.tracker.core.result.SocialMediaResult
 import com.tracker.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * Demonstrates Tracker library integration:
@@ -107,7 +104,6 @@ class MainActivity : AppCompatActivity() {
                     tvLanguageLearningDuration.text = ""
                     tvLanguageLearningConfidence.text = ""
                     tvLanguageLearningApps.text = ""
-                    tvLanguageLearningSessions.text = ""
                 }
 
                 !learning.occurred -> {
@@ -116,7 +112,6 @@ class MainActivity : AppCompatActivity() {
                     tvLanguageLearningConfidence.text =
                         "Confidence: ${formatConfidence(learning.confidence)} (${learning.confidenceLevel})"
                     tvLanguageLearningApps.text = ""
-                    tvLanguageLearningSessions.text = ""
                 }
 
                 else -> {
@@ -126,7 +121,6 @@ class MainActivity : AppCompatActivity() {
                         "Confidence: ${formatConfidence(learning.confidence)} (${learning.confidenceLevel})"
                     tvLanguageLearningApps.text =
                         "Apps: ${learning.apps.joinToString(", ") { it.appName }}"
-                    tvLanguageLearningSessions.text = formatSessions(learning.sessions)
                 }
             }
 
@@ -137,7 +131,6 @@ class MainActivity : AppCompatActivity() {
                     tvReadingDuration.text = ""
                     tvReadingConfidence.text = ""
                     tvReadingApps.text = ""
-                    tvReadingSessions.text = ""
                 }
 
                 !reading.occurred -> {
@@ -146,7 +139,6 @@ class MainActivity : AppCompatActivity() {
                     tvReadingConfidence.text =
                         "Confidence: ${formatConfidence(reading.confidence)} (${reading.confidenceLevel})"
                     tvReadingApps.text = ""
-                    tvReadingSessions.text = ""
                 }
 
                 else -> {
@@ -155,7 +147,6 @@ class MainActivity : AppCompatActivity() {
                     tvReadingConfidence.text =
                         "Confidence: ${formatConfidence(reading.confidence)} (${reading.confidenceLevel})"
                     tvReadingApps.text = "Apps: ${reading.apps.joinToString(", ") { it.appName }}"
-                    tvReadingSessions.text = formatSessions(reading.sessions)
                 }
             }
 
@@ -166,7 +157,6 @@ class MainActivity : AppCompatActivity() {
                     tvSocialMediaDuration.text = ""
                     tvSocialMediaConfidence.text = ""
                     tvSocialMediaApps.text = ""
-                    tvSocialMediaSessions.text = ""
                 }
 
                 !social.occurred -> {
@@ -175,7 +165,6 @@ class MainActivity : AppCompatActivity() {
                     tvSocialMediaConfidence.text =
                         "Confidence: ${formatConfidence(social.confidence)} (${social.confidenceLevel})"
                     tvSocialMediaApps.text = ""
-                    tvSocialMediaSessions.text = ""
                 }
 
                 else -> {
@@ -184,7 +173,6 @@ class MainActivity : AppCompatActivity() {
                     tvSocialMediaConfidence.text =
                         "Confidence: ${formatConfidence(social.confidence)} (${social.confidenceLevel})"
                     tvSocialMediaApps.text = "Apps: ${social.apps.joinToString(", ") { it.appName }}"
-                    tvSocialMediaSessions.text = formatSessions(social.sessions)
                 }
             }
 
@@ -229,17 +217,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun formatConfidence(confidence: Float) = String.format("%.0f%%", confidence * 100)
-
-    private fun formatSessions(sessions: List<com.tracker.core.result.UsageSession>): String {
-        if (sessions.isEmpty()) return ""
-
-        val dateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-        return "Sessions:\n" + sessions.take(5).joinToString("\n") { session ->
-            val start = dateFormat.format(Date(session.startTime))
-            val end = dateFormat.format(Date(session.endTime))
-            "  $start-$end ${session.appName} (${session.durationMinutes} min)"
-        } + if (sessions.size > 5) "\n  ... and ${sessions.size - 5} more" else ""
-    }
 
     private fun hasUsageStatsPermission(): Boolean {
         val appOpsManager = getSystemService(APP_OPS_SERVICE) as AppOpsManager
