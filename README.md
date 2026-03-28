@@ -34,7 +34,8 @@ lifecycleScope.launch {
 
     // Reading
     reading?.occurred          // true if reading was detected
-    reading?.durationMinutes   // total minutes
+    reading?.durationMinutes   // total minutes across all sessions
+    reading?.sessionCount      // number of distinct reading sessions
     reading?.confidence        // 0.0–1.0
     reading?.confidenceLevel   // LOW / MEDIUM / HIGH
     reading?.apps              // List<AppInfo> — apps that contributed
@@ -42,6 +43,7 @@ lifecycleScope.launch {
     // Language learning
     learning?.occurred
     learning?.durationMinutes
+    learning?.sessionCount
     learning?.apps
 
     // Movie watching
@@ -51,33 +53,36 @@ lifecycleScope.launch {
 
     // Social media
     social?.occurred
-    social?.durationMinutes    // total time spent
+    social?.durationMinutes
+    social?.sessionCount       // number of distinct app-open sessions
     social?.apps               // List<AppInfo> — apps used
 }
 ```
 
 **Example output (last 24 hours):**
-- Reading: 30 min · Kindle · 75% confidence (MEDIUM)
-- Language Learning: 45 min · Duolingo, Anki · 85% confidence (HIGH)
+- Reading: 30 min · 2 sessions · Kindle · 75% confidence (MEDIUM)
+- Language Learning: 45 min · 5 sessions · Duolingo, Anki · 85% confidence (HIGH)
 - Movie Watching: 3 films · The Matrix, Inception, Interstellar · 95% confidence (HIGH)
-- Social Media: 120 min · Instagram, Reddit, WhatsApp · 88% confidence (HIGH)
+- Social Media: 120 min · 23 sessions · Instagram, Reddit, WhatsApp · 88% confidence (HIGH)
 
 ## Metrics
 
 | Metric | Source | Apps / Data | Permission |
 |---|---|---|---|
-| **LANGUAGE_LEARNING** | App usage stats | Duolingo, Anki, LingoDeer, Drops, Kanji Study, Renshuu, and 8 more | `PACKAGE_USAGE_STATS` |
-| **READING** | App usage stats | Kindle, Google Play Books | `PACKAGE_USAGE_STATS` |
+| **LANGUAGE_LEARNING** | Foreground session events | Duolingo, Anki, LingoDeer, Drops, Kanji Study, Renshuu, and 8 more | `PACKAGE_USAGE_STATS` |
+| **READING** | Foreground session events | Kindle, Google Play Books | `PACKAGE_USAGE_STATS` |
 | **MOVIE_WATCHING** | Letterboxd RSS | Film titles and watch dates from public feed | `INTERNET` (no user prompt) |
-| **SOCIAL_MEDIA_USAGE** | App usage stats | Facebook, Instagram, Twitter, TikTok, Reddit, WhatsApp, and 9 more | `PACKAGE_USAGE_STATS` |
+| **SOCIAL_MEDIA_USAGE** | Foreground session events | Facebook, Instagram, Twitter/X, TikTok, Reddit, WhatsApp, and 9 more | `PACKAGE_USAGE_STATS` |
 
 **Note on Social Media**: Includes messaging apps (WhatsApp, Telegram) with lower confidence scores as they may be used for work/family communication.
+
+**Note on session accuracy**: On Android 10+ (API 29), session tracking uses `ACTIVITY_RESUMED`/`ACTIVITY_PAUSED` events for precise per-session start and end times. Consecutive activity transitions within the same app are merged into a single session if the gap between them is under 30 seconds.
 
 ## Installation
 
 ```kotlin
 dependencies {
-    implementation("com.tracker:core:3.0.0")
+    implementation("com.tracker:core:4.0.0")
 }
 ```
 
@@ -112,7 +117,7 @@ Add to `AndroidManifest.xml`:
 ./gradlew :app:installDebug
 ```
 
-Demonstrates the full flow: permission request, querying all metrics (language learning, reading, movie watching, social media), and displaying results. To enable movie watching, set your Letterboxd username in `MainActivity.kt`.
+Demonstrates the full flow: permission request, querying all metrics (language learning, reading, social media, movie watching), and displaying results. To enable movie watching, set your Letterboxd username in `MainActivity.kt`.
 
 ## License
 

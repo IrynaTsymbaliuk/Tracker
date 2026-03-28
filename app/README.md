@@ -1,35 +1,39 @@
 # Tracker Library - Sample App
 
-This sample application demonstrates how to integrate and use the **Tracker** library to monitor language learning and reading habits.
+This sample application demonstrates how to integrate and use the **Tracker** library to monitor language learning, reading, social media usage, and movie watching habits.
 
 ## Features Demonstrated
 
 ### 1. **Library Setup**
 ```kotlin
 val tracker = Tracker.Builder(context)
-    .setMinConfidence(0.50f)  // 50% confidence threshold
+    .enableReading()
+    .enableLanguageLearning()
+    .enableSocialMedia()
+    .enableMovieWatching()
+    .setLetterboxdUsername("your_username")
+    .setMinConfidence(0.50f)
     .build()
 ```
 
 ### 2. **Permission Handling**
-- Checks for `PACKAGE_USAGE_STATS` permission per-metric
-- Guides user to grant permission via Settings
+- Checks for `PACKAGE_USAGE_STATS` permission on resume
+- Guides user to grant it via Settings
 - Re-checks permission when returning from Settings
 
 ```kotlin
-// Check access for specific metrics
-if (!tracker.hasAllRequiredAccess(Metric.LANGUAGE_LEARNING)) {
-    tracker.requestMissingAccess(this, Metric.LANGUAGE_LEARNING)
-}
+// Direct the user to the system usage access settings screen
+startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
 ```
 
 ### 3. **Querying Metrics**
 ```kotlin
-// Query each metric individually using coroutines
 lifecycleScope.launch {
-    val llResult = tracker.queryLanguageLearning()
-    val readingResult = tracker.queryReading()
-    displayResults(llResult, readingResult)
+    val learning = tracker.queryLanguageLearning()
+    val reading = tracker.queryReading()
+    val social = tracker.querySocialMedia()
+    val movies = tracker.queryMovieWatching()
+    displayResults(learning, reading, social, movies)
 }
 ```
 
@@ -38,19 +42,19 @@ The app shows results for the last 24 hours:
 
 - **Language Learning Section**:
   - Activity status (detected or not)
-  - Duration (in minutes)
+  - Duration and session count (e.g. "45 min (5 sessions)")
   - Confidence score and level (HIGH/MEDIUM/LOW)
   - Apps used (by human-readable name, e.g., "Duolingo, Anki")
 
 - **Reading Section**:
   - Activity status (detected or not)
-  - Duration (in minutes)
+  - Duration and session count (e.g. "30 min (2 sessions)")
   - Confidence score and level (HIGH/MEDIUM/LOW)
   - Apps used (e.g., "Kindle, Google Play Books")
 
 - **Social Media Section**:
   - Activity status (detected or not)
-  - Duration (in minutes)
+  - Duration and session count (e.g. "120 min (23 sessions)")
   - Confidence score and level (HIGH/MEDIUM/LOW)
   - Apps used (e.g., "Instagram, Reddit, WhatsApp")
 
@@ -78,32 +82,32 @@ The app shows results for the last 24 hours:
    - Enable "Permit usage access"
 
 4. **View Results**:
-   - Return to the app
-   - Tap "Query Metrics"
-   - View your language learning and reading activity from the last 24 hours
+   - Return to the app — metrics are queried automatically
+   - Or tap "Query Metrics" to refresh
+   - View activity from the last 24 hours
 
 ## Code Structure
 
 ```
 MainActivity.kt
-├── setupTracker()           # Build Tracker instance
-├── checkPermissionAndQuery() # Permission check flow
-├── queryMetrics()           # Query using coroutines
-├── displayResults()         # Show results in UI
-└── UI state management methods
+├── onCreate()               # Build Tracker instance, wire button listeners
+├── onResume()               # Check permission, auto-query if granted
+├── queryMetrics()           # Query all metrics using coroutines
+├── displayResults()         # Show results in UI with session counts
+└── hasUsageStatsPermission() # AppOpsManager permission check
 ```
 
 ## Key Learnings
 
-1. **Builder Pattern**: Configure the Tracker with fluent API
-2. **Coroutines**: Use suspend functions for modern async handling
-3. **Permission Flow**: Proper permission request and handling
-4. **Result Structure**: Access result data with confidence scores and session details
-5. **Error Handling**: Handle permission denied and query errors
+1. **Builder Pattern**: Configure the Tracker with a fluent API
+2. **Coroutines**: Use suspend functions for async metric queries
+3. **Permission Flow**: Check on resume, redirect to system settings if missing
+4. **Result Structure**: Access duration, session count, confidence score, and contributing apps
+5. **Error Handling**: Catch exceptions for permission denied and query failures
 
 ## Testing
 
-The app works best when you have language learning or reading apps installed and have used them in the last 24 hours.
+The app works best when you have supported apps installed and have used them in the last 24 hours.
 
 **Supported language learning apps:**
 - Duolingo, Anki, LingoDeer, Drops
@@ -113,11 +117,18 @@ The app works best when you have language learning or reading apps installed and
 **Supported reading apps:**
 - Kindle, Google Play Books
 
-The library will automatically detect and track usage of any installed supported apps.
+**Supported social media apps:**
+- Facebook, Instagram, Twitter/X, TikTok, Snapchat
+- Reddit, Pinterest, LinkedIn, Discord, Threads
+- WhatsApp, Telegram, Mastodon, Bluesky, Tumblr
+
+**Movie watching:**
+- Set `letterboxdUsername` in `MainActivity.kt` to your Letterboxd username
 
 ## Notes
 
-- The app requires Android API 26+ (Android 8.0+)
+- The app requires Android API 21+ (Android 5.0)
 - `PACKAGE_USAGE_STATS` is a protected permission that requires user action
 - Queries return data for the last 24 hours only
-- Each metric can be queried independently with its own data quality information
+- Each metric can be queried independently
+- On Android 10+, session times use precise `ACTIVITY_RESUMED`/`ACTIVITY_PAUSED` events
