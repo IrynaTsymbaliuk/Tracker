@@ -1,6 +1,6 @@
 package com.tracker.core.provider
 
-import com.tracker.core.collector.UsageStatsCollector
+import com.tracker.core.collector.UsageEventsCollector
 import com.tracker.core.collector.UsageStatsMetadata
 import com.tracker.core.config.KnownApps
 import com.tracker.core.result.AppInfo
@@ -11,7 +11,7 @@ import com.tracker.core.result.toOccurred
 import com.tracker.core.types.DataSource
 
 /**
- * Detects social media usage from app foreground time.
+ * Detects social media usage from app foreground sessions.
  *
  * **Confidence scoring**:
  * - Traditional social apps (Facebook, Instagram, TikTok): 0.90-0.95
@@ -21,7 +21,7 @@ import com.tracker.core.types.DataSource
  * Combined confidence uses weighted average by duration.
  */
 class SocialMediaProvider internal constructor(
-    private val usageStatsCollector: UsageStatsCollector
+    private val usageEventsCollector: UsageEventsCollector
 ) : MetricProvider<SocialMediaResult> {
 
     override suspend fun query(
@@ -30,7 +30,7 @@ class SocialMediaProvider internal constructor(
         minConfidence: Float
     ): SocialMediaResult? {
 
-        val evidenceList = usageStatsCollector.collect(
+        val evidenceList = usageEventsCollector.collect(
             fromMillis,
             toMillis,
             KnownApps.socialMedia

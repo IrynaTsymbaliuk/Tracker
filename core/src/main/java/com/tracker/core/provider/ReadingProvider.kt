@@ -1,6 +1,6 @@
 package com.tracker.core.provider
 
-import com.tracker.core.collector.UsageStatsCollector
+import com.tracker.core.collector.UsageEventsCollector
 import com.tracker.core.collector.UsageStatsMetadata
 import com.tracker.core.config.KnownApps
 import com.tracker.core.result.AppInfo
@@ -11,7 +11,7 @@ import com.tracker.core.result.toOccurred
 import com.tracker.core.types.DataSource
 
 class ReadingProvider internal constructor(
-    private val usageStatsCollector: UsageStatsCollector
+    private val usageEventsCollector: UsageEventsCollector
 ) : MetricProvider<ReadingResult> {
 
     override suspend fun query(
@@ -20,7 +20,7 @@ class ReadingProvider internal constructor(
         minConfidence: Float
     ): ReadingResult? {
 
-        val evidenceList = usageStatsCollector.collect(
+        val evidenceList = usageEventsCollector.collect(
             fromMillis,
             toMillis,
             KnownApps.reading
@@ -30,7 +30,10 @@ class ReadingProvider internal constructor(
             it.durationMinutes > 0
         }.ifEmpty { return null }
 
-        val combinedConfidence = combineProbabilities(validEvidenceList.map { it.confidence })
+        val uniqueAppConfidences = validEvidenceList
+            .distinctBy { UsageStatsMetadata.fromMap(it.metadata)?.packageName }
+            .map { it.confidence }
+        val combinedConfidence = combineProbabilities(uniqueAppConfidences)
         val totalDuration = validEvidenceList.sumOf { it.durationMinutes }
 
         val occurred = combinedConfidence.toOccurred(minConfidence)

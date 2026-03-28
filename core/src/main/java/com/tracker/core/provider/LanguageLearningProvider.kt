@@ -1,6 +1,6 @@
 package com.tracker.core.provider
 
-import com.tracker.core.collector.UsageStatsCollector
+import com.tracker.core.collector.UsageEventsCollector
 import com.tracker.core.collector.UsageStatsMetadata
 import com.tracker.core.config.KnownApps
 import com.tracker.core.result.AppInfo
@@ -11,7 +11,7 @@ import com.tracker.core.result.toOccurred
 import com.tracker.core.types.DataSource
 
 class LanguageLearningProvider internal constructor(
-    private val usageStatsCollector: UsageStatsCollector
+    private val usageEventsCollector: UsageEventsCollector
 ) : MetricProvider<LanguageLearningResult> {
 
     override suspend fun query(
@@ -20,7 +20,7 @@ class LanguageLearningProvider internal constructor(
         minConfidence: Float
     ): LanguageLearningResult? {
 
-        val evidenceList = usageStatsCollector.collect(
+        val evidenceList = usageEventsCollector.collect(
             fromMillis,
             toMillis,
             KnownApps.languageLearning

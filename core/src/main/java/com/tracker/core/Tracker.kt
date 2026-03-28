@@ -4,7 +4,7 @@ import android.content.Context
 import com.tracker.core.collector.AndroidNetworkConnectivityChecker
 import com.tracker.core.collector.HttpRssFetcher
 import com.tracker.core.collector.LetterboxdCollector
-import com.tracker.core.collector.UsageStatsCollector
+import com.tracker.core.collector.UsageEventsCollector
 import com.tracker.core.permission.PermissionManager
 import com.tracker.core.provider.LanguageLearningProvider
 import com.tracker.core.provider.MovieWatchingProvider
@@ -155,7 +155,7 @@ class Tracker private constructor(
          */
         fun build(): Tracker {
             val permissionManager = PermissionManager(context)
-            val usageStatsCollector = UsageStatsCollector(context, permissionManager)
+            val usageEventsCollector = UsageEventsCollector(context, permissionManager)
 
             val movieProvider = if (enableMovieWatching) {
                 MovieWatchingProvider(
@@ -171,12 +171,12 @@ class Tracker private constructor(
 
             return Tracker(
                 minConfidence = minConfidence,
-                readingProvider = if (enableReading) ReadingProvider(usageStatsCollector) else null,
+                readingProvider = if (enableReading) ReadingProvider(usageEventsCollector) else null,
                 languageLearningProvider = if (enableLanguageLearning) LanguageLearningProvider(
-                    usageStatsCollector
+                    usageEventsCollector
                 ) else null,
                 movieWatchingProvider = movieProvider,
-                socialMediaProvider = if (enableSocialMedia) SocialMediaProvider(usageStatsCollector) else null,
+                socialMediaProvider = if (enableSocialMedia) SocialMediaProvider(usageEventsCollector) else null,
                 timeProvider = timeProvider
             )
         }
