@@ -6,14 +6,14 @@ import com.tracker.core.types.DataSource
 /**
  * Result for language learning habit detection.
  *
- * @property occurred Whether language learning was detected for this day
+ * @property occurred Whether language learning was detected for the queried time range
  * @property source Primary data source
  * @property confidence Combined confidence score
  * @property confidenceLevel Categorical confidence level
  * @property timeRange The queried time range
- * @property durationMinutes Total time spent in language learning apps
- * @property sessionCount Number of distinct learning sessions
- * @property apps List of apps that contributed to this result
+ * @property durationMinutes Total time spent in language learning apps across all sessions
+ * @property sessions Individual foreground sessions, sorted by [UsageSession.startTime] ascending.
+ * See [UsageSession] for deduplication key guidance when storing sessions locally.
  */
 data class LanguageLearningResult(
     override val occurred: Boolean,
@@ -22,6 +22,5 @@ data class LanguageLearningResult(
     override val confidenceLevel: ConfidenceLevel,
     override val timeRange: TimeRange,
     val durationMinutes: Int,
-    val sessionCount: Int,
-    val apps: List<AppInfo> = emptyList()
+    val sessions: List<UsageSession> = emptyList()
 ) : HabitResult()

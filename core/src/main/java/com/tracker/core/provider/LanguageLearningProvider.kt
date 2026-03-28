@@ -3,9 +3,9 @@ package com.tracker.core.provider
 import com.tracker.core.collector.UsageEventsCollector
 import com.tracker.core.collector.UsageStatsMetadata
 import com.tracker.core.config.KnownApps
-import com.tracker.core.result.AppInfo
 import com.tracker.core.result.LanguageLearningResult
 import com.tracker.core.result.TimeRange
+import com.tracker.core.result.UsageSession
 import com.tracker.core.result.toConfidenceLevel
 import com.tracker.core.result.toOccurred
 import com.tracker.core.types.DataSource
@@ -33,10 +33,16 @@ class LanguageLearningProvider internal constructor(
 
         val totalDuration = validEvidenceList.sumOf { it.durationMinutes }
 
-        val apps = validEvidenceList.mapNotNull { ev ->
+        val sessions = validEvidenceList.mapNotNull { ev ->
             val metadata = UsageStatsMetadata.fromMap(ev.metadata) ?: return@mapNotNull null
-            AppInfo(metadata.packageName, metadata.appName)
-        }.distinctBy { it.packageName }
+            UsageSession(
+                startTime = ev.startTimeMillis,
+                endTime = ev.endTimeMillis,
+                durationMinutes = ev.durationMinutes,
+                packageName = metadata.packageName,
+                appName = metadata.appName
+            )
+        }.sortedBy { it.startTime }
 
         return LanguageLearningResult(
             occurred = combinedConfidence.toOccurred(minConfidence),
@@ -45,8 +51,7 @@ class LanguageLearningProvider internal constructor(
             confidenceLevel = combinedConfidence.toConfidenceLevel(),
             timeRange = TimeRange(fromMillis, toMillis),
             durationMinutes = totalDuration,
-            sessionCount = validEvidenceList.size,
-            apps = apps
+            sessions = sessions
         )
     }
 }

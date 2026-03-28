@@ -127,11 +127,11 @@ class MainActivity : AppCompatActivity() {
 
                 else -> {
                     tvLanguageLearningStatus.text = "✓ Detected"
-                    tvLanguageLearningDuration.text = "Duration: ${learning.durationMinutes} min (${learning.sessionCount} sessions)"
+                    tvLanguageLearningDuration.text = "Duration: ${learning.durationMinutes} min (${learning.sessions.size} sessions)"
                     tvLanguageLearningConfidence.text =
                         "Confidence: ${formatConfidence(learning.confidence)} (${learning.confidenceLevel})"
                     tvLanguageLearningApps.text =
-                        "Apps: ${learning.apps.joinToString(", ") { it.appName }}"
+                        "Apps: ${learning.sessions.map { it.appName }.distinct().joinToString(", ")}"
                 }
             }
 
@@ -154,10 +154,10 @@ class MainActivity : AppCompatActivity() {
 
                 else -> {
                     tvReadingStatus.text = "✓ Detected"
-                    tvReadingDuration.text = "Duration: ${reading.durationMinutes} min (${reading.sessionCount} sessions)"
+                    tvReadingDuration.text = "Duration: ${reading.durationMinutes} min (${reading.sessions.size} sessions)"
                     tvReadingConfidence.text =
                         "Confidence: ${formatConfidence(reading.confidence)} (${reading.confidenceLevel})"
-                    tvReadingApps.text = "Apps: ${reading.apps.joinToString(", ") { it.appName }}"
+                    tvReadingApps.text = "Apps: ${reading.sessions.map { it.appName }.distinct().joinToString(", ")}"
                 }
             }
 
@@ -180,10 +180,10 @@ class MainActivity : AppCompatActivity() {
 
                 else -> {
                     tvSocialMediaStatus.text = "✓ Detected"
-                    tvSocialMediaDuration.text = "Duration: ${social.durationMinutes} min (${social.sessionCount} sessions)"
+                    tvSocialMediaDuration.text = "Duration: ${social.durationMinutes} min (${social.sessions.size} sessions)"
                     tvSocialMediaConfidence.text =
                         "Confidence: ${formatConfidence(social.confidence)} (${social.confidenceLevel})"
-                    tvSocialMediaApps.text = "Apps: ${social.apps.joinToString(", ") { it.appName }}"
+                    tvSocialMediaApps.text = "Apps: ${social.sessions.map { it.appName }.distinct().joinToString(", ")}"
                 }
             }
 

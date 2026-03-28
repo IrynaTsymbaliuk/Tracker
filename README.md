@@ -35,16 +35,14 @@ lifecycleScope.launch {
     // Reading
     reading?.occurred          // true if reading was detected
     reading?.durationMinutes   // total minutes across all sessions
-    reading?.sessionCount      // number of distinct reading sessions
     reading?.confidence        // 0.0–1.0
     reading?.confidenceLevel   // LOW / MEDIUM / HIGH
-    reading?.apps              // List<AppInfo> — apps that contributed
+    reading?.sessions          // List<UsageSession> sorted by startTime
 
     // Language learning
     learning?.occurred
     learning?.durationMinutes
-    learning?.sessionCount
-    learning?.apps
+    learning?.sessions
 
     // Movie watching
     movies?.occurred
@@ -54,8 +52,12 @@ lifecycleScope.launch {
     // Social media
     social?.occurred
     social?.durationMinutes
-    social?.sessionCount       // number of distinct app-open sessions
-    social?.apps               // List<AppInfo> — apps used
+    social?.sessions           // List<UsageSession> — one entry per app-open
+
+    // Derive apps and session count from sessions
+    reading?.sessions?.map { it.appName }?.distinct()   // ["Kindle"]
+    social?.sessions?.size                               // 23
+    social?.sessions?.groupBy { it.packageName }        // per-app session breakdown
 }
 ```
 
@@ -64,6 +66,12 @@ lifecycleScope.launch {
 - Language Learning: 45 min · 5 sessions · Duolingo, Anki · 85% confidence (HIGH)
 - Movie Watching: 3 films · The Matrix, Inception, Interstellar · 95% confidence (HIGH)
 - Social Media: 120 min · 23 sessions · Instagram, Reddit, WhatsApp · 88% confidence (HIGH)
+
+Session count and app list are derived from `sessions`:
+```kotlin
+result?.sessions?.size                            // session count
+result?.sessions?.map { it.appName }?.distinct() // app list
+```
 
 ## Querying by time window
 
@@ -99,6 +107,8 @@ days = 7  │ ████████ ████████ █████�
 **Note on Social Media**: Includes messaging apps (WhatsApp, Telegram) with lower confidence scores as they may be used for work/family communication.
 
 **Note on session accuracy**: On Android 10+ (API 29), session tracking uses `ACTIVITY_RESUMED`/`ACTIVITY_PAUSED` events for precise per-session start and end times. Consecutive activity transitions within the same app are merged into a single session if the gap between them is under 30 seconds.
+
+**Note on sessions deduplication**: When storing sessions locally across multiple queries, use `(packageName, startTime)` as the composite key. Exception: if `session.startTime == result.timeRange.from`, the session start was inferred (the app was already open at the query boundary) — use `(packageName, endTime)` for those. Sessions under 1 minute have `durationMinutes = 0` but are still present in the list. See `UsageSession` for full details.
 
 ## Installation
 

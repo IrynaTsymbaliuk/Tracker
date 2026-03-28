@@ -48,21 +48,21 @@ The app shows results for the selected time window:
 
 - **Language Learning Section**:
   - Activity status (detected or not)
-  - Duration and session count (e.g. "45 min (5 sessions)")
+  - Duration and session count derived from `sessions.size` (e.g. "45 min (5 sessions)")
   - Confidence score and level (HIGH/MEDIUM/LOW)
-  - Apps used (by human-readable name, e.g., "Duolingo, Anki")
+  - Apps derived from `sessions.map { it.appName }.distinct()` (e.g., "Duolingo, Anki")
 
 - **Reading Section**:
   - Activity status (detected or not)
-  - Duration and session count (e.g. "30 min (2 sessions)")
+  - Duration and session count derived from `sessions.size` (e.g. "30 min (2 sessions)")
   - Confidence score and level (HIGH/MEDIUM/LOW)
-  - Apps used (e.g., "Kindle, Google Play Books")
+  - Apps derived from `sessions.map { it.appName }.distinct()` (e.g., "Kindle, Google Play Books")
 
 - **Social Media Section**:
   - Activity status (detected or not)
-  - Duration and session count (e.g. "120 min (23 sessions)")
+  - Duration and session count derived from `sessions.size` (e.g. "120 min (23 sessions)")
   - Confidence score and level (HIGH/MEDIUM/LOW)
-  - Apps used (e.g., "Instagram, Reddit, WhatsApp")
+  - Apps derived from `sessions.map { it.appName }.distinct()` (e.g., "Instagram, Reddit, WhatsApp")
 
 - **Movie Watching Section**:
   - Activity status (detected or not)
@@ -108,7 +108,7 @@ MainActivity.kt
 1. **Builder Pattern**: Configure the Tracker with a fluent API
 2. **Coroutines**: Use suspend functions for async metric queries
 3. **Permission Flow**: Check on resume, redirect to system settings if missing
-4. **Result Structure**: Access duration, session count, confidence score, and contributing apps
+4. **Result Structure**: Access duration, confidence score, and `sessions` — session count and app list are derived from the sessions list
 5. **Error Handling**: Catch exceptions for permission denied and query failures
 
 ## Testing

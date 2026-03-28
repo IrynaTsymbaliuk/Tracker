@@ -15,9 +15,9 @@ import com.tracker.core.types.DataSource
  * @property confidence Combined confidence score
  * @property confidenceLevel Categorical confidence level
  * @property timeRange The queried time range
- * @property durationMinutes Total time spent across all apps
- * @property sessionCount Number of distinct usage sessions
- * @property apps Apps that contributed to this result
+ * @property durationMinutes Total time spent across all sessions
+ * @property sessions Individual foreground sessions, sorted by [UsageSession.startTime] ascending.
+ * See [UsageSession] for deduplication key guidance when storing sessions locally.
  */
 data class SocialMediaResult(
     override val occurred: Boolean,
@@ -26,6 +26,5 @@ data class SocialMediaResult(
     override val confidenceLevel: ConfidenceLevel,
     override val timeRange: TimeRange,
     val durationMinutes: Int,
-    val sessionCount: Int,
-    val apps: List<AppInfo> = emptyList()
+    val sessions: List<UsageSession> = emptyList()
 ) : HabitResult()
