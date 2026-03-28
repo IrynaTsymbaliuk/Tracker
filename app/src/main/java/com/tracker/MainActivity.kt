@@ -32,6 +32,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var tracker: Tracker
+    private var selectedDays = 1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,6 +48,15 @@ class MainActivity : AppCompatActivity() {
             .setMinConfidence(0.50f)
             .build()
 
+        binding.chipGroupDays.setOnCheckedStateChangeListener { _, checkedIds ->
+            selectedDays = when (checkedIds.firstOrNull()) {
+                R.id.chip2Days -> 2
+                R.id.chip7Days -> 7
+                else -> 1
+            }
+            queryMetrics()
+        }
+
         binding.btnRequestPermission.setOnClickListener {
             startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
         }
@@ -57,15 +67,16 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         if (hasUsageStatsPermission()) {
             binding.permissionSection.visibility = View.GONE
+            binding.chipGroupDays.visibility = View.VISIBLE
             binding.btnQuery.visibility = View.VISIBLE
             queryMetrics()
         } else {
             binding.permissionSection.visibility = View.VISIBLE
+            binding.chipGroupDays.visibility = View.GONE
             binding.btnQuery.visibility = View.GONE
             binding.resultSection.visibility = View.GONE
         }
     }
-
 
     private fun queryMetrics() {
         binding.progressBar.visibility = View.VISIBLE
@@ -73,10 +84,10 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                val learning = tracker.queryLanguageLearning()
-                val reading = tracker.queryReading()
-                val social = tracker.querySocialMedia()
-                val movies = tracker.queryMovieWatching()
+                val learning = tracker.queryLanguageLearning(selectedDays)
+                val reading = tracker.queryReading(selectedDays)
+                val social = tracker.querySocialMedia(selectedDays)
+                val movies = tracker.queryMovieWatching(selectedDays)
                 displayResults(learning, reading, social, movies)
             } catch (e: Exception) {
                 Toast.makeText(this@MainActivity, "Query failed: ${e.message}", Toast.LENGTH_LONG)
@@ -95,7 +106,7 @@ class MainActivity : AppCompatActivity() {
         movies: MovieWatchingResult?
     ) {
         with(binding) {
-            tvTimeRange.text = "Last 24 hours"
+            tvTimeRange.text = if (selectedDays == 1) "Today" else "Last $selectedDays days"
 
             // Language Learning
             when {

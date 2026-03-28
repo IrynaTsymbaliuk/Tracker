@@ -27,18 +27,24 @@ startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
 ```
 
 ### 3. **Querying Metrics**
+
+The app lets the user select a time window (Today / 2 Days / 7 Days) via a chip group. The selected value is passed to each query:
+
 ```kotlin
 lifecycleScope.launch {
-    val learning = tracker.queryLanguageLearning()
-    val reading = tracker.queryReading()
-    val social = tracker.querySocialMedia()
-    val movies = tracker.queryMovieWatching()
+    val learning = tracker.queryLanguageLearning(days = selectedDays)
+    val reading = tracker.queryReading(days = selectedDays)
+    val social = tracker.querySocialMedia(days = selectedDays)
+    val movies = tracker.queryMovieWatching(days = selectedDays)
     displayResults(learning, reading, social, movies)
 }
 ```
 
+`days = 1` covers today from midnight through now. `days = 2` adds yesterday, and so on.
+
 ### 4. **Displaying Results**
-The app shows results for the last 24 hours:
+
+The app shows results for the selected time window:
 
 - **Language Learning Section**:
   - Activity status (detected or not)
@@ -83,8 +89,8 @@ The app shows results for the last 24 hours:
 
 4. **View Results**:
    - Return to the app — metrics are queried automatically
+   - Select a time window: Today, 2 Days, or 7 Days
    - Or tap "Query Metrics" to refresh
-   - View activity from the last 24 hours
 
 ## Code Structure
 
@@ -129,6 +135,6 @@ The app works best when you have supported apps installed and have used them in 
 
 - The app requires Android API 21+ (Android 5.0)
 - `PACKAGE_USAGE_STATS` is a protected permission that requires user action
-- Queries return data for the last 24 hours only
+- Queries cover today from midnight (days=1), or multiple days back from midnight (days=2+)
 - Each metric can be queried independently
 - On Android 10+, session times use precise `ACTIVITY_RESUMED`/`ACTIVITY_PAUSED` events

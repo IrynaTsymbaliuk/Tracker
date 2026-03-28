@@ -27,7 +27,7 @@ val tracker = Tracker.Builder(context)
     .build()
 
 lifecycleScope.launch {
-    val reading = tracker.queryReading()
+    val reading = tracker.queryReading()           // today by default
     val learning = tracker.queryLanguageLearning()
     val movies = tracker.queryMovieWatching()
     val social = tracker.querySocialMedia()
@@ -59,11 +59,33 @@ lifecycleScope.launch {
 }
 ```
 
-**Example output (last 24 hours):**
+**Example output (today):**
 - Reading: 30 min · 2 sessions · Kindle · 75% confidence (MEDIUM)
 - Language Learning: 45 min · 5 sessions · Duolingo, Anki · 85% confidence (HIGH)
 - Movie Watching: 3 films · The Matrix, Inception, Interstellar · 95% confidence (HIGH)
 - Social Media: 120 min · 23 sessions · Instagram, Reddit, WhatsApp · 88% confidence (HIGH)
+
+## Querying by time window
+
+All query methods accept an optional `days` parameter:
+
+```kotlin
+tracker.queryReading(days = 1)   // today: midnight → now (default)
+tracker.queryReading(days = 2)   // yesterday midnight → now
+tracker.queryReading(days = 7)   // 6 days ago midnight → now
+```
+
+`days = 1` always starts at **midnight of the current day** in the device's local timezone, not 24 hours ago. This means results grow throughout the day as more activity is recorded.
+
+```
+days = 1  │ ████░░░░  today so far
+days = 2  │ ████████ ████░░░░  yesterday (complete) + today so far
+days = 7  │ ████████ ████████ ████████ ████████ ████████ ████████ ████░░░░
+```
+
+**Constraints:**
+- Must be `>= 1` — throws `IllegalArgumentException` otherwise
+- Android retains usage events for approximately 14 days. Queries beyond that return empty results without error.
 
 ## Metrics
 
@@ -117,7 +139,7 @@ Add to `AndroidManifest.xml`:
 ./gradlew :app:installDebug
 ```
 
-Demonstrates the full flow: permission request, querying all metrics (language learning, reading, social media, movie watching), and displaying results. To enable movie watching, set your Letterboxd username in `MainActivity.kt`.
+Demonstrates the full flow: permission request, selecting a time window (Today / 2 Days / 7 Days), querying all metrics (language learning, reading, social media, movie watching), and displaying results. To enable movie watching, set your Letterboxd username in `MainActivity.kt`.
 
 ## License
 

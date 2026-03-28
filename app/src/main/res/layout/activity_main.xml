@@ -102,12 +102,48 @@
 
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Days Selector -->
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipGroupDays"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="12dp"
+            app:singleSelection="true"
+            app:selectionRequired="true"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip1Day"
+                style="@style/Widget.MaterialComponents.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Today"
+                android:checked="true" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip2Days"
+                style="@style/Widget.MaterialComponents.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="2 Days" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip7Days"
+                style="@style/Widget.MaterialComponents.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="7 Days" />
+
+        </com.google.android.material.chip.ChipGroup>
+
         <!-- Query Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnQuery"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Query Last 24 Hours"
+            android:text="Query Metrics"
             android:textSize="16sp"
             android:padding="14dp"
             android:layout_marginBottom="16dp"
@@ -182,10 +218,10 @@
                         android:id="@+id/tvLanguageLearningStatus"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textSize="14sp"
-                        android:textColor="?android:textColorSecondary"
-                        android:layout_marginBottom="4dp"
                         android:layout_marginStart="12dp"
+                        android:layout_marginBottom="4dp"
+                        android:textColor="?android:textColorSecondary"
+                        android:textSize="14sp"
                         tools:text="✓ Activity Detected" />
 
                     <TextView

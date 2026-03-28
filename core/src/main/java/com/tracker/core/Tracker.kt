@@ -14,6 +14,7 @@ import com.tracker.core.result.LanguageLearningResult
 import com.tracker.core.result.MovieWatchingResult
 import com.tracker.core.result.ReadingResult
 import com.tracker.core.result.SocialMediaResult
+import java.util.Calendar
 
 /**
  * Main entry point for the library. This is the only class the host app needs to interact with.
@@ -47,10 +48,6 @@ class Tracker private constructor(
     internal val timeProvider: TimeProvider // internal for testing
 ) {
 
-    companion object {
-        private const val LAST_24_HOURS_MS = 86_400_000L
-    }
-
     /**
      * Sets the Letterboxd username for movie watching queries.
      * Can be called at any time to enable or update movie tracking.
@@ -62,36 +59,67 @@ class Tracker private constructor(
     }
 
     /**
-     * @return Language learning data for the last 24 hours, or null if not available
+     * @param days Number of days to include: 1 = today from midnight through now,
+     * 2 = yesterday midnight through now, etc. Must be >= 1.
+     * @return Language learning data for the requested window, or null if not available
      */
-    suspend fun queryLanguageLearning(): LanguageLearningResult? {
-        val now = timeProvider.now()
-        return languageLearningProvider?.query(now - LAST_24_HOURS_MS, now, minConfidence)
+    suspend fun queryLanguageLearning(days: Int = 1): LanguageLearningResult? {
+        val (from, to) = queryWindow(days)
+        return languageLearningProvider?.query(from, to, minConfidence)
     }
 
     /**
-     * @return Reading data for the last 24 hours, or null if not available
+     * @param days Number of days to include: 1 = today from midnight through now,
+     * 2 = yesterday midnight through now, etc. Must be >= 1.
+     * @return Reading data for the requested window, or null if not available
      */
-    suspend fun queryReading(): ReadingResult? {
-        val now = timeProvider.now()
-        return readingProvider?.query(now - LAST_24_HOURS_MS, now, minConfidence)
+    suspend fun queryReading(days: Int = 1): ReadingResult? {
+        val (from, to) = queryWindow(days)
+        return readingProvider?.query(from, to, minConfidence)
     }
 
     /**
      * Requires Letterboxd username to be set via [setLetterboxdUsername].
-     * @return Movie watching data for the last 24 hours, or null if username not set or feed unavailable
+     *
+     * @param days Number of days to include: 1 = today from midnight through now,
+     * 2 = yesterday midnight through now, etc. Must be >= 1.
+     * @return Movie watching data for the requested window, or null if username not set or feed unavailable
      */
-    suspend fun queryMovieWatching(): MovieWatchingResult? {
-        val now = timeProvider.now()
-        return movieWatchingProvider?.query(now - LAST_24_HOURS_MS, now, minConfidence)
+    suspend fun queryMovieWatching(days: Int = 1): MovieWatchingResult? {
+        val (from, to) = queryWindow(days)
+        return movieWatchingProvider?.query(from, to, minConfidence)
     }
 
     /**
-     * @return Social media usage data for the last 24 hours, or null if not available
+     * @param days Number of days to include: 1 = today from midnight through now,
+     * 2 = yesterday midnight through now, etc. Must be >= 1.
+     * @return Social media usage data for the requested window, or null if not available
      */
-    suspend fun querySocialMedia(): SocialMediaResult? {
+    suspend fun querySocialMedia(days: Int = 1): SocialMediaResult? {
+        val (from, to) = queryWindow(days)
+        return socialMediaProvider?.query(from, to, minConfidence)
+    }
+
+    /**
+     * Returns a (fromMillis, toMillis) pair for the given number of days.
+     *
+     * from = midnight of (today - (days - 1)) in the device's local timezone.
+     * to = the current time.
+     *
+     * Anchors midnight calculation to [timeProvider] so tests can control the result.
+     */
+    private fun queryWindow(days: Int): Pair<Long, Long> {
+        require(days >= 1) { "days must be >= 1, was $days" }
         val now = timeProvider.now()
-        return socialMediaProvider?.query(now - LAST_24_HOURS_MS, now, minConfidence)
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = now
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            add(Calendar.DAY_OF_YEAR, -(days - 1))
+        }
+        return calendar.timeInMillis to now
     }
 
     /**
