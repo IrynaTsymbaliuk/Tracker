@@ -7,11 +7,7 @@ This sample application demonstrates how to integrate and use the **Tracker** li
 ### 1. **Library Setup**
 ```kotlin
 val tracker = Tracker.Builder(context)
-    .enableReading()
-    .enableLanguageLearning()
-    .enableSocialMedia()
-    .enableMovieWatching()
-    .setLetterboxdUsername("your_username")
+    .setLetterboxdUsername("your_username")  // optional: required only for movie watching
     .setMinConfidence(0.50f)
     .build()
 ```
@@ -105,11 +101,11 @@ MainActivity.kt
 
 ## Key Learnings
 
-1. **Builder Pattern**: Configure the Tracker with a fluent API
+1. **Builder Pattern**: Configure the Tracker with a fluent API — no `enable*` flags needed, all features are always available
 2. **Coroutines**: Use suspend functions for async metric queries
 3. **Permission Flow**: Check on resume, redirect to system settings if missing
 4. **Result Structure**: Access duration, confidence score, and `sessions` — session count and app list are derived from the sessions list
-5. **Error Handling**: Catch exceptions for permission denied and query failures
+5. **Error Handling**: Catch `PermissionDeniedException`, `NoMonitorableAppsException` for usage-stats queries; catch `IllegalStateException` for movie watching when username is not set
 
 ## Testing
 

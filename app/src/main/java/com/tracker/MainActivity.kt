@@ -40,10 +40,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         tracker = Tracker.Builder(this.applicationContext)
-            .enableReading()
-            .enableLanguageLearning()
-            .enableSocialMedia()
-            .enableMovieWatching()
             .setLetterboxdUsername(letterboxdUsername)
             .setMinConfidence(0.50f)
             .build()
@@ -83,19 +79,32 @@ class MainActivity : AppCompatActivity() {
         binding.btnQuery.isEnabled = false
 
         lifecycleScope.launch {
+            var learning: LanguageLearningResult? = null
+            var reading: ReadingResult? = null
+            var social: SocialMediaResult? = null
+            var movies: MovieWatchingResult? = null
+            var movieError: String? = null
+
             try {
-                val learning = tracker.queryLanguageLearning(selectedDays)
-                val reading = tracker.queryReading(selectedDays)
-                val social = tracker.querySocialMedia(selectedDays)
-                val movies = tracker.queryMovieWatching(selectedDays)
-                displayResults(learning, reading, social, movies)
+                learning = tracker.queryLanguageLearning(selectedDays)
+                reading = tracker.queryReading(selectedDays)
+                social = tracker.querySocialMedia(selectedDays)
             } catch (e: Exception) {
                 Toast.makeText(this@MainActivity, "Query failed: ${e.message}", Toast.LENGTH_LONG)
                     .show()
-            } finally {
-                binding.progressBar.visibility = View.GONE
-                binding.btnQuery.isEnabled = true
             }
+
+            try {
+                movies = tracker.queryMovieWatching(selectedDays)
+            } catch (_: IllegalStateException) {
+                movieError = "Not configured — set letterboxdUsername in MainActivity"
+            } catch (e: Exception) {
+                movieError = "Feed unavailable: ${e.message}"
+            }
+
+            displayResults(learning, reading, social, movies, movieError)
+            binding.progressBar.visibility = View.GONE
+            binding.btnQuery.isEnabled = true
         }
     }
 
@@ -103,7 +112,8 @@ class MainActivity : AppCompatActivity() {
         learning: LanguageLearningResult?,
         reading: ReadingResult?,
         social: SocialMediaResult?,
-        movies: MovieWatchingResult?
+        movies: MovieWatchingResult?,
+        movieError: String? = null
     ) {
         with(binding) {
             tvTimeRange.text = if (selectedDays == 1) "Today" else "Last $selectedDays days"
@@ -189,26 +199,17 @@ class MainActivity : AppCompatActivity() {
 
             // Movie Watching
             when {
-                movies == null && letterboxdUsername == null -> {
-                    tvMovieWatchingStatus.text =
-                        "Not configured — set letterboxdUsername in MainActivity"
+                movieError != null -> {
+                    tvMovieWatchingStatus.text = movieError
                     tvMovieWatchingCount.text = ""
                     tvMovieWatchingConfidence.text = ""
                     tvMovieWatchingMovies.text = ""
                 }
 
                 movies == null -> {
-                    tvMovieWatchingStatus.text = "No data — feed unavailable"
+                    tvMovieWatchingStatus.text = "No films logged in this period"
                     tvMovieWatchingCount.text = ""
                     tvMovieWatchingConfidence.text = ""
-                    tvMovieWatchingMovies.text = ""
-                }
-
-                !movies.occurred -> {
-                    tvMovieWatchingStatus.text = "No films logged today"
-                    tvMovieWatchingCount.text = "Count: 0"
-                    tvMovieWatchingConfidence.text =
-                        "Confidence: ${formatConfidence(movies.confidence)} (${movies.confidenceLevel})"
                     tvMovieWatchingMovies.text = ""
                 }
 

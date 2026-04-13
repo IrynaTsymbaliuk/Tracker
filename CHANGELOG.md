@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.0] - 2026-04-13
+
+### Changed
+- **BREAKING**: Removed `enableReading()`, `enableLanguageLearning()`, `enableSocialMedia()`, and `enableMovieWatching()` from `Tracker.Builder`. All features are now always available — no opt-in flags required.
+- **BREAKING**: `queryMovieWatching()` now throws `IllegalStateException` instead of returning `null` when a Letterboxd username has not been set. Call `setLetterboxdUsername()` on the builder or on the `Tracker` instance before querying.
+- `UsageEventsCollector` is now created lazily on the first usage-stats query and shared across all usage-stats features (reading, language learning, social media). No instance is created if those features are never queried.
+- `Tracker` now always uses `applicationContext` internally, preventing memory leaks when an `Activity` context is passed to the builder.
+- Added `@throws` documentation to all query methods.
+
+### Migration
+
+```kotlin
+// Before
+val tracker = Tracker.Builder(context)
+    .enableReading()
+    .enableLanguageLearning()
+    .enableSocialMedia()
+    .enableMovieWatching()
+    .setLetterboxdUsername("username")
+    .build()
+
+// After
+val tracker = Tracker.Builder(context)
+    .setLetterboxdUsername("username")  // still optional
+    .build()
+```
+
+```kotlin
+// Before — null meant "username not set"
+val movies = tracker.queryMovieWatching()  // returned null silently
+
+// After — throws if username not configured
+try {
+    val movies = tracker.queryMovieWatching()
+} catch (e: IllegalStateException) {
+    // username not set
+}
+```
+
 ## [3.0.0] - 2026-03-19
 
 ### Added

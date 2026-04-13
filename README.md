@@ -18,46 +18,55 @@ Tracker is an Android library that automatically identifies behaviors like langu
 
 ```kotlin
 val tracker = Tracker.Builder(context)
-    .enableReading()
-    .enableLanguageLearning()
-    .enableSocialMedia()
-    .enableMovieWatching()
-    .setLetterboxdUsername("your_username")  // Optional: can also be set later
+    .setLetterboxdUsername("your_username")  // optional: required only for movie watching
     .setMinConfidence(0.50f)
     .build()
 
 lifecycleScope.launch {
-    val reading = tracker.queryReading()           // today by default
-    val learning = tracker.queryLanguageLearning()
-    val movies = tracker.queryMovieWatching()
-    val social = tracker.querySocialMedia()
+    try {
+        val reading = tracker.queryReading()           // today by default
+        val learning = tracker.queryLanguageLearning()
+        val social = tracker.querySocialMedia()
 
-    // Reading
-    reading?.occurred          // true if reading was detected
-    reading?.durationMinutes   // total minutes across all sessions
-    reading?.confidence        // 0.0–1.0
-    reading?.confidenceLevel   // LOW / MEDIUM / HIGH
-    reading?.sessions          // List<UsageSession> sorted by startTime
+        // Reading
+        reading?.occurred          // true if reading was detected
+        reading?.durationMinutes   // total minutes across all sessions
+        reading?.confidence        // 0.0–1.0
+        reading?.confidenceLevel   // LOW / MEDIUM / HIGH
+        reading?.sessions          // List<UsageSession> sorted by startTime
 
-    // Language learning
-    learning?.occurred
-    learning?.durationMinutes
-    learning?.sessions
+        // Language learning
+        learning?.occurred
+        learning?.durationMinutes
+        learning?.sessions
 
-    // Movie watching
-    movies?.occurred
-    movies?.count              // number of films logged
-    movies?.movies             // List<MovieInfo> — title, watchedDate, publishedDate
+        // Social media
+        social?.occurred
+        social?.durationMinutes
+        social?.sessions           // List<UsageSession> — one entry per app-open
 
-    // Social media
-    social?.occurred
-    social?.durationMinutes
-    social?.sessions           // List<UsageSession> — one entry per app-open
+        // Derive apps and session count from sessions
+        reading?.sessions?.map { it.appName }?.distinct()   // ["Kindle"]
+        social?.sessions?.size                               // 23
+        social?.sessions?.groupBy { it.packageName }        // per-app session breakdown
+    } catch (e: PermissionDeniedException) {
+        // PACKAGE_USAGE_STATS not granted — direct user to Settings
+    } catch (e: NoMonitorableAppsException) {
+        // None of the known apps are installed on this device
+    }
 
-    // Derive apps and session count from sessions
-    reading?.sessions?.map { it.appName }?.distinct()   // ["Kindle"]
-    social?.sessions?.size                               // 23
-    social?.sessions?.groupBy { it.packageName }        // per-app session breakdown
+    // Movie watching requires a Letterboxd username
+    // Throws IllegalStateException if username is not set
+    try {
+        val movies = tracker.queryMovieWatching()
+        movies?.occurred
+        movies?.count              // number of films logged
+        movies?.movies             // List<MovieInfo> — title, watchedDate, publishedDate
+    } catch (e: IllegalStateException) {
+        // Username not configured — call tracker.setLetterboxdUsername("username") first
+    } catch (e: NetworkException) {
+        // Network request failed
+    }
 }
 ```
 

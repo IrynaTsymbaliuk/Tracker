@@ -1,5 +1,6 @@
 package com.tracker.core.provider
 
+import com.tracker.core.collector.InvalidLetterboxdIdException
 import com.tracker.core.collector.LetterboxdCollector
 import com.tracker.core.collector.LetterboxdMetadata
 import com.tracker.core.result.MovieInfo
@@ -23,7 +24,7 @@ class MovieWatchingProvider internal constructor(
         toMillis: Long,
         minConfidence: Float
     ): MovieWatchingResult? {
-        if (letterboxdUsername.isNullOrBlank()) return null
+        if (letterboxdUsername.isNullOrBlank()) throw InvalidLetterboxdIdException("Letterboxd username is not set")
 
         val evidenceList = letterboxdCollector.collect(fromMillis, toMillis, letterboxdUsername).ifEmpty { return null }
 

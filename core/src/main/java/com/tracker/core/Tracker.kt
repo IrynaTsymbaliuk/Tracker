@@ -19,85 +19,120 @@ import java.util.Calendar
 /**
  * Main entry point for the library. This is the only class the host app needs to interact with.
  *
+ * All features are always available. [UsageEventsCollector] is created lazily on the first
+ * usage-stats query and shared across all usage-stats features.
+ *
  * Usage:
  * ```
  * val tracker = Tracker.Builder(context)
- *     .enableReading()
- *     .enableLanguageLearning()
- *     .enableMovieWatching()
  *     .setLetterboxdUsername("username")  // Optional: can also be set later
  *     .setMinConfidence(0.50f)
  *     .build()
  *
  * // Or set/update username later
- * // tracker.setLetterboxdUsername("username")
+ * tracker.setLetterboxdUsername("username")
  *
  * // Query metrics (last 24 hours)
  * val languageLearning = tracker.queryLanguageLearning()
  * val reading = tracker.queryReading()
- * val movieWatching = tracker.queryMovieWatching()
+ * val movieWatching = tracker.queryMovieWatching()  // throws if username not set
  * val socialMedia = tracker.querySocialMedia()
  * ```
  */
 class Tracker private constructor(
     val minConfidence: Float,
-    private val readingProvider: ReadingProvider?,
-    private val languageLearningProvider: LanguageLearningProvider?,
-    private val movieWatchingProvider: MovieWatchingProvider?,
-    private val socialMediaProvider: SocialMediaProvider?,
+    private val appContext: Context,
+    letterboxdUsername: String?,
     internal val timeProvider: TimeProvider // internal for testing
 ) {
 
+    private var letterboxdUsername: String? = letterboxdUsername
+
+    private val permissionManager by lazy { PermissionManager(appContext) }
+
+    private val usageEventsCollector by lazy {
+        UsageEventsCollector(appContext, permissionManager)
+    }
+
+    private val readingProvider by lazy { ReadingProvider(usageEventsCollector) }
+    private val languageLearningProvider by lazy { LanguageLearningProvider(usageEventsCollector) }
+    private val socialMediaProvider by lazy { SocialMediaProvider(usageEventsCollector) }
+
+    private val movieWatchingProvider by lazy {
+        MovieWatchingProvider(
+            LetterboxdCollector(
+                rssFetcher = HttpRssFetcher(
+                    networkChecker = AndroidNetworkConnectivityChecker(appContext)
+                )
+            )
+        )
+    }
+
     /**
      * Sets the Letterboxd username for movie watching queries.
-     * Can be called at any time to enable or update movie tracking.
+     * Can be called at any time to update the username.
      *
      * @param username Letterboxd username
      */
     fun setLetterboxdUsername(username: String?) {
-        movieWatchingProvider?.setUsername(username)
+        letterboxdUsername = username
     }
 
     /**
      * @param days Number of days to include: 1 = today from midnight through now,
      * 2 = yesterday midnight through now, etc. Must be >= 1.
-     * @return Language learning data for the requested window, or null if not available
+     * @return Language learning data for the requested window, or null if no data is available
+     * @throws PermissionDeniedException if PACKAGE_USAGE_STATS is not granted
+     * @throws NoMonitorableAppsException if none of the known language learning apps are installed
      */
     suspend fun queryLanguageLearning(days: Int = 1): LanguageLearningResult? {
         val (from, to) = queryWindow(days)
-        return languageLearningProvider?.query(from, to, minConfidence)
+        return languageLearningProvider.query(from, to, minConfidence)
     }
 
     /**
      * @param days Number of days to include: 1 = today from midnight through now,
      * 2 = yesterday midnight through now, etc. Must be >= 1.
-     * @return Reading data for the requested window, or null if not available
+     * @return Reading data for the requested window, or null if no data is available
+     * @throws PermissionDeniedException if PACKAGE_USAGE_STATS is not granted
+     * @throws NoMonitorableAppsException if none of the known reading apps are installed
      */
     suspend fun queryReading(days: Int = 1): ReadingResult? {
         val (from, to) = queryWindow(days)
-        return readingProvider?.query(from, to, minConfidence)
+        return readingProvider.query(from, to, minConfidence)
     }
 
     /**
-     * Requires Letterboxd username to be set via [setLetterboxdUsername].
+     * Requires a Letterboxd username to be set via [setLetterboxdUsername] or
+     * [Builder.setLetterboxdUsername] before calling.
      *
      * @param days Number of days to include: 1 = today from midnight through now,
      * 2 = yesterday midnight through now, etc. Must be >= 1.
-     * @return Movie watching data for the requested window, or null if username not set or feed unavailable
+     * @return Movie watching data for the requested window, or null if the feed is unavailable
+     * @throws IllegalStateException if Letterboxd username has not been set
+     * @throws NetworkException if the network request fails
+     * @throws RssParseException if the RSS feed cannot be parsed
      */
     suspend fun queryMovieWatching(days: Int = 1): MovieWatchingResult? {
+        val username = letterboxdUsername
+        check(!username.isNullOrBlank()) {
+            "Letterboxd username is not set. Call setLetterboxdUsername() or Builder.setLetterboxdUsername() before querying movie watching."
+        }
+        movieWatchingProvider.setUsername(username)
         val (from, to) = queryWindow(days)
-        return movieWatchingProvider?.query(from, to, minConfidence)
+        return movieWatchingProvider.query(from, to, minConfidence)
     }
 
     /**
      * @param days Number of days to include: 1 = today from midnight through now,
      * 2 = yesterday midnight through now, etc. Must be >= 1.
-     * @return Social media usage data for the requested window, or null if not available
+     * @return Social media usage data for the requested window, or null if no data is available
+     * @throws PermissionDeniedException if PACKAGE_USAGE_STATS is not granted
+     * @throws NoMonitorableAppsException if none of the known social media apps are installed
      */
     suspend fun querySocialMedia(days: Int = 1): SocialMediaResult? {
         val (from, to) = queryWindow(days)
-        return socialMediaProvider?.query(from, to, minConfidence)
+        return socialMediaProvider.query(from, to, minConfidence)
     }
 
     /**
@@ -129,32 +164,7 @@ class Tracker private constructor(
         private var minConfidence: Float = 0.50f
         internal var timeProvider: TimeProvider =
             TimeProvider { System.currentTimeMillis() } // internal for testing
-
-        private var enableReading = false
-        private var enableLanguageLearning = false
-        private var enableSocialMedia = false
-        private var enableMovieWatching = false
         private var letterboxdUsername: String? = null
-
-        fun enableReading(): Builder {
-            enableReading = true
-            return this
-        }
-
-        fun enableLanguageLearning(): Builder {
-            enableLanguageLearning = true
-            return this
-        }
-
-        fun enableSocialMedia(): Builder {
-            enableSocialMedia = true
-            return this
-        }
-
-        fun enableMovieWatching(): Builder {
-            enableMovieWatching = true
-            return this
-        }
 
         /**
          * @param confidence Minimum confidence threshold (0.0 to 1.0, default: 0.50)
@@ -168,7 +178,7 @@ class Tracker private constructor(
 
         /**
          * Sets Letterboxd username for movie watching queries.
-         * Can also be set later via [Tracker.setLetterboxdUsername].
+         * Can also be set or updated later via [Tracker.setLetterboxdUsername].
          *
          * @param username Letterboxd username
          * @return This builder for chaining
@@ -182,30 +192,10 @@ class Tracker private constructor(
          * @return Configured [Tracker] instance
          */
         fun build(): Tracker {
-            val appContext = context.applicationContext
-            val permissionManager = PermissionManager(appContext)
-            val usageEventsCollector = UsageEventsCollector(appContext, permissionManager)
-
-            val movieProvider = if (enableMovieWatching) {
-                MovieWatchingProvider(
-                    LetterboxdCollector(
-                        rssFetcher = HttpRssFetcher(
-                            networkChecker = AndroidNetworkConnectivityChecker(appContext)
-                        )
-                    )
-                ).apply {
-                    letterboxdUsername?.let { setUsername(it) }
-                }
-            } else null
-
             return Tracker(
                 minConfidence = minConfidence,
-                readingProvider = if (enableReading) ReadingProvider(usageEventsCollector) else null,
-                languageLearningProvider = if (enableLanguageLearning) LanguageLearningProvider(
-                    usageEventsCollector
-                ) else null,
-                movieWatchingProvider = movieProvider,
-                socialMediaProvider = if (enableSocialMedia) SocialMediaProvider(usageEventsCollector) else null,
+                appContext = context.applicationContext,
+                letterboxdUsername = letterboxdUsername,
                 timeProvider = timeProvider
             )
         }
