@@ -18,7 +18,7 @@ interface MetricProvider<T : HabitResult> {
     ): T?
 }
 
-fun weightedAverage(usages: List<DurationEvidence>): Float {
+internal fun weightedAverage(usages: List<DurationEvidence>): Float {
     if (usages.isEmpty()) return 0f
     val totalDuration: Double = usages.sumOf { it.durationMinutes }.toDouble()
     if (totalDuration == 0.0) return 0f

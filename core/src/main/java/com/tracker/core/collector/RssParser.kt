@@ -18,7 +18,12 @@ internal class RssParser {
     }
 
     private val dateFormat =
-        SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.getDefault()).apply {
+        SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z", Locale.ENGLISH).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+
+    private val watchedDateFormat =
+        SimpleDateFormat("MMM dd, yyyy", Locale.ENGLISH).apply {
             timeZone = TimeZone.getTimeZone("UTC")
         }
 
@@ -35,7 +40,7 @@ internal class RssParser {
 
                 XmlPullParser.END_TAG -> {
                     if (parser.name == "item") {
-                        currentItem?.toMovieInfo()?.let { movies.add(it) }
+                        currentItem?.toMovieInfo(watchedDateFormat)?.let { movies.add(it) }
                         currentItem = null
                     }
                 }
@@ -77,10 +82,10 @@ internal class RssParser {
         val pubDate: Long? = null,
         val description: String? = null
     ) {
-        fun toMovieInfo(): MovieInfo? {
+        fun toMovieInfo(watchedDateFormat: SimpleDateFormat): MovieInfo? {
             val titleValue = title ?: return null
             val pubDateValue = pubDate ?: return null
-            val watchedDate = extractWatchedDate(description) ?: pubDateValue
+            val watchedDate = extractWatchedDate(description, watchedDateFormat) ?: pubDateValue
 
             return MovieInfo(
                 title = titleValue,
@@ -89,15 +94,11 @@ internal class RssParser {
             )
         }
 
-        private fun extractWatchedDate(description: String?): Long? {
+        private fun extractWatchedDate(description: String?, watchedDateFormat: SimpleDateFormat): Long? {
             if (description == null) return null
 
             val match = watchedDatePattern.find(description) ?: return null
             val dateString = match.groupValues[1] // "Jan 15, 2024"
-
-            val watchedDateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).apply {
-                timeZone = TimeZone.getTimeZone("UTC")
-            }
 
             return try {
                 watchedDateFormat.parse(dateString)?.time

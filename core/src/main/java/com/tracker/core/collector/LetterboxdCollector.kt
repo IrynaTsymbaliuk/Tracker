@@ -8,6 +8,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import java.net.URLEncoder
 
 /**
  * Collects movie watching evidence from Letterboxd RSS feeds.
@@ -60,7 +61,8 @@ class LetterboxdCollector(
 
         checkId(letterboxdUsername)
 
-        val rssUrl = "$BASE_URL/$letterboxdUsername/rss/"
+        val encodedUsername = URLEncoder.encode(letterboxdUsername, "UTF-8")
+        val rssUrl = "$BASE_URL/$encodedUsername/rss/"
         Log.d(TAG, "Fetching RSS feed from: $rssUrl")
 
         // Check for cancellation before expensive network call

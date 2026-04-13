@@ -25,8 +25,7 @@ class MovieWatchingProvider internal constructor(
     ): MovieWatchingResult? {
         if (letterboxdUsername.isNullOrBlank()) return null
 
-        val evidenceList = letterboxdCollector.collect(fromMillis, toMillis, letterboxdUsername)
-            ?.ifEmpty { return null } ?: return null
+        val evidenceList = letterboxdCollector.collect(fromMillis, toMillis, letterboxdUsername).ifEmpty { return null }
 
         val totalCounter = evidenceList.sumOf { it.counter }
 

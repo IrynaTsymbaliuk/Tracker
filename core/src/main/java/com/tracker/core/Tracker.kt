@@ -182,14 +182,15 @@ class Tracker private constructor(
          * @return Configured [Tracker] instance
          */
         fun build(): Tracker {
-            val permissionManager = PermissionManager(context)
-            val usageEventsCollector = UsageEventsCollector(context, permissionManager)
+            val appContext = context.applicationContext
+            val permissionManager = PermissionManager(appContext)
+            val usageEventsCollector = UsageEventsCollector(appContext, permissionManager)
 
             val movieProvider = if (enableMovieWatching) {
                 MovieWatchingProvider(
                     LetterboxdCollector(
                         rssFetcher = HttpRssFetcher(
-                            networkChecker = AndroidNetworkConnectivityChecker(context)
+                            networkChecker = AndroidNetworkConnectivityChecker(appContext)
                         )
                     )
                 ).apply {
