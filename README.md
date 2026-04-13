@@ -28,20 +28,17 @@ lifecycleScope.launch {
         val learning = tracker.queryLanguageLearning()
         val social = tracker.querySocialMedia()
 
-        // Reading
-        reading?.occurred          // true if reading was detected
+        // Reading — null means no activity in the time range
         reading?.durationMinutes   // total minutes across all sessions
         reading?.confidence        // 0.0–1.0
         reading?.confidenceLevel   // LOW / MEDIUM / HIGH
         reading?.sessions          // List<UsageSession> sorted by startTime
 
         // Language learning
-        learning?.occurred
         learning?.durationMinutes
         learning?.sessions
 
         // Social media
-        social?.occurred
         social?.durationMinutes
         social?.sessions           // List<UsageSession> — one entry per app-open
 
@@ -59,8 +56,7 @@ lifecycleScope.launch {
     // Throws IllegalStateException if username is not set
     try {
         val movies = tracker.queryMovieWatching()
-        movies?.occurred
-        movies?.count              // number of films logged
+        movies?.count              // number of films logged — null means no films in range
         movies?.movies             // List<MovieInfo> — title, watchedDate, publishedDate
     } catch (e: IllegalStateException) {
         // Username not configured — call tracker.setLetterboxdUsername("username") first

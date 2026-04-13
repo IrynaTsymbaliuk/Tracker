@@ -119,82 +119,46 @@ class MainActivity : AppCompatActivity() {
             tvTimeRange.text = if (selectedDays == 1) "Today" else "Last $selectedDays days"
 
             // Language Learning
-            when {
-                learning == null -> {
-                    tvLanguageLearningStatus.text = "No data"
-                    tvLanguageLearningDuration.text = ""
-                    tvLanguageLearningConfidence.text = ""
-                    tvLanguageLearningApps.text = ""
-                }
-
-                !learning.occurred -> {
-                    tvLanguageLearningStatus.text = "No activity detected"
-                    tvLanguageLearningDuration.text = "Duration: 0 min"
-                    tvLanguageLearningConfidence.text =
-                        "Confidence: ${formatConfidence(learning.confidence)} (${learning.confidenceLevel})"
-                    tvLanguageLearningApps.text = ""
-                }
-
-                else -> {
-                    tvLanguageLearningStatus.text = "✓ Detected"
-                    tvLanguageLearningDuration.text = "Duration: ${learning.durationMinutes} min (${learning.sessions.size} sessions)"
-                    tvLanguageLearningConfidence.text =
-                        "Confidence: ${formatConfidence(learning.confidence)} (${learning.confidenceLevel})"
-                    tvLanguageLearningApps.text =
-                        "Apps: ${learning.sessions.map { it.appName }.distinct().joinToString(", ")}"
-                }
+            if (learning == null) {
+                tvLanguageLearningStatus.text = "No data"
+                tvLanguageLearningDuration.text = ""
+                tvLanguageLearningConfidence.text = ""
+                tvLanguageLearningApps.text = ""
+            } else {
+                tvLanguageLearningStatus.text = "✓ Detected"
+                tvLanguageLearningDuration.text = "Duration: ${learning.durationMinutes} min (${learning.sessions.size} sessions)"
+                tvLanguageLearningConfidence.text =
+                    "Confidence: ${formatConfidence(learning.confidence)} (${learning.confidenceLevel})"
+                tvLanguageLearningApps.text =
+                    "Apps: ${learning.sessions.map { it.appName }.distinct().joinToString(", ")}"
             }
 
             // Reading
-            when {
-                reading == null -> {
-                    tvReadingStatus.text = "No data"
-                    tvReadingDuration.text = ""
-                    tvReadingConfidence.text = ""
-                    tvReadingApps.text = ""
-                }
-
-                !reading.occurred -> {
-                    tvReadingStatus.text = "No activity detected"
-                    tvReadingDuration.text = "Duration: 0 min"
-                    tvReadingConfidence.text =
-                        "Confidence: ${formatConfidence(reading.confidence)} (${reading.confidenceLevel})"
-                    tvReadingApps.text = ""
-                }
-
-                else -> {
-                    tvReadingStatus.text = "✓ Detected"
-                    tvReadingDuration.text = "Duration: ${reading.durationMinutes} min (${reading.sessions.size} sessions)"
-                    tvReadingConfidence.text =
-                        "Confidence: ${formatConfidence(reading.confidence)} (${reading.confidenceLevel})"
-                    tvReadingApps.text = "Apps: ${reading.sessions.map { it.appName }.distinct().joinToString(", ")}"
-                }
+            if (reading == null) {
+                tvReadingStatus.text = "No data"
+                tvReadingDuration.text = ""
+                tvReadingConfidence.text = ""
+                tvReadingApps.text = ""
+            } else {
+                tvReadingStatus.text = "✓ Detected"
+                tvReadingDuration.text = "Duration: ${reading.durationMinutes} min (${reading.sessions.size} sessions)"
+                tvReadingConfidence.text =
+                    "Confidence: ${formatConfidence(reading.confidence)} (${reading.confidenceLevel})"
+                tvReadingApps.text = "Apps: ${reading.sessions.map { it.appName }.distinct().joinToString(", ")}"
             }
 
             // Social Media
-            when {
-                social == null -> {
-                    tvSocialMediaStatus.text = "No data"
-                    tvSocialMediaDuration.text = ""
-                    tvSocialMediaConfidence.text = ""
-                    tvSocialMediaApps.text = ""
-                }
-
-                !social.occurred -> {
-                    tvSocialMediaStatus.text = "No activity detected"
-                    tvSocialMediaDuration.text = "Duration: 0 min"
-                    tvSocialMediaConfidence.text =
-                        "Confidence: ${formatConfidence(social.confidence)} (${social.confidenceLevel})"
-                    tvSocialMediaApps.text = ""
-                }
-
-                else -> {
-                    tvSocialMediaStatus.text = "✓ Detected"
-                    tvSocialMediaDuration.text = "Duration: ${social.durationMinutes} min (${social.sessions.size} sessions)"
-                    tvSocialMediaConfidence.text =
-                        "Confidence: ${formatConfidence(social.confidence)} (${social.confidenceLevel})"
-                    tvSocialMediaApps.text = "Apps: ${social.sessions.map { it.appName }.distinct().joinToString(", ")}"
-                }
+            if (social == null) {
+                tvSocialMediaStatus.text = "No data"
+                tvSocialMediaDuration.text = ""
+                tvSocialMediaConfidence.text = ""
+                tvSocialMediaApps.text = ""
+            } else {
+                tvSocialMediaStatus.text = "✓ Detected"
+                tvSocialMediaDuration.text = "Duration: ${social.durationMinutes} min (${social.sessions.size} sessions)"
+                tvSocialMediaConfidence.text =
+                    "Confidence: ${formatConfidence(social.confidence)} (${social.confidenceLevel})"
+                tvSocialMediaApps.text = "Apps: ${social.sessions.map { it.appName }.distinct().joinToString(", ")}"
             }
 
             // Movie Watching

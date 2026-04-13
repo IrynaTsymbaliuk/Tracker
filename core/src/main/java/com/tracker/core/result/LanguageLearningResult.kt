@@ -6,7 +6,6 @@ import com.tracker.core.types.DataSource
 /**
  * Result for language learning habit detection.
  *
- * @property occurred Whether language learning was detected for the queried time range
  * @property source Primary data source
  * @property confidence Combined confidence score
  * @property confidenceLevel Categorical confidence level
@@ -16,7 +15,6 @@ import com.tracker.core.types.DataSource
  * See [UsageSession] for deduplication key guidance when storing sessions locally.
  */
 data class LanguageLearningResult(
-    override val occurred: Boolean,
     override val source: DataSource,
     override val confidence: Float,
     override val confidenceLevel: ConfidenceLevel,

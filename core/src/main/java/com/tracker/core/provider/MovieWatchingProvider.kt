@@ -38,7 +38,6 @@ class MovieWatchingProvider internal constructor(
         val confidence = evidenceList.first().confidence
 
         return MovieWatchingResult(
-            occurred = totalCounter > 0,
             source = DataSource.LETTERBOXD_RSS,
             confidence = confidence,
             confidenceLevel = confidence.toConfidenceLevel(),

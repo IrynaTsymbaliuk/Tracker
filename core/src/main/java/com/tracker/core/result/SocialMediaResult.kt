@@ -10,7 +10,6 @@ import com.tracker.core.types.DataSource
  * (Facebook, Instagram, Twitter), messaging apps (WhatsApp, Telegram), and
  * community platforms (Reddit, Discord).
  *
- * @property occurred Whether social media usage was detected
  * @property source Primary data source
  * @property confidence Combined confidence score
  * @property confidenceLevel Categorical confidence level
@@ -20,7 +19,6 @@ import com.tracker.core.types.DataSource
  * See [UsageSession] for deduplication key guidance when storing sessions locally.
  */
 data class SocialMediaResult(
-    override val occurred: Boolean,
     override val source: DataSource,
     override val confidence: Float,
     override val confidenceLevel: ConfidenceLevel,

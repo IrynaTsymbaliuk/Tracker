@@ -7,7 +7,6 @@ import com.tracker.core.result.SocialMediaResult
 import com.tracker.core.result.TimeRange
 import com.tracker.core.result.UsageSession
 import com.tracker.core.result.toConfidenceLevel
-import com.tracker.core.result.toOccurred
 import com.tracker.core.types.DataSource
 
 /**
@@ -55,7 +54,6 @@ class SocialMediaProvider internal constructor(
         }.sortedBy { it.startTime }
 
         return SocialMediaResult(
-            occurred = combinedConfidence.toOccurred(minConfidence),
             source = DataSource.USAGE_STATS,
             confidence = combinedConfidence,
             confidenceLevel = combinedConfidence.toConfidenceLevel(),
