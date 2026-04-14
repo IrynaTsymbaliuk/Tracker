@@ -6,5 +6,7 @@ package com.tracker.core.types
 enum class DataSource {
     USAGE_STATS,
     LETTERBOXD_RSS,
+    HEALTH_CONNECT,
+    SENSOR,
     UNKNOWN
 }

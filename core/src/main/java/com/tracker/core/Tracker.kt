@@ -1,7 +1,9 @@
 package com.tracker.core
 
 import android.content.Context
+import android.os.Build
 import com.tracker.core.collector.AndroidNetworkConnectivityChecker
+import com.tracker.core.collector.HealthConnectStepCollector
 import com.tracker.core.collector.HttpRssFetcher
 import com.tracker.core.collector.LetterboxdCollector
 import com.tracker.core.collector.UsageEventsCollector
@@ -10,10 +12,12 @@ import com.tracker.core.provider.LanguageLearningProvider
 import com.tracker.core.provider.MovieWatchingProvider
 import com.tracker.core.provider.ReadingProvider
 import com.tracker.core.provider.SocialMediaProvider
+import com.tracker.core.provider.StepCountingProvider
 import com.tracker.core.result.LanguageLearningResult
 import com.tracker.core.result.MovieWatchingResult
 import com.tracker.core.result.ReadingResult
 import com.tracker.core.result.SocialMediaResult
+import com.tracker.core.result.StepCountingResult
 import java.util.Calendar
 
 /**
@@ -66,6 +70,12 @@ class Tracker private constructor(
                 )
             )
         )
+    }
+
+    private val stepCountingProvider: StepCountingProvider? by lazy {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            StepCountingProvider(HealthConnectStepCollector(appContext))
+        } else null
     }
 
     /**
@@ -133,6 +143,20 @@ class Tracker private constructor(
     suspend fun querySocialMedia(days: Int = 1): SocialMediaResult? {
         val (from, to) = queryWindow(days)
         return socialMediaProvider.query(from, to, minConfidence)
+    }
+
+    /**
+     * Requires Health Connect to be installed and [HealthConnectStepCollector.READ_STEPS_PERMISSION]
+     * to be granted at runtime via [PermissionController.createRequestPermissionResultContract].
+     *
+     * @param days Number of days to include: 1 = today from midnight through now,
+     * 2 = yesterday midnight through now, etc. Must be >= 1.
+     * @return Step count data for the requested window, or null if Health Connect is unavailable
+     * or the API level is below 26
+     */
+    suspend fun queryStepCounting(days: Int = 1): StepCountingResult? {
+        val (from, to) = queryWindow(days)
+        return stepCountingProvider?.query(from, to, minConfidence)
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.tracker.core.collector
 
 import android.util.Log
+import com.tracker.core.common.TAG
 import com.tracker.core.result.MovieInfo
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
@@ -12,8 +13,6 @@ import java.util.TimeZone
 internal class RssParser {
 
     private companion object {
-
-        private const val TAG = "RssParser"
         val watchedDatePattern = Regex("Watched on [A-Za-z]+, ([A-Za-z]+ \\d+, \\d{4})")
     }
 
@@ -94,7 +93,10 @@ internal class RssParser {
             )
         }
 
-        private fun extractWatchedDate(description: String?, watchedDateFormat: SimpleDateFormat): Long? {
+        private fun extractWatchedDate(
+            description: String?,
+            watchedDateFormat: SimpleDateFormat
+        ): Long? {
             if (description == null) return null
 
             val match = watchedDatePattern.find(description) ?: return null

@@ -1,120 +1,123 @@
-# Tracker Library - Sample App
+# Tracker — Sample App
 
-This sample application demonstrates how to integrate and use the **Tracker** library to monitor language learning, reading, social media usage, and movie watching habits.
+This sample application demonstrates how to integrate and use the **Tracker** library to monitor language learning, reading, social media usage, movie watching, and step counting.
 
 ## Features Demonstrated
 
-### 1. **Library Setup**
+### 1. Library Setup
+
 ```kotlin
 val tracker = Tracker.Builder(context)
     .setLetterboxdUsername("your_username")  // optional: required only for movie watching
-    .setMinConfidence(0.50f)
     .build()
 ```
 
-### 2. **Permission Handling**
-- Checks for `PACKAGE_USAGE_STATS` permission on resume
-- Guides user to grant it via Settings
-- Re-checks permission when returning from Settings
+### 2. Permission Handling
 
+The app handles two separate permissions:
+
+**Usage Stats** (`PACKAGE_USAGE_STATS`) — required for language learning, reading, and social media:
 ```kotlin
+// Check via AppOpsManager
+val mode = appOps.checkOpNoThrow(
+    AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), packageName
+)
 // Direct the user to the system usage access settings screen
 startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
 ```
 
-### 3. **Querying Metrics**
+**Health Connect** (`health.READ_STEPS`) — required for step counting:
+```kotlin
+// Request at runtime using the Health Connect permission contract
+val launcher = registerForActivityResult(
+    PermissionController.createRequestPermissionResultContract()
+) { updateHcPermissionUi() }
+launcher.launch(setOf(HealthPermission.getReadPermission(StepsRecord::class)))
+```
 
-The app lets the user select a time window (Today / 2 Days / 7 Days) via a chip group. The selected value is passed to each query:
+Both permissions show inline status rows with a "Grant" button that appears only when the permission is missing.
+
+### 3. Querying Metrics
+
+All metrics are queried for today (midnight → now). Each query is wrapped independently so a failure in one does not affect the others:
 
 ```kotlin
 lifecycleScope.launch {
-    val learning = tracker.queryLanguageLearning(days = selectedDays)
-    val reading = tracker.queryReading(days = selectedDays)
-    val social = tracker.querySocialMedia(days = selectedDays)
-    val movies = tracker.queryMovieWatching(days = selectedDays)
-    displayResults(learning, reading, social, movies)
+    val language = runCatching { tracker.queryLanguageLearning() }.getOrNull()
+    val reading  = runCatching { tracker.queryReading() }.getOrNull()
+    val social   = runCatching { tracker.querySocialMedia() }.getOrNull()
+    val movies   = runCatching { tracker.queryMovieWatching() }.getOrNull()
+    val steps    = runCatching { tracker.queryStepCounting() }.getOrNull()
+    displayResults(language, reading, social, movies, steps)
 }
 ```
 
-`days = 1` covers today from midnight through now. `days = 2` adds yesterday, and so on.
+A `null` result means either no activity in the time range or a missing/denied permission.
 
-### 4. **Displaying Results**
+### 4. Displaying Results
 
-The app shows results for the selected time window:
+Each metric is shown as a single line:
 
-- **Language Learning Section**:
-  - Activity status (detected or not)
-  - Duration and session count derived from `sessions.size` (e.g. "45 min (5 sessions)")
-  - Confidence score and level (HIGH/MEDIUM/LOW)
-  - Apps derived from `sessions.map { it.appName }.distinct()` (e.g., "Duolingo, Anki")
+- **Language**: `📚 Language    45 min · HIGH · 85%`
+- **Reading**: `📖 Reading    30 min · MEDIUM · 75%`
+- **Social**: `📱 Social    120 min · HIGH · 88%`
+- **Movies**: `🎬 Movies    3 films · HIGH · 95%`
+- **Steps**: `👣 Steps    7,622 steps · HIGH · 99%`
 
-- **Reading Section**:
-  - Activity status (detected or not)
-  - Duration and session count derived from `sessions.size` (e.g. "30 min (2 sessions)")
-  - Confidence score and level (HIGH/MEDIUM/LOW)
-  - Apps derived from `sessions.map { it.appName }.distinct()` (e.g., "Kindle, Google Play Books")
-
-- **Social Media Section**:
-  - Activity status (detected or not)
-  - Duration and session count derived from `sessions.size` (e.g. "120 min (23 sessions)")
-  - Confidence score and level (HIGH/MEDIUM/LOW)
-  - Apps derived from `sessions.map { it.appName }.distinct()` (e.g., "Instagram, Reddit, WhatsApp")
-
-- **Movie Watching Section**:
-  - Activity status (detected or not)
-  - Number of films logged
-  - Film titles
+`—` is shown when the result is null (no data or permission not granted).
 
 ## How to Run
 
-1. **Build the project**:
-   ```bash
-   ./gradlew :app:assembleDebug
-   ```
-
-2. **Install on device/emulator**:
+1. **Install on device**:
    ```bash
    ./gradlew :app:installDebug
    ```
 
-3. **Grant Permission**:
-   - Open the app
-   - Tap "Grant Permission"
-   - Find "Tracker Demo" in the list
-   - Enable "Permit usage access"
+2. **Grant Usage Access**:
+   - Tap "Grant" next to "Usage access  ✗"
+   - Find "Tracker Demo" in the list and enable "Permit usage access"
+   - Return to the app — metrics update automatically
 
-4. **View Results**:
-   - Return to the app — metrics are queried automatically
-   - Select a time window: Today, 2 Days, or 7 Days
-   - Or tap "Query Metrics" to refresh
+3. **Grant Health Connect** (optional, for step counting):
+   - Tap "Grant" next to "Health Connect  ✗"
+   - Approve the `Steps` permission in the Health Connect dialog
+   - Return to the app — step count appears automatically
+
+4. **Enable Movie Watching** (optional):
+   - Set `letterboxdUsername` in `MainActivity.kt` to your Letterboxd username
+
+5. **Refresh**:
+   - Tap "Query Today" to manually refresh all metrics
 
 ## Code Structure
 
 ```
 MainActivity.kt
-├── onCreate()               # Build Tracker instance, wire button listeners
-├── onResume()               # Check permission, auto-query if granted
-├── queryMetrics()           # Query all metrics using coroutines
-├── displayResults()         # Show results in UI with session counts
-└── hasUsageStatsPermission() # AppOpsManager permission check
+├── onCreate()                  # Build Tracker, register HC permission launcher, wire buttons
+├── onResume()                  # Update permission UI, auto-query metrics
+├── updateUsagePermissionUi()   # Show/hide Grant button based on AppOps check
+├── hasUsageStatsPermission()   # AppOpsManager permission check
+├── updateHcPermissionUi()      # Show/hide Grant button based on HC permission state
+├── queryMetrics()              # Query all metrics concurrently using coroutines
+└── displayResults()            # Render one line per metric
 ```
 
 ## Key Learnings
 
 1. **Builder Pattern**: Configure the Tracker with a fluent API — no `enable*` flags needed, all features are always available
-2. **Coroutines**: Use suspend functions for async metric queries
-3. **Permission Flow**: Check on resume, redirect to system settings if missing
-4. **Result Structure**: Access duration, confidence score, and `sessions` — session count and app list are derived from the sessions list
-5. **Error Handling**: Catch `PermissionDeniedException`, `NoMonitorableAppsException` for usage-stats queries; catch `IllegalStateException` for movie watching when username is not set
+2. **Coroutines**: All query methods are `suspend` functions; wrap each independently with `runCatching` so one failure doesn't block the rest
+3. **Two permission flows**: `PACKAGE_USAGE_STATS` requires a manual system settings redirect; `health.READ_STEPS` uses the Health Connect runtime permission contract
+4. **Health Connect manifest setup**: Both `ACTION_SHOW_PERMISSIONS_RATIONALE` (Android 9–13) and the `VIEW_PERMISSION_USAGE` activity-alias (Android 14+) must be declared for the permission dialog to work
+5. **Step counting deduplication**: Use `queryStepCounting()` rather than summing `StepsRecord` entries manually — Health Connect's aggregation API handles deduplication across Google Fit, the phone step counter, and other sources
 
 ## Testing
 
-The app works best when you have supported apps installed and have used them in the last 24 hours.
+The app works best when you have supported apps installed and have used them today.
 
 **Supported language learning apps:**
 - Duolingo, Anki, LingoDeer, Drops
-- Japanese learning apps: Kanji Study, Renshuu, J5a, Hey Japan
-- And 5 more (see KnownApps.kt for the complete list)
+- Japanese learning apps: Kanji Study, Renshuu, J5a, Hey Japan, JP News, Mytest, TenWords
+- And 2 more (see `KnownApps.kt` for the complete list)
 
 **Supported reading apps:**
 - Kindle, Google Play Books
@@ -127,10 +130,14 @@ The app works best when you have supported apps installed and have used them in 
 **Movie watching:**
 - Set `letterboxdUsername` in `MainActivity.kt` to your Letterboxd username
 
+**Step counting:**
+- Requires Health Connect to be installed (built-in on Android 14+; available via Google Play on Android 9–13)
+- Grant the `Steps` permission when prompted
+
 ## Notes
 
-- The app requires Android API 21+ (Android 5.0)
-- `PACKAGE_USAGE_STATS` is a protected permission that requires user action
-- Queries cover today from midnight (days=1), or multiple days back from midnight (days=2+)
-- Each metric can be queried independently
+- The sample app requires Android API 26+ (Android 8.0)
+- The library itself supports Android API 21+; the higher sample app minimum is due to Health Connect and `java.time` usage
+- `PACKAGE_USAGE_STATS` is a protected permission that requires user action in system settings
+- Queries always cover today from midnight in the device's local timezone
 - On Android 10+, session times use precise `ACTIVITY_RESUMED`/`ACTIVITY_PAUSED` events

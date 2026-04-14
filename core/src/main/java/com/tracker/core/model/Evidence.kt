@@ -31,3 +31,10 @@ data class CounterEvidence(
     override val metadata: Map<String, Any>,
     val counter: Int
 ) : Evidence()
+
+data class StepEvidence(
+    override val source: DataSource,
+    override val confidence: Float,
+    override val metadata: Map<String, Any>,
+    val steps: Long
+) : Evidence()

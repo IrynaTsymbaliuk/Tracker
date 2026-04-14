@@ -2,7 +2,7 @@
 
 **Detect user habits from Android system data and third-party services — no user input required.**
 
-Tracker is an Android library that automatically identifies behaviors like language learning, reading, movie watching, and social media usage by analyzing device usage and third-party feeds. Your app gets structured habit data with confidence scores, without asking users to log anything manually.
+Tracker is an Android library that automatically identifies behaviors like language learning, reading, movie watching, social media usage, and physical activity by analyzing device usage and third-party feeds. Your app gets structured habit data with confidence scores, without asking users to log anything manually.
 
 ## Is This for You?
 
@@ -63,6 +63,11 @@ lifecycleScope.launch {
     } catch (e: NetworkException) {
         // Network request failed
     }
+
+    // Step counting via Health Connect — returns null if HC unavailable or permission not granted
+    val steps = tracker.queryStepCounting()
+    steps?.steps           // Long — deduplicated across all data sources
+    steps?.confidence      // 0.99 when sourced from Health Connect
 }
 ```
 
@@ -71,6 +76,7 @@ lifecycleScope.launch {
 - Language Learning: 45 min · 5 sessions · Duolingo, Anki · 85% confidence (HIGH)
 - Movie Watching: 3 films · The Matrix, Inception, Interstellar · 95% confidence (HIGH)
 - Social Media: 120 min · 23 sessions · Instagram, Reddit, WhatsApp · 88% confidence (HIGH)
+- Steps: 7,622 steps · 99% confidence (HIGH)
 
 Session count and app list are derived from `sessions`:
 ```kotlin
@@ -104,16 +110,19 @@ days = 7  │ ████████ ████████ █████�
 
 | Metric | Source | Apps / Data | Permission |
 |---|---|---|---|
-| **LANGUAGE_LEARNING** | Foreground session events | Duolingo, Anki, LingoDeer, Drops, Kanji Study, Renshuu, and 8 more | `PACKAGE_USAGE_STATS` |
+| **LANGUAGE_LEARNING** | Foreground session events | Duolingo, Anki, LingoDeer, Drops, Kanji Study, Renshuu, and 7 more | `PACKAGE_USAGE_STATS` |
 | **READING** | Foreground session events | Kindle, Google Play Books | `PACKAGE_USAGE_STATS` |
 | **MOVIE_WATCHING** | Letterboxd RSS | Film titles and watch dates from public feed | `INTERNET` (no user prompt) |
-| **SOCIAL_MEDIA_USAGE** | Foreground session events | Facebook, Instagram, Twitter/X, TikTok, Reddit, WhatsApp, and 9 more | `PACKAGE_USAGE_STATS` |
+| **SOCIAL_MEDIA** | Foreground session events | Facebook, Instagram, Twitter/X, TikTok, Reddit, WhatsApp, and 9 more | `PACKAGE_USAGE_STATS` |
+| **STEP_COUNTING** | Health Connect | Aggregated across all step sources, deduped by HC | `health.READ_STEPS` · API 26+ |
 
-**Note on Social Media**: Includes messaging apps (WhatsApp, Telegram) with lower confidence scores as they may be used for work/family communication.
+**Note on Social Media**: Includes messaging apps (WhatsApp, Telegram) with lower confidence scores (0.75) as they may be used for work or family communication.
 
 **Note on session accuracy**: On Android 10+ (API 29), session tracking uses `ACTIVITY_RESUMED`/`ACTIVITY_PAUSED` events for precise per-session start and end times. Consecutive activity transitions within the same app are merged into a single session if the gap between them is under 30 seconds.
 
 **Note on sessions deduplication**: When storing sessions locally across multiple queries, use `(packageName, startTime)` as the composite key. Exception: if `session.startTime == result.timeRange.from`, the session start was inferred (the app was already open at the query boundary) — use `(packageName, endTime)` for those. Sessions under 1 minute have `durationMinutes = 0` but are still present in the list. See `UsageSession` for full details.
+
+**Note on step counting**: `queryStepCounting()` uses Health Connect's aggregation API (`StepsRecord.COUNT_TOTAL`), which deduplicates across all contributing apps (e.g. Google Fit, phone step counter) before returning the total. Returns `null` if Health Connect is unavailable or the `READ_STEPS` permission has not been granted.
 
 ## Installation
 
@@ -132,13 +141,41 @@ Add to `AndroidManifest.xml`:
 
 <!-- Required for movie watching (Letterboxd RSS) -->
 <uses-permission android:name="android.permission.INTERNET" />
+
+<!-- Required for step counting via Health Connect -->
+<uses-permission android:name="android.permission.health.READ_STEPS" />
 ```
 
 `PACKAGE_USAGE_STATS` is a protected permission — the user must grant it manually via **Settings → Apps → Special app access → Usage access**.
 
+`health.READ_STEPS` must be requested at runtime using `PermissionController.createRequestPermissionResultContract()`. Add the following to the activity that handles the permission result:
+
+```xml
+<!-- Required for Health Connect (Android 9–13) -->
+<intent-filter>
+    <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+    <category android:name="android.intent.category.DEFAULT" />
+</intent-filter>
+```
+
+```xml
+<!-- Required for Health Connect (Android 14+) -->
+<activity-alias
+    android:name=".ViewPermissionUsageActivity"
+    android:exported="true"
+    android:permission="android.permission.START_VIEW_PERMISSION_USAGE"
+    android:targetActivity=".YourActivity">
+    <intent-filter>
+        <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+        <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+    </intent-filter>
+</activity-alias>
+```
+
 ## Privacy
 
 - All usage stats are processed entirely on-device
+- Health Connect data never leaves the device
 - Letterboxd data is fetched from public RSS feeds — no authentication, no private data
 - No data is sent to any server beyond the third-party services you configure
 
@@ -147,6 +184,7 @@ Add to `AndroidManifest.xml`:
 - **Min SDK**: 21 (Android 5.0)
 - **Target SDK**: 36
 - **Kotlin**: 1.9+
+- **Step counting**: requires API 26+ and Health Connect
 
 ## Sample App
 
@@ -154,7 +192,7 @@ Add to `AndroidManifest.xml`:
 ./gradlew :app:installDebug
 ```
 
-Demonstrates the full flow: permission request, selecting a time window (Today / 2 Days / 7 Days), querying all metrics (language learning, reading, social media, movie watching), and displaying results. To enable movie watching, set your Letterboxd username in `MainActivity.kt`.
+Demonstrates the full flow: permission setup for both `PACKAGE_USAGE_STATS` and Health Connect, querying all metrics for today (language learning, reading, social media, movie watching, step counting), and displaying results. To enable movie watching, set your Letterboxd username in `MainActivity.kt`.
 
 ## License
 

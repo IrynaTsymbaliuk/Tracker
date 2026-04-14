@@ -5,6 +5,9 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Health Connect: required to read StepsRecord via HealthConnectStepCollector -->
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+
     <!--
         Package visibility queries for Android 11+ (API 30+)
         Declares which apps this library needs to detect.
@@ -29,6 +32,9 @@
         <!-- Reading Apps -->
         <package android:name="com.google.android.apps.books" />
         <package android:name="com.amazon.kindle" />
+
+        <!-- Health Connect -->
+        <package android:name="com.google.android.apps.healthdata" />
 
         <!-- Social Media Apps -->
         <package android:name="com.facebook.katana" />

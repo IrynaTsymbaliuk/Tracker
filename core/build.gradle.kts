@@ -43,14 +43,10 @@ android {
 }
 
 dependencies {
-
-    // AndroidX Core
     implementation(libs.androidx.core.ktx)
-
-    // Kotlin Coroutines
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.health.connect)
 
-    // Testing
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.robolectric)

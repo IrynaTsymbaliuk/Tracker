@@ -42,6 +42,8 @@ dependencies {
     // Core library
     implementation(project(":core"))
 
+    implementation(libs.health.connect)
+
     // Android
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

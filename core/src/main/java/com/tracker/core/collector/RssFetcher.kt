@@ -3,12 +3,12 @@ package com.tracker.core.collector
 import android.os.Build
 import android.util.Log
 import com.tracker.core.BuildConfig
+import com.tracker.core.common.TAG
 import kotlinx.coroutines.delay
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.UnknownHostException
-import kotlin.collections.contains
 
 /**
  * Fetches RSS feed content from URLs.
@@ -49,7 +49,6 @@ class HttpRssFetcher(
 ) : RssFetcher {
 
     companion object {
-        private const val TAG = "HttpRssFetcher"
         private val RETRYABLE_STATUS_CODES = setOf(408, 429, 500, 502, 503, 504)
 
         private fun defaultUserAgent(): String {
@@ -67,7 +66,10 @@ class HttpRssFetcher(
             try {
                 if (attempt > 0) {
                     val delayTime = retryDelayMs * (1 shl (attempt - 1)) // Exponential backoff
-                    Log.d(TAG, "Retrying request (attempt $attempt/$maxRetries) after ${delayTime}ms delay")
+                    Log.d(
+                        TAG,
+                        "Retrying request (attempt $attempt/$maxRetries) after ${delayTime}ms delay"
+                    )
                     delay(delayTime)
                 }
 
@@ -106,10 +108,12 @@ class HttpRssFetcher(
             is UnknownHostException -> false // DNS failures not retryable
             is NetworkException -> {
                 val statusCode = e.message?.let { msg ->
-                    "HTTP error code: (\\d+)".toRegex().find(msg)?.groupValues?.get(1)?.toIntOrNull()
+                    "HTTP error code: (\\d+)".toRegex().find(msg)?.groupValues?.get(1)
+                        ?.toIntOrNull()
                 }
                 statusCode in RETRYABLE_STATUS_CODES
             }
+
             else -> false
         }
     }

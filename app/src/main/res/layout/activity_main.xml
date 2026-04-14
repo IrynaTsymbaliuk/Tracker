@@ -1,446 +1,163 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
-    android:background="?android:colorBackground"
     tools:context=".MainActivity">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="20dp">
 
-        <!-- Header -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardElevation="4dp"
-            app:cardCornerRadius="12dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="20dp"
-                android:gravity="center">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Tracker Library Demo"
-                    android:textSize="22sp"
-                    android:textStyle="bold"
-                    android:textColor="?android:textColorPrimary"
-                    android:gravity="center"
-                    android:layout_marginBottom="8dp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Track your language learning, reading, social media usage, and movie watching habits with the Tracker library."
-                    android:textSize="14sp"
-                    android:textColor="?android:textColorSecondary"
-                    android:gravity="center"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginEnd="16dp" />
-
-            </LinearLayout>
-
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Permission Section -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/permissionSection"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardElevation="4dp"
-            app:cardCornerRadius="12dp"
-            app:cardBackgroundColor="#F44336"
-            android:visibility="gone"
-            tools:visibility="visible">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="20dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="⚠️ Permission Required"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:textColor="#FFFFFF"
-                    android:layout_marginBottom="8dp" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="This app needs access to usage stats to track language learning app usage. This permission is required to demonstrate the library functionality."
-                    android:textSize="14sp"
-                    android:textColor="#FFFFFF"
-                    android:layout_marginBottom="16dp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnRequestPermission"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Grant Permission"
-                    android:textColor="#F44336"
-                    app:backgroundTint="#FFFFFF"
-                    app:icon="@android:drawable/ic_menu_preferences"
-                    app:iconTint="#F44336" />
-
-            </LinearLayout>
-
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Days Selector -->
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/chipGroupDays"
+        <!-- Title -->
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="12dp"
-            app:singleSelection="true"
-            app:selectionRequired="true"
-            android:visibility="gone"
-            tools:visibility="visible">
+            android:text="Tracker Demo"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="?android:textColorPrimary"
+            android:layout_marginBottom="20dp" />
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chip1Day"
-                style="@style/Widget.MaterialComponents.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Today"
-                android:checked="true" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chip2Days"
-                style="@style/Widget.MaterialComponents.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="2 Days" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chip7Days"
-                style="@style/Widget.MaterialComponents.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="7 Days" />
-
-        </com.google.android.material.chip.ChipGroup>
-
-        <!-- Query Button -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnQuery"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Query Metrics"
-            android:textSize="16sp"
-            android:padding="14dp"
-            android:layout_marginBottom="16dp"
-            app:icon="@android:drawable/ic_menu_search"
-            app:cornerRadius="8dp"
-            android:visibility="gone"
-            tools:visibility="visible" />
-
-        <!-- Progress Bar -->
-        <ProgressBar
-            android:id="@+id/progressBar"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_gravity="center"
-            android:layout_marginTop="32dp"
-            android:layout_marginBottom="32dp"
-            android:visibility="gone"
-            tools:visibility="visible" />
-
-        <!-- Results Section -->
+        <!-- Usage Stats permission row -->
         <LinearLayout
-            android:id="@+id/resultSection"
+            android:id="@+id/layoutUsagePermission"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="gone"
-            tools:visibility="visible">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
 
-            <!-- Time Range Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
+            <TextView
+                android:id="@+id/tvUsageStatus"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardElevation="4dp"
-                app:cardCornerRadius="12dp">
+                android:layout_weight="1"
+                android:textSize="14sp"
+                android:textColor="?android:textColorSecondary"
+                tools:text="Usage access  ✓" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="📊 Activity Results"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="?android:textColorPrimary"
-                        android:layout_marginBottom="8dp" />
-
-                    <TextView
-                        android:id="@+id/tvTimeRange"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="14sp"
-                        android:textColor="?android:textColorSecondary"
-                        android:layout_marginBottom="16dp"
-                        tools:text="Last 24 Hours" />
-
-                    <!-- Language Learning Section -->
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="📚 Language Learning"
-                        android:textSize="15sp"
-                        android:textStyle="bold"
-                        android:textColor="?android:textColorPrimary"
-                        android:layout_marginBottom="8dp" />
-
-                    <TextView
-                        android:id="@+id/tvLanguageLearningStatus"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:layout_marginBottom="4dp"
-                        android:textColor="?android:textColorSecondary"
-                        android:textSize="14sp"
-                        tools:text="✓ Activity Detected" />
-
-                    <TextView
-                        android:id="@+id/tvLanguageLearningDuration"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="14sp"
-                        android:textColor="?android:textColorSecondary"
-                        android:layout_marginBottom="4dp"
-                        android:layout_marginStart="12dp"
-                        tools:text="Duration: 45 minutes" />
-
-                    <TextView
-                        android:id="@+id/tvLanguageLearningConfidence"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="14sp"
-                        android:textColor="?android:textColorSecondary"
-                        android:layout_marginBottom="4dp"
-                        android:layout_marginStart="12dp"
-                        tools:text="Confidence: 85% (HIGH)" />
-
-                    <TextView
-                        android:id="@+id/tvLanguageLearningApps"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="14sp"
-                        android:textColor="?android:textColorSecondary"
-                        android:layout_marginBottom="4dp"
-                        android:layout_marginStart="12dp"
-                        tools:text="Apps: Duolingo, Memrise" />
-
-                    <TextView
-                        android:id="@+id/tvLanguageLearningSessions"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="12sp"
-                        android:textColor="?android:textColorTertiary"
-                        android:layout_marginBottom="16dp"
-                        android:layout_marginStart="12dp"
-                        android:fontFamily="monospace"
-                        tools:text="Sessions:\n  09:00-09:15 Duolingo (15 min)\n  14:30-15:00 Anki (30 min)" />
-
-                    <!-- Reading Section -->
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="📖 Reading"
-                        android:textSize="15sp"
-                        android:textStyle="bold"
-                        android:textColor="?android:textColorPrimary"
-                        android:layout_marginBottom="8dp" />
-
-                    <TextView
-                        android:id="@+id/tvReadingStatus"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="14sp"
-                        android:textColor="?android:textColorSecondary"
-                        android:layout_marginBottom="4dp"
-                        android:layout_marginStart="12dp"
-                        tools:text="✓ Activity Detected" />
-
-                    <TextView
-                        android:id="@+id/tvReadingDuration"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="14sp"
-                        android:textColor="?android:textColorSecondary"
-                        android:layout_marginBottom="4dp"
-                        android:layout_marginStart="12dp"
-                        tools:text="Duration: 30 minutes" />
-
-                    <TextView
-                        android:id="@+id/tvReadingConfidence"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="14sp"
-                        android:textColor="?android:textColorSecondary"
-                        android:layout_marginBottom="4dp"
-                        android:layout_marginStart="12dp"
-                        tools:text="Confidence: 75% (MEDIUM)" />
-
-                    <TextView
-                        android:id="@+id/tvReadingApps"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="14sp"
-                        android:textColor="?android:textColorSecondary"
-                        android:layout_marginStart="12dp"
-                        android:layout_marginBottom="4dp"
-                        tools:text="Apps: Kindle, Google Books" />
-
-                    <TextView
-                        android:id="@+id/tvReadingSessions"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="12sp"
-                        android:textColor="?android:textColorTertiary"
-                        android:layout_marginBottom="16dp"
-                        android:layout_marginStart="12dp"
-                        android:fontFamily="monospace"
-                        tools:text="Sessions:\n  10:00-10:25 Kindle (25 min)" />
-
-                    <!-- Social Media Section -->
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="📱 Social Media"
-                        android:textSize="15sp"
-                        android:textStyle="bold"
-                        android:textColor="?android:textColorPrimary"
-                        android:layout_marginBottom="8dp" />
-
-                    <TextView
-                        android:id="@+id/tvSocialMediaStatus"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="14sp"
-                        android:textColor="?android:textColorSecondary"
-                        android:layout_marginBottom="4dp"
-                        android:layout_marginStart="12dp"
-                        tools:text="✓ Activity Detected" />
-
-                    <TextView
-                        android:id="@+id/tvSocialMediaDuration"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="14sp"
-                        android:textColor="?android:textColorSecondary"
-                        android:layout_marginBottom="4dp"
-                        android:layout_marginStart="12dp"
-                        tools:text="Duration: 120 minutes" />
-
-                    <TextView
-                        android:id="@+id/tvSocialMediaConfidence"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="14sp"
-                        android:textColor="?android:textColorSecondary"
-                        android:layout_marginBottom="4dp"
-                        android:layout_marginStart="12dp"
-                        tools:text="Confidence: 88% (HIGH)" />
-
-                    <TextView
-                        android:id="@+id/tvSocialMediaApps"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="14sp"
-                        android:textColor="?android:textColorSecondary"
-                        android:layout_marginStart="12dp"
-                        android:layout_marginBottom="4dp"
-                        tools:text="Apps: Instagram, Reddit, WhatsApp" />
-
-                    <TextView
-                        android:id="@+id/tvSocialMediaSessions"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="12sp"
-                        android:textColor="?android:textColorTertiary"
-                        android:layout_marginBottom="16dp"
-                        android:layout_marginStart="12dp"
-                        android:fontFamily="monospace"
-                        tools:text="Sessions:\n  11:00-11:30 Instagram (30 min)\n  15:00-15:45 Reddit (45 min)" />
-
-                    <!-- Movie Watching Section -->
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="🎬 Movie Watching"
-                        android:textSize="15sp"
-                        android:textStyle="bold"
-                        android:textColor="?android:textColorPrimary"
-                        android:layout_marginBottom="8dp" />
-
-                    <TextView
-                        android:id="@+id/tvMovieWatchingStatus"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="14sp"
-                        android:textColor="?android:textColorSecondary"
-                        android:layout_marginBottom="4dp"
-                        android:layout_marginStart="12dp"
-                        tools:text="✓ Activity Detected" />
-
-                    <TextView
-                        android:id="@+id/tvMovieWatchingCount"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="14sp"
-                        android:textColor="?android:textColorSecondary"
-                        android:layout_marginBottom="4dp"
-                        android:layout_marginStart="12dp"
-                        tools:text="Movies: 3 watched" />
-
-                    <TextView
-                        android:id="@+id/tvMovieWatchingConfidence"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="14sp"
-                        android:textColor="?android:textColorSecondary"
-                        android:layout_marginBottom="4dp"
-                        android:layout_marginStart="12dp"
-                        tools:text="Confidence: 95% (HIGH)" />
-
-                    <TextView
-                        android:id="@+id/tvMovieWatchingMovies"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textSize="14sp"
-                        android:textColor="?android:textColorSecondary"
-                        android:layout_marginStart="12dp"
-                        tools:text="Movies: The Matrix, Inception" />
-
-                </LinearLayout>
-
-            </com.google.android.material.card.MaterialCardView>
+            <Button
+                android:id="@+id/btnGrantUsage"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Grant"
+                android:visibility="gone"
+                tools:visibility="visible" />
 
         </LinearLayout>
+
+        <!-- Health Connect permission row -->
+        <LinearLayout
+            android:id="@+id/layoutHcPermission"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="20dp"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <TextView
+                android:id="@+id/tvHcStatus"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textSize="14sp"
+                android:textColor="?android:textColorSecondary"
+                tools:text="Health Connect  ✓" />
+
+            <Button
+                android:id="@+id/btnGrantHc"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Grant"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+        </LinearLayout>
+
+        <!-- Query button + progress -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="20dp">
+
+            <Button
+                android:id="@+id/btnQuery"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Query Today" />
+
+            <ProgressBar
+                android:id="@+id/progressBar"
+                style="?android:attr/progressBarStyleSmall"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="12dp"
+                android:visibility="gone" />
+
+        </LinearLayout>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?android:attr/listDivider"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Results — one line per metric -->
+        <TextView
+            android:id="@+id/tvLanguage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="?android:textColorSecondary"
+            android:layout_marginBottom="10dp"
+            tools:text="📚 Language    45 min · HIGH · 85%" />
+
+        <TextView
+            android:id="@+id/tvReading"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="?android:textColorSecondary"
+            android:layout_marginBottom="10dp"
+            tools:text="📖 Reading    No data" />
+
+        <TextView
+            android:id="@+id/tvSocial"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="?android:textColorSecondary"
+            android:layout_marginBottom="10dp"
+            tools:text="📱 Social    120 min · HIGH · 88%" />
+
+        <TextView
+            android:id="@+id/tvMovies"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="?android:textColorSecondary"
+            android:layout_marginBottom="10dp"
+            tools:text="🎬 Movies    2 films · HIGH · 95%" />
+
+        <TextView
+            android:id="@+id/tvSteps"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="?android:textColorSecondary"
+            tools:text="👣 Steps    8,432 steps · HIGH · 99%" />
 
     </LinearLayout>
 

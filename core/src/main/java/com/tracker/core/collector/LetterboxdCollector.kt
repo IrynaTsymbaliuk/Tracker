@@ -1,6 +1,7 @@
 package com.tracker.core.collector
 
 import android.util.Log
+import com.tracker.core.common.TAG
 import com.tracker.core.model.CounterEvidence
 import com.tracker.core.result.MovieInfo
 import com.tracker.core.types.DataSource
@@ -28,12 +29,11 @@ import java.net.URLEncoder
  * ```
  */
 class LetterboxdCollector(
-    private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val rssFetcher: RssFetcher
+    private val rssFetcher: RssFetcher,
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
 
     companion object {
-        private const val TAG = "LetterboxdCollector"
         private const val BASE_URL = "https://letterboxd.com"
         private const val LETTERBOXD_CONFIDENCE = 0.95f
     }
