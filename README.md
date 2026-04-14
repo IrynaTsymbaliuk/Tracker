@@ -128,7 +128,7 @@ days = 7  │ ████████ ████████ █████�
 
 ```kotlin
 dependencies {
-    implementation("com.tracker:core:4.0.0")
+    implementation("com.tracker:core:5.0.0")
 }
 ```
 
