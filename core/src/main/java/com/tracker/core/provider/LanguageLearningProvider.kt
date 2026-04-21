@@ -44,7 +44,7 @@ class LanguageLearningProvider internal constructor(
         }.sortedBy { it.startTime }
 
         return LanguageLearningResult(
-            source = DataSource.USAGE_STATS,
+            sources = listOf(DataSource.USAGE_STATS),
             confidence = combinedConfidence,
             confidenceLevel = combinedConfidence.toConfidenceLevel(),
             timeRange = TimeRange(fromMillis, toMillis),

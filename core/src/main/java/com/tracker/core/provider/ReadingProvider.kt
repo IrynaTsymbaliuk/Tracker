@@ -49,7 +49,7 @@ class ReadingProvider internal constructor(
         }.sortedBy { it.startTime }
 
         return ReadingResult(
-            source = DataSource.USAGE_STATS,
+            sources = listOf(DataSource.USAGE_STATS),
             confidence = combinedConfidence,
             confidenceLevel = combinedConfidence.toConfidenceLevel(),
             timeRange = TimeRange(fromMillis, toMillis),

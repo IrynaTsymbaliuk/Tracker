@@ -157,7 +157,16 @@
             android:layout_height="wrap_content"
             android:textSize="14sp"
             android:textColor="?android:textColorSecondary"
+            android:layout_marginBottom="10dp"
             tools:text="👣 Steps    8,432 steps · HIGH · 99%" />
+
+        <TextView
+            android:id="@+id/tvMeditation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="?android:textColorSecondary"
+            tools:text="🧘 Meditation    15 min · 1 session · HC+Usage · 97%" />
 
     </LinearLayout>
 

@@ -8,6 +8,9 @@
     <!-- Health Connect: required to read StepsRecord via HealthConnectStepCollector -->
     <uses-permission android:name="android.permission.health.READ_STEPS" />
 
+    <!-- Health Connect: required to read MindfulnessSessionRecord via HealthConnectMindfulnessCollector -->
+    <uses-permission android:name="android.permission.health.READ_MINDFULNESS" />
+
     <!--
         Package visibility queries for Android 11+ (API 30+)
         Declares which apps this library needs to detect.
@@ -52,6 +55,18 @@
         <package android:name="org.joinmastodon.android" />
         <package android:name="xyz.blueskyweb.app" />
         <package android:name="com.tumblr" />
+
+        <!-- Meditation Apps -->
+        <package android:name="com.calm.android" />
+        <package android:name="com.getsomeheadspace.android" />
+        <package android:name="com.spotlightsix.zentimerlite2" />
+        <package android:name="com.elevatelabs.geonosis" />
+        <package android:name="org.wakingup.android" />
+        <package android:name="com.smilingmind.app" />
+        <package android:name="com.tenpercent.tph" />
+        <package android:name="jp.relook.meisoon" />
+        <package android:name="meditation.relax.sleep.sounds" />
+        <package android:name="com.mindvalley.mva" />
     </queries>
 
 </manifest>

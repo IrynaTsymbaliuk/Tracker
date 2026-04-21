@@ -3,17 +3,20 @@ package com.tracker.core
 import android.content.Context
 import android.os.Build
 import com.tracker.core.collector.AndroidNetworkConnectivityChecker
+import com.tracker.core.collector.HealthConnectMindfulnessCollector
 import com.tracker.core.collector.HealthConnectStepCollector
 import com.tracker.core.collector.HttpRssFetcher
 import com.tracker.core.collector.LetterboxdCollector
 import com.tracker.core.collector.UsageEventsCollector
 import com.tracker.core.permission.PermissionManager
 import com.tracker.core.provider.LanguageLearningProvider
+import com.tracker.core.provider.MeditationProvider
 import com.tracker.core.provider.MovieWatchingProvider
 import com.tracker.core.provider.ReadingProvider
 import com.tracker.core.provider.SocialMediaProvider
 import com.tracker.core.provider.StepCountingProvider
 import com.tracker.core.result.LanguageLearningResult
+import com.tracker.core.result.MeditationResult
 import com.tracker.core.result.MovieWatchingResult
 import com.tracker.core.result.ReadingResult
 import com.tracker.core.result.SocialMediaResult
@@ -41,6 +44,7 @@ import java.util.Calendar
  * val reading = tracker.queryReading()
  * val movieWatching = tracker.queryMovieWatching()  // throws if username not set
  * val socialMedia = tracker.querySocialMedia()
+ * val meditation = tracker.queryMeditation()
  * ```
  */
 class Tracker private constructor(
@@ -76,6 +80,16 @@ class Tracker private constructor(
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             StepCountingProvider(HealthConnectStepCollector(appContext))
         } else null
+    }
+
+    private val meditationProvider: MeditationProvider by lazy {
+        val mindfulnessCollector = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            HealthConnectMindfulnessCollector(appContext)
+        } else null
+        MeditationProvider(
+            healthConnectCollector = mindfulnessCollector,
+            usageEventsCollector = usageEventsCollector
+        )
     }
 
     /**
@@ -157,6 +171,30 @@ class Tracker private constructor(
     suspend fun queryStepCounting(days: Int = 1): StepCountingResult? {
         val (from, to) = queryWindow(days)
         return stepCountingProvider?.query(from, to, minConfidence)
+    }
+
+    /**
+     * Queries meditation activity from two fused sources:
+     * - Health Connect `MindfulnessSessionRecord` (requires
+     *   [HealthConnectMindfulnessCollector.READ_MINDFULNESS_PERMISSION] granted at runtime
+     *   and API 26+; automatically falls back to UsageStats-only if unavailable).
+     * - UsageStats foreground sessions of known meditation apps
+     *   (see [com.tracker.core.config.KnownApps.meditation]).
+     *
+     * Overlapping sessions from both sources are deduplicated, and the resulting
+     * [MeditationResult.sources] lists all contributing sources.
+     *
+     * @param days Number of days to include: 1 = today from midnight through now,
+     * 2 = yesterday midnight through now, etc. Must be >= 1.
+     * @return Meditation data for the requested window, or null if neither source has data
+     * @throws PermissionDeniedException if neither source grants access
+     * (Health Connect throws are caught internally; UsageStats permission denial is caught too,
+     * so this method typically returns null rather than throwing. If PACKAGE_USAGE_STATS is
+     * denied AND no HealthConnect data is available, the result is null).
+     */
+    suspend fun queryMeditation(days: Int = 1): MeditationResult? {
+        val (from, to) = queryWindow(days)
+        return meditationProvider.query(from, to, minConfidence)
     }
 
     /**

@@ -11,7 +11,7 @@ mockk = "1.13.8"
 robolectric = "4.11.1"
 coroutines = "1.7.3"
 lifecycle = "2.8.7"
-healthConnect = "1.1.0-rc01"
+healthConnect = "1.1.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }

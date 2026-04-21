@@ -2,7 +2,7 @@
 
 **Detect user habits from Android system data and third-party services — no user input required.**
 
-Tracker is an Android library that automatically identifies behaviors like language learning, reading, movie watching, social media usage, and physical activity by analyzing device usage and third-party feeds. Your app gets structured habit data with confidence scores, without asking users to log anything manually.
+Tracker is an Android library that automatically identifies behaviors like language learning, reading, movie watching, social media usage, physical activity, and meditation by analyzing device usage, Health Connect data, and third-party feeds. Your app gets structured habit data with confidence scores, without asking users to log anything manually.
 
 ## Is This for You?
 
@@ -68,6 +68,20 @@ lifecycleScope.launch {
     val steps = tracker.queryStepCounting()
     steps?.steps           // Long — deduplicated across all data sources
     steps?.confidence      // 0.99 when sourced from Health Connect
+
+    // Meditation — fuses Health Connect MindfulnessSessionRecord with known-meditation-app
+    // foreground sessions. Falls back to UsageStats-only if Health Connect is unavailable.
+    val meditation = tracker.queryMeditation()
+    meditation?.durationMinutes  // total meditation time across all (deduplicated) sessions
+    meditation?.sessions         // List<MeditationSession> sorted by startTime
+    meditation?.sources          // [HEALTH_CONNECT], [USAGE_STATS], or [HEALTH_CONNECT, USAGE_STATS]
+
+    // A session that was seen by both HealthConnect and Calm is merged into one:
+    meditation?.sessions?.forEach { s ->
+        s.sources       // e.g. [HEALTH_CONNECT, USAGE_STATS] for a merged session
+        s.packageName   // "com.calm.android" when UsageStats contributed; null for HC-only
+        s.appName       // "Calm" when UsageStats contributed; null for HC-only
+    }
 }
 ```
 
@@ -77,6 +91,7 @@ lifecycleScope.launch {
 - Movie Watching: 3 films · The Matrix, Inception, Interstellar · 95% confidence (HIGH)
 - Social Media: 120 min · 23 sessions · Instagram, Reddit, WhatsApp · 88% confidence (HIGH)
 - Steps: 7,622 steps · 99% confidence (HIGH)
+- Meditation: 15 min · 1 session · Calm (HealthConnect + UsageStats merged) · 97% confidence (HIGH)
 
 Session count and app list are derived from `sessions`:
 ```kotlin
@@ -115,6 +130,7 @@ days = 7  │ ████████ ████████ █████�
 | **MOVIE_WATCHING** | Letterboxd RSS | Film titles and watch dates from public feed | `INTERNET` (no user prompt) |
 | **SOCIAL_MEDIA** | Foreground session events | Facebook, Instagram, Twitter/X, TikTok, Reddit, WhatsApp, and 9 more | `PACKAGE_USAGE_STATS` |
 | **STEP_COUNTING** | Health Connect | Aggregated across all step sources, deduped by HC | `health.READ_STEPS` · API 26+ |
+| **MEDITATION** | Health Connect + Foreground session events (fused) | `MindfulnessSessionRecord`s plus Calm, Headspace, Insight Timer, Balance, Waking Up, Smiling Mind, Ten Percent Happier, Medito, MEISOON, Mindvalley | `health.READ_MINDFULNESS` (optional, API 26+) · `PACKAGE_USAGE_STATS` |
 
 **Note on Social Media**: Includes messaging apps (WhatsApp, Telegram) with lower confidence scores (0.75) as they may be used for work or family communication.
 
@@ -123,6 +139,14 @@ days = 7  │ ████████ ████████ █████�
 **Note on sessions deduplication**: When storing sessions locally across multiple queries, use `(packageName, startTime)` as the composite key. Exception: if `session.startTime == result.timeRange.from`, the session start was inferred (the app was already open at the query boundary) — use `(packageName, endTime)` for those. Sessions under 1 minute have `durationMinutes = 0` but are still present in the list. See `UsageSession` for full details.
 
 **Note on step counting**: `queryStepCounting()` uses Health Connect's aggregation API (`StepsRecord.COUNT_TOTAL`), which deduplicates across all contributing apps (e.g. Google Fit, phone step counter) before returning the total. Returns `null` if Health Connect is unavailable or the `READ_STEPS` permission has not been granted.
+
+**Note on meditation**: `queryMeditation()` fuses two sources:
+- **Health Connect** `MindfulnessSessionRecord` (authoritative, confidence `0.99`)
+- **UsageStats** foreground sessions of known meditation apps (confidence `0.85`–`0.95` per app)
+
+Sessions that overlap significantly (≥ 50% of the shorter session's duration) are deduplicated into a single `MeditationSession` whose `sources` list contains both `HEALTH_CONNECT` and `USAGE_STATS`. The result's top-level `sources` reports every source that contributed. If Health Connect is unavailable, the record type is unsupported on this device, or the `READ_MINDFULNESS` permission is denied, the query automatically falls back to UsageStats-only. Returns `null` only when **neither** source produced any sessions.
+
+**Note on the `sources` field**: every `HabitResult` exposes `sources: List<DataSource>` (not `source`). Single-source results contain a one-element list; meditation may contain one or two elements depending on which sources contributed.
 
 ## Installation
 
@@ -144,11 +168,28 @@ Add to `AndroidManifest.xml`:
 
 <!-- Required for step counting via Health Connect -->
 <uses-permission android:name="android.permission.health.READ_STEPS" />
+
+<!-- Optional but recommended for meditation — enables the Health Connect mindfulness source.
+     The meditation query falls back to UsageStats-only if this permission is not granted. -->
+<uses-permission android:name="android.permission.health.READ_MINDFULNESS" />
 ```
 
 `PACKAGE_USAGE_STATS` is a protected permission — the user must grant it manually via **Settings → Apps → Special app access → Usage access**.
 
-`health.READ_STEPS` must be requested at runtime using `PermissionController.createRequestPermissionResultContract()`. Add the following to the activity that handles the permission result:
+Health Connect permissions (`health.READ_STEPS` and `health.READ_MINDFULNESS`) must be requested at runtime using `PermissionController.createRequestPermissionResultContract()`. You can request both in a single prompt:
+
+```kotlin
+val launcher = registerForActivityResult(
+    PermissionController.createRequestPermissionResultContract()
+) { /* refresh UI */ }
+
+launcher.launch(setOf(
+    HealthPermission.getReadPermission(StepsRecord::class),
+    HealthPermission.getReadPermission(MindfulnessSessionRecord::class)
+))
+```
+
+Add the following to the activity that handles the permission result:
 
 ```xml
 <!-- Required for Health Connect (Android 9–13) -->
@@ -192,7 +233,7 @@ Add to `AndroidManifest.xml`:
 ./gradlew :app:installDebug
 ```
 
-Demonstrates the full flow: permission setup for both `PACKAGE_USAGE_STATS` and Health Connect, querying all metrics for today (language learning, reading, social media, movie watching, step counting), and displaying results. To enable movie watching, set your Letterboxd username in `MainActivity.kt`.
+Demonstrates the full flow: permission setup for `PACKAGE_USAGE_STATS` and Health Connect (steps + mindfulness), querying all six metrics for today (language learning, reading, social media, movie watching, step counting, meditation), and displaying results. The meditation row shows which sources contributed (`HC`, `Usage`, or `HC+Usage`). To enable movie watching, set your Letterboxd username in `MainActivity.kt`.
 
 ## License
 

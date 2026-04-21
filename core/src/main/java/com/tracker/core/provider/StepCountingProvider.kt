@@ -34,7 +34,7 @@ class StepCountingProvider internal constructor(
         }
 
         return StepCountingResult(
-            source = evidence.source,
+            sources = listOf(evidence.source),
             confidence = evidence.confidence,
             confidenceLevel = evidence.confidence.toConfidenceLevel(),
             timeRange = TimeRange(fromMillis, toMillis),

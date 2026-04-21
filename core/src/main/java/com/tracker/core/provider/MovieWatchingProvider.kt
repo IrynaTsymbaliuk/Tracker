@@ -38,7 +38,7 @@ class MovieWatchingProvider internal constructor(
         val confidence = evidenceList.first().confidence
 
         return MovieWatchingResult(
-            source = DataSource.LETTERBOXD_RSS,
+            sources = listOf(DataSource.LETTERBOXD_RSS),
             confidence = confidence,
             confidenceLevel = confidence.toConfidenceLevel(),
             timeRange = TimeRange(fromMillis, toMillis),

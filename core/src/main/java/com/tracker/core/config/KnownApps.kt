@@ -153,4 +153,58 @@ object KnownApps {
         )
     )
 
+    /**
+     * Map of known meditation apps where the user must spend time meditating.
+     * Key: package name
+     * Value: app metadata
+     *
+     * Confidence multipliers are in the 0.85–0.95 range. Pure meditation apps
+     * (Calm, Headspace, Insight Timer, Balance, Waking Up, Smiling Mind, Ten
+     * Percent Happier, Medito, MEISOON) score 0.90–0.95 because foreground time
+     * almost always maps to an active meditation session. Mindvalley is broader
+     * than meditation, so its confidence is lower.
+     */
+    val meditation: Map<String, AppMetadata> = mapOf(
+        "com.calm.android" to AppMetadata(
+            packageName = "com.calm.android",
+            confidenceMultiplier = 0.95f
+        ),
+        "com.getsomeheadspace.android" to AppMetadata(
+            packageName = "com.getsomeheadspace.android",
+            confidenceMultiplier = 0.95f
+        ),
+        "com.spotlightsix.zentimerlite2" to AppMetadata(
+            packageName = "com.spotlightsix.zentimerlite2",
+            confidenceMultiplier = 0.93f
+        ),
+        "com.elevatelabs.geonosis" to AppMetadata(
+            packageName = "com.elevatelabs.geonosis",
+            confidenceMultiplier = 0.93f
+        ),
+        "org.wakingup.android" to AppMetadata(
+            packageName = "org.wakingup.android",
+            confidenceMultiplier = 0.93f
+        ),
+        "com.smilingmind.app" to AppMetadata(
+            packageName = "com.smilingmind.app",
+            confidenceMultiplier = 0.92f
+        ),
+        "com.tenpercent.tph" to AppMetadata(
+            packageName = "com.tenpercent.tph",
+            confidenceMultiplier = 0.93f
+        ),
+        "jp.relook.meisoon" to AppMetadata(
+            packageName = "jp.relook.meisoon",
+            confidenceMultiplier = 0.90f
+        ),
+        "meditation.relax.sleep.sounds" to AppMetadata(
+            packageName = "meditation.relax.sleep.sounds",
+            confidenceMultiplier = 0.93f
+        ),
+        "com.mindvalley.mva" to AppMetadata(
+            packageName = "com.mindvalley.mva",
+            confidenceMultiplier = 0.85f
+        )
+    )
+
 }

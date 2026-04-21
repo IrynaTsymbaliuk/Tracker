@@ -1,6 +1,6 @@
 # Tracker — Sample App
 
-This sample application demonstrates how to integrate and use the **Tracker** library to monitor language learning, reading, social media usage, movie watching, and step counting.
+This sample application demonstrates how to integrate and use the **Tracker** library to monitor language learning, reading, social media usage, movie watching, step counting, and meditation.
 
 ## Features Demonstrated
 
@@ -16,7 +16,7 @@ val tracker = Tracker.Builder(context)
 
 The app handles two separate permissions:
 
-**Usage Stats** (`PACKAGE_USAGE_STATS`) — required for language learning, reading, and social media:
+**Usage Stats** (`PACKAGE_USAGE_STATS`) — required for language learning, reading, social media, and the meditation-app-foreground branch:
 ```kotlin
 // Check via AppOpsManager
 val mode = appOps.checkOpNoThrow(
@@ -26,16 +26,19 @@ val mode = appOps.checkOpNoThrow(
 startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
 ```
 
-**Health Connect** (`health.READ_STEPS`) — required for step counting:
+**Health Connect** — required for step counting (`health.READ_STEPS`) and for the HealthConnect branch of meditation (`health.READ_MINDFULNESS`). Both are requested in a single runtime prompt:
 ```kotlin
-// Request at runtime using the Health Connect permission contract
 val launcher = registerForActivityResult(
     PermissionController.createRequestPermissionResultContract()
 ) { updateHcPermissionUi() }
-launcher.launch(setOf(HealthPermission.getReadPermission(StepsRecord::class)))
+
+launcher.launch(setOf(
+    HealthPermission.getReadPermission(StepsRecord::class),
+    HealthPermission.getReadPermission(MindfulnessSessionRecord::class)
+))
 ```
 
-Both permissions show inline status rows with a "Grant" button that appears only when the permission is missing.
+Both permissions show inline status rows with a "Grant" button that appears only when a permission is missing. The Health Connect status row distinguishes between "none granted" (`✗`), "partial" (`◐`), and "both granted" (`✓`).
 
 ### 3. Querying Metrics
 
@@ -43,12 +46,13 @@ All metrics are queried for today (midnight → now). Each query is wrapped inde
 
 ```kotlin
 lifecycleScope.launch {
-    val language = runCatching { tracker.queryLanguageLearning() }.getOrNull()
-    val reading  = runCatching { tracker.queryReading() }.getOrNull()
-    val social   = runCatching { tracker.querySocialMedia() }.getOrNull()
-    val movies   = runCatching { tracker.queryMovieWatching() }.getOrNull()
-    val steps    = runCatching { tracker.queryStepCounting() }.getOrNull()
-    displayResults(language, reading, social, movies, steps)
+    val language   = runCatching { tracker.queryLanguageLearning() }.getOrNull()
+    val reading    = runCatching { tracker.queryReading() }.getOrNull()
+    val social     = runCatching { tracker.querySocialMedia() }.getOrNull()
+    val movies     = runCatching { tracker.queryMovieWatching() }.getOrNull()
+    val steps      = runCatching { tracker.queryStepCounting() }.getOrNull()
+    val meditation = runCatching { tracker.queryMeditation() }.getOrNull()
+    displayResults(language, reading, social, movies, steps, meditation)
 }
 ```
 
@@ -63,8 +67,9 @@ Each metric is shown as a single line:
 - **Social**: `📱 Social    120 min · HIGH · 88%`
 - **Movies**: `🎬 Movies    3 films · HIGH · 95%`
 - **Steps**: `👣 Steps    7,622 steps · HIGH · 99%`
+- **Meditation**: `🧘 Meditation    15 min · 1 session · HC+Usage · 97%`
 
-`—` is shown when the result is null (no data or permission not granted).
+For meditation, the sample renders the active data sources inline: `HC` for Health Connect, `Usage` for UsageStats, `HC+Usage` when both contributed and were merged. `—` is shown when the result is null (no data or no permission granted on either source).
 
 ## How to Run
 
@@ -78,10 +83,10 @@ Each metric is shown as a single line:
    - Find "Tracker Demo" in the list and enable "Permit usage access"
    - Return to the app — metrics update automatically
 
-3. **Grant Health Connect** (optional, for step counting):
-   - Tap "Grant" next to "Health Connect  ✗"
-   - Approve the `Steps` permission in the Health Connect dialog
-   - Return to the app — step count appears automatically
+3. **Grant Health Connect** (optional, for step counting and the HealthConnect branch of meditation):
+   - Tap "Grant" next to the Health Connect row
+   - Approve both `Steps` and `Mindfulness sessions` in the Health Connect dialog
+   - Return to the app — step count and meditation results appear automatically
 
 4. **Enable Movie Watching** (optional):
    - Set `letterboxdUsername` in `MainActivity.kt` to your Letterboxd username
@@ -97,18 +102,21 @@ MainActivity.kt
 ├── onResume()                  # Update permission UI, auto-query metrics
 ├── updateUsagePermissionUi()   # Show/hide Grant button based on AppOps check
 ├── hasUsageStatsPermission()   # AppOpsManager permission check
-├── updateHcPermissionUi()      # Show/hide Grant button based on HC permission state
-├── queryMetrics()              # Query all metrics concurrently using coroutines
-└── displayResults()            # Render one line per metric
+├── updateHcPermissionUi()      # Show/hide Grant button based on HC permission state (steps + mindfulness)
+├── queryMetrics()              # Query all six metrics concurrently using coroutines
+├── displayResults()            # Render one line per metric
+└── sourcesLabel()              # Render MeditationResult.sources as "HC+Usage"
 ```
 
 ## Key Learnings
 
 1. **Builder Pattern**: Configure the Tracker with a fluent API — no `enable*` flags needed, all features are always available
 2. **Coroutines**: All query methods are `suspend` functions; wrap each independently with `runCatching` so one failure doesn't block the rest
-3. **Two permission flows**: `PACKAGE_USAGE_STATS` requires a manual system settings redirect; `health.READ_STEPS` uses the Health Connect runtime permission contract
-4. **Health Connect manifest setup**: Both `ACTION_SHOW_PERMISSIONS_RATIONALE` (Android 9–13) and the `VIEW_PERMISSION_USAGE` activity-alias (Android 14+) must be declared for the permission dialog to work
-5. **Step counting deduplication**: Use `queryStepCounting()` rather than summing `StepsRecord` entries manually — Health Connect's aggregation API handles deduplication across Google Fit, the phone step counter, and other sources
+3. **Two permission flows**: `PACKAGE_USAGE_STATS` requires a manual system settings redirect; Health Connect permissions use the runtime permission contract
+4. **Multiple Health Connect permissions in one prompt**: pass a `Set` with all required `HealthPermission` strings to `launcher.launch(...)` — the user only sees items they haven't granted
+5. **Health Connect manifest setup**: Both `ACTION_SHOW_PERMISSIONS_RATIONALE` (Android 9–13) and the `VIEW_PERMISSION_USAGE` activity-alias (Android 14+) must be declared for the permission dialog to work
+6. **Step counting deduplication**: Use `queryStepCounting()` rather than summing `StepsRecord` entries manually — Health Connect's aggregation API handles deduplication across Google Fit, the phone step counter, and other sources
+7. **Multi-source fusion for meditation**: `queryMeditation()` merges HealthConnect `MindfulnessSessionRecord`s with foreground sessions of known meditation apps. Overlapping sessions are deduplicated, and the result's `sources` list reflects which sources contributed. If HealthConnect is unavailable, the call gracefully falls back to UsageStats-only.
 
 ## Testing
 
@@ -127,12 +135,21 @@ The app works best when you have supported apps installed and have used them tod
 - Reddit, Pinterest, LinkedIn, Discord, Threads
 - WhatsApp, Telegram, Mastodon, Bluesky, Tumblr
 
+**Supported meditation apps:**
+- Calm, Headspace, Insight Timer, Balance, Waking Up
+- Smiling Mind, Ten Percent Happier, Medito, MEISOON, Mindvalley
+
 **Movie watching:**
 - Set `letterboxdUsername` in `MainActivity.kt` to your Letterboxd username
 
 **Step counting:**
 - Requires Health Connect to be installed (built-in on Android 14+; available via Google Play on Android 9–13)
 - Grant the `Steps` permission when prompted
+
+**Meditation:**
+- Either: use one of the supported meditation apps (detected via UsageStats), or
+- Have a meditation app that writes `MindfulnessSessionRecord`s to Health Connect (e.g. Calm), or log a session manually in the Health Connect app
+- Grant the `Mindfulness sessions` permission when prompted for best results (both sources merged)
 
 ## Notes
 
@@ -141,3 +158,4 @@ The app works best when you have supported apps installed and have used them tod
 - `PACKAGE_USAGE_STATS` is a protected permission that requires user action in system settings
 - Queries always cover today from midnight in the device's local timezone
 - On Android 10+, session times use precise `ACTIVITY_RESUMED`/`ACTIVITY_PAUSED` events
+- `MindfulnessSessionRecord` requires a recent `androidx.health.connect:connect-client` release. On older HC installations, the meditation query transparently falls back to UsageStats-only.
