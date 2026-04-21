@@ -2,7 +2,7 @@
 
 **Detect user habits from Android system data and third-party services — no user input required.**
 
-Tracker is an Android library that automatically identifies behaviors like language learning, reading, movie watching, social media usage, physical activity, and meditation by analyzing device usage, Health Connect data, and third-party feeds. Your app gets structured habit data with confidence scores, without asking users to log anything manually.
+Tracker is an Android library that automatically identifies behaviors like language learning, reading, movie watching, social media usage, step counting, meditation, and exercise by analyzing device usage, Health Connect data, and third-party feeds. Your app gets structured habit data with confidence scores, without asking users to log anything manually.
 
 ## Is This for You?
 
@@ -82,6 +82,26 @@ lifecycleScope.launch {
         s.packageName   // "com.calm.android" when UsageStats contributed; null for HC-only
         s.appName       // "Calm" when UsageStats contributed; null for HC-only
     }
+
+    // Exercise via Health Connect ExerciseSessionRecord — returns null if HC unavailable,
+    // READ_EXERCISE permission not granted, or no sessions in the window.
+    val exercise = tracker.queryExercise()
+    exercise?.durationMinutes  // total exercise time across all sessions
+    exercise?.sessions         // List<ExerciseSession> sorted by startTime
+    exercise?.confidence       // 0.99 — ExerciseSessionRecord is authoritative
+
+    // Each session exposes both the raw HC type id and a snake_case string:
+    exercise?.sessions?.forEach { s ->
+        s.exerciseTypeId   // Int — e.g. 56 (EXERCISE_TYPE_RUNNING)
+        s.exerciseType     // String — e.g. "running", "strength_training", "yoga"
+        s.durationMinutes
+    }
+
+    // Derive per-type breakdowns directly:
+    val durationByType: Map<String, Int> = exercise?.sessions
+        ?.groupBy { it.exerciseType }
+        ?.mapValues { (_, s) -> s.sumOf { it.durationMinutes } }
+        ?: emptyMap()
 }
 ```
 
@@ -92,6 +112,7 @@ lifecycleScope.launch {
 - Social Media: 120 min · 23 sessions · Instagram, Reddit, WhatsApp · 88% confidence (HIGH)
 - Steps: 7,622 steps · 99% confidence (HIGH)
 - Meditation: 15 min · 1 session · Calm (HealthConnect + UsageStats merged) · 97% confidence (HIGH)
+- Exercise: 45 min · 2 sessions · Running, Strength Training · 99% confidence (HIGH)
 
 Session count and app list are derived from `sessions`:
 ```kotlin
@@ -131,6 +152,7 @@ days = 7  │ ████████ ████████ █████�
 | **SOCIAL_MEDIA** | Foreground session events | Facebook, Instagram, Twitter/X, TikTok, Reddit, WhatsApp, and 9 more | `PACKAGE_USAGE_STATS` |
 | **STEP_COUNTING** | Health Connect | Aggregated across all step sources, deduped by HC | `health.READ_STEPS` · API 26+ |
 | **MEDITATION** | Health Connect + Foreground session events (fused) | `MindfulnessSessionRecord`s plus Calm, Headspace, Insight Timer, Balance, Waking Up, Smiling Mind, Ten Percent Happier, Medito, MEISOON, Mindvalley | `health.READ_MINDFULNESS` (optional, API 26+) · `PACKAGE_USAGE_STATS` |
+| **EXERCISE** | Health Connect | `ExerciseSessionRecord`s written by any fitness app (Strava, Google Fit, Samsung Health, Peloton, etc.) or logged manually | `health.READ_EXERCISE` · API 26+ |
 
 **Note on Social Media**: Includes messaging apps (WhatsApp, Telegram) with lower confidence scores (0.75) as they may be used for work or family communication.
 
@@ -145,6 +167,8 @@ days = 7  │ ████████ ████████ █████�
 - **UsageStats** foreground sessions of known meditation apps (confidence `0.85`–`0.95` per app)
 
 Sessions that overlap significantly (≥ 50% of the shorter session's duration) are deduplicated into a single `MeditationSession` whose `sources` list contains both `HEALTH_CONNECT` and `USAGE_STATS`. The result's top-level `sources` reports every source that contributed. If Health Connect is unavailable, the record type is unsupported on this device, or the `READ_MINDFULNESS` permission is denied, the query automatically falls back to UsageStats-only. Returns `null` only when **neither** source produced any sessions.
+
+**Note on exercise**: `queryExercise()` reads `ExerciseSessionRecord`s from Health Connect — these are authoritative entries written by fitness apps (Strava, Google Fit, Samsung Health, Peloton, Nike Run Club, and many others) or logged manually by the user. Confidence is fixed at `0.99`. No minimum-duration filter is applied: short sessions appear in `sessions` with `durationMinutes = 0` (rounded from seconds) so the session count stays accurate. Each `ExerciseSession` exposes both `exerciseTypeId` (the raw Health Connect integer, useful for programmatic mapping) and `exerciseType` (a snake_case string, e.g. `"running"`, `"strength_training"`, `"yoga"`). Returns `null` if Health Connect is unavailable, the API level is below 26, the `READ_EXERCISE` permission has not been granted, or no sessions exist in the window.
 
 **Note on the `sources` field**: every `HabitResult` exposes `sources: List<DataSource>` (not `source`). Single-source results contain a one-element list; meditation may contain one or two elements depending on which sources contributed.
 
@@ -172,11 +196,14 @@ Add to `AndroidManifest.xml`:
 <!-- Optional but recommended for meditation — enables the Health Connect mindfulness source.
      The meditation query falls back to UsageStats-only if this permission is not granted. -->
 <uses-permission android:name="android.permission.health.READ_MINDFULNESS" />
+
+<!-- Required for exercise via Health Connect -->
+<uses-permission android:name="android.permission.health.READ_EXERCISE" />
 ```
 
 `PACKAGE_USAGE_STATS` is a protected permission — the user must grant it manually via **Settings → Apps → Special app access → Usage access**.
 
-Health Connect permissions (`health.READ_STEPS` and `health.READ_MINDFULNESS`) must be requested at runtime using `PermissionController.createRequestPermissionResultContract()`. You can request both in a single prompt:
+Health Connect permissions (`health.READ_STEPS`, `health.READ_MINDFULNESS`, `health.READ_EXERCISE`) must be requested at runtime using `PermissionController.createRequestPermissionResultContract()`. You can request all of them in a single prompt:
 
 ```kotlin
 val launcher = registerForActivityResult(
@@ -185,7 +212,8 @@ val launcher = registerForActivityResult(
 
 launcher.launch(setOf(
     HealthPermission.getReadPermission(StepsRecord::class),
-    HealthPermission.getReadPermission(MindfulnessSessionRecord::class)
+    HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
+    HealthPermission.getReadPermission(ExerciseSessionRecord::class)
 ))
 ```
 
@@ -225,7 +253,7 @@ Add the following to the activity that handles the permission result:
 - **Min SDK**: 21 (Android 5.0)
 - **Target SDK**: 36
 - **Kotlin**: 1.9+
-- **Step counting**: requires API 26+ and Health Connect
+- **Step counting, meditation (HealthConnect branch), exercise**: require API 26+ and Health Connect
 
 ## Sample App
 
@@ -233,7 +261,7 @@ Add the following to the activity that handles the permission result:
 ./gradlew :app:installDebug
 ```
 
-Demonstrates the full flow: permission setup for `PACKAGE_USAGE_STATS` and Health Connect (steps + mindfulness), querying all six metrics for today (language learning, reading, social media, movie watching, step counting, meditation), and displaying results. The meditation row shows which sources contributed (`HC`, `Usage`, or `HC+Usage`). To enable movie watching, set your Letterboxd username in `MainActivity.kt`.
+Demonstrates the full flow: permission setup for `PACKAGE_USAGE_STATS` and Health Connect (steps + mindfulness + exercise, all requested in one prompt), querying all seven metrics for today (language learning, reading, social media, movie watching, step counting, meditation, exercise), and displaying results. The meditation row shows which sources contributed (`HC`, `Usage`, or `HC+Usage`); the exercise row lists the distinct exercise types detected (e.g. `Running, Strength Training`). To enable movie watching, set your Letterboxd username in `MainActivity.kt`.
 
 ## License
 

@@ -3,18 +3,21 @@ package com.tracker.core
 import android.content.Context
 import android.os.Build
 import com.tracker.core.collector.AndroidNetworkConnectivityChecker
+import com.tracker.core.collector.HealthConnectExerciseCollector
 import com.tracker.core.collector.HealthConnectMindfulnessCollector
 import com.tracker.core.collector.HealthConnectStepCollector
 import com.tracker.core.collector.HttpRssFetcher
 import com.tracker.core.collector.LetterboxdCollector
 import com.tracker.core.collector.UsageEventsCollector
 import com.tracker.core.permission.PermissionManager
+import com.tracker.core.provider.ExerciseProvider
 import com.tracker.core.provider.LanguageLearningProvider
 import com.tracker.core.provider.MeditationProvider
 import com.tracker.core.provider.MovieWatchingProvider
 import com.tracker.core.provider.ReadingProvider
 import com.tracker.core.provider.SocialMediaProvider
 import com.tracker.core.provider.StepCountingProvider
+import com.tracker.core.result.ExerciseResult
 import com.tracker.core.result.LanguageLearningResult
 import com.tracker.core.result.MeditationResult
 import com.tracker.core.result.MovieWatchingResult
@@ -45,6 +48,7 @@ import java.util.Calendar
  * val movieWatching = tracker.queryMovieWatching()  // throws if username not set
  * val socialMedia = tracker.querySocialMedia()
  * val meditation = tracker.queryMeditation()
+ * val exercise = tracker.queryExercise()
  * ```
  */
 class Tracker private constructor(
@@ -90,6 +94,12 @@ class Tracker private constructor(
             healthConnectCollector = mindfulnessCollector,
             usageEventsCollector = usageEventsCollector
         )
+    }
+
+    private val exerciseProvider: ExerciseProvider? by lazy {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            ExerciseProvider(HealthConnectExerciseCollector(appContext))
+        } else null
     }
 
     /**
@@ -195,6 +205,25 @@ class Tracker private constructor(
     suspend fun queryMeditation(days: Int = 1): MeditationResult? {
         val (from, to) = queryWindow(days)
         return meditationProvider.query(from, to, minConfidence)
+    }
+
+    /**
+     * Queries exercise activity from Health Connect `ExerciseSessionRecord`.
+     *
+     * Requires Health Connect to be installed, API 26+, and
+     * [HealthConnectExerciseCollector.READ_EXERCISE_PERMISSION] to be granted at
+     * runtime via
+     * [androidx.health.connect.client.PermissionController.createRequestPermissionResultContract].
+     *
+     * @param days Number of days to include: 1 = today from midnight through now,
+     * 2 = yesterday midnight through now, etc. Must be >= 1.
+     * @return Exercise data for the requested window, or null if Health Connect is
+     * unavailable, the API level is below 26, the permission has not been granted,
+     * or no sessions exist in the window.
+     */
+    suspend fun queryExercise(days: Int = 1): ExerciseResult? {
+        val (from, to) = queryWindow(days)
+        return exerciseProvider?.query(from, to, minConfidence)
     }
 
     /**

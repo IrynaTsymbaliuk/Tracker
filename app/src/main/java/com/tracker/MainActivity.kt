@@ -14,10 +14,12 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.lifecycle.lifecycleScope
 import com.tracker.core.Tracker
+import com.tracker.core.result.ExerciseResult
 import com.tracker.core.result.LanguageLearningResult
 import com.tracker.core.result.MeditationResult
 import com.tracker.core.result.MovieWatchingResult
@@ -86,15 +88,16 @@ class MainActivity : AppCompatActivity() {
 
         if (sdkAvailable) {
             val granted = grantedHcPermissions()
-            val hasSteps = HC_STEPS_PERMISSION in granted
-            val hasMindfulness = HC_MINDFULNESS_PERMISSION in granted
-            val allGranted = hasSteps && hasMindfulness
+            val missing = REQUIRED_HC_PERMISSIONS - granted
+            val allGranted = missing.isEmpty()
 
             binding.tvHcStatus.text = when {
-                allGranted -> "Health Connect  ✓ (Steps + Mindfulness)"
-                hasSteps -> "Health Connect  ◐ (Steps granted · Mindfulness missing)"
-                hasMindfulness -> "Health Connect  ◐ (Mindfulness granted · Steps missing)"
-                else -> "Health Connect  ✗"
+                allGranted -> "Health Connect  ✓ (Steps + Mindfulness + Exercise)"
+                missing.size == REQUIRED_HC_PERMISSIONS.size -> "Health Connect  ✗"
+                else -> {
+                    val missingLabels = missing.mapNotNull { HC_PERMISSION_LABELS[it] }
+                    "Health Connect  ◐ (missing: ${missingLabels.joinToString(", ")})"
+                }
             }
             binding.btnGrantHc.visibility = if (allGranted) View.GONE else View.VISIBLE
             binding.layoutHcPermission.visibility = View.VISIBLE
@@ -141,8 +144,9 @@ class MainActivity : AppCompatActivity() {
             val movies     = runCatching { tracker.queryMovieWatching() }.getOrNull()
             val steps      = runCatching { tracker.queryStepCounting() }.getOrNull()
             val meditation = runCatching { tracker.queryMeditation() }.getOrNull()
+            val exercise   = runCatching { tracker.queryExercise() }.getOrNull()
 
-            displayResults(language, reading, social, movies, steps, meditation)
+            displayResults(language, reading, social, movies, steps, meditation, exercise)
 
             binding.progressBar.visibility = View.GONE
             binding.btnQuery.isEnabled = true
@@ -155,7 +159,8 @@ class MainActivity : AppCompatActivity() {
         social: SocialMediaResult?,
         movies: MovieWatchingResult?,
         steps: StepCountingResult?,
-        meditation: MeditationResult?
+        meditation: MeditationResult?,
+        exercise: ExerciseResult?
     ) {
         binding.tvLanguage.text = language
             ?.let { "📚 Language    ${it.durationMinutes} min · ${it.confidenceLevel} · ${pct(it.confidence)}" }
@@ -184,6 +189,32 @@ class MainActivity : AppCompatActivity() {
                 "🧘 Meditation    ${it.durationMinutes} min · $sessionCount $sessionLabel · ${sourcesLabel(it)} · ${pct(it.confidence)}"
             }
             ?: "🧘 Meditation    —"
+
+        binding.tvExercise.text = exercise
+            ?.let {
+                val sessionCount = it.sessions.size
+                val sessionLabel = if (sessionCount == 1) "session" else "sessions"
+                val types = it.sessions
+                    .map { s -> titleCase(s.exerciseType) }
+                    .distinct()
+                    .joinToString(", ")
+                val typesSuffix = if (types.isNotEmpty()) " · $types" else ""
+                "🏃 Exercise    ${it.durationMinutes} min · $sessionCount $sessionLabel$typesSuffix · ${pct(it.confidence)}"
+            }
+            ?: "🏃 Exercise    —"
+    }
+
+    /**
+     * Converts a Health Connect exercise-type snake_case string into a user-friendly
+     * Title Case label (e.g. `"strength_training"` → `"Strength Training"`, `"running"`
+     * → `"Running"`). Blank input returns `"Other"`.
+     */
+    private fun titleCase(raw: String): String {
+        if (raw.isBlank()) return "Other"
+        return raw.split('_')
+            .joinToString(" ") { word ->
+                word.replaceFirstChar { ch -> ch.uppercaseChar() }
+            }
     }
 
     /** Short human-readable label for the list of contributing data sources. */
@@ -203,6 +234,8 @@ class MainActivity : AppCompatActivity() {
             HealthPermission.getReadPermission(StepsRecord::class)
         private val HC_MINDFULNESS_PERMISSION =
             HealthPermission.getReadPermission(MindfulnessSessionRecord::class)
+        private val HC_EXERCISE_PERMISSION =
+            HealthPermission.getReadPermission(ExerciseSessionRecord::class)
 
         /**
          * Every Health Connect permission this sample app wants. Clicking the single
@@ -211,7 +244,18 @@ class MainActivity : AppCompatActivity() {
          */
         private val REQUIRED_HC_PERMISSIONS: Set<String> = setOf(
             HC_STEPS_PERMISSION,
-            HC_MINDFULNESS_PERMISSION
+            HC_MINDFULNESS_PERMISSION,
+            HC_EXERCISE_PERMISSION
+        )
+
+        /**
+         * User-facing label for each required Health Connect permission. Used to render
+         * the partial-grant status message ("missing: Exercise, …").
+         */
+        private val HC_PERMISSION_LABELS: Map<String, String> = mapOf(
+            HC_STEPS_PERMISSION to "Steps",
+            HC_MINDFULNESS_PERMISSION to "Mindfulness",
+            HC_EXERCISE_PERMISSION to "Exercise"
         )
     }
 }

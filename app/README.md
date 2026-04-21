@@ -1,6 +1,6 @@
 # Tracker — Sample App
 
-This sample application demonstrates how to integrate and use the **Tracker** library to monitor language learning, reading, social media usage, movie watching, step counting, and meditation.
+This sample application demonstrates how to integrate and use the **Tracker** library to monitor language learning, reading, social media usage, movie watching, step counting, meditation, and exercise.
 
 ## Features Demonstrated
 
@@ -26,7 +26,7 @@ val mode = appOps.checkOpNoThrow(
 startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
 ```
 
-**Health Connect** — required for step counting (`health.READ_STEPS`) and for the HealthConnect branch of meditation (`health.READ_MINDFULNESS`). Both are requested in a single runtime prompt:
+**Health Connect** — required for step counting (`health.READ_STEPS`), the HealthConnect branch of meditation (`health.READ_MINDFULNESS`), and exercise (`health.READ_EXERCISE`). All three are requested in a single runtime prompt:
 ```kotlin
 val launcher = registerForActivityResult(
     PermissionController.createRequestPermissionResultContract()
@@ -34,11 +34,12 @@ val launcher = registerForActivityResult(
 
 launcher.launch(setOf(
     HealthPermission.getReadPermission(StepsRecord::class),
-    HealthPermission.getReadPermission(MindfulnessSessionRecord::class)
+    HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
+    HealthPermission.getReadPermission(ExerciseSessionRecord::class)
 ))
 ```
 
-Both permissions show inline status rows with a "Grant" button that appears only when a permission is missing. The Health Connect status row distinguishes between "none granted" (`✗`), "partial" (`◐`), and "both granted" (`✓`).
+Both permissions show inline status rows with a "Grant" button that appears only when a permission is missing. The Health Connect status row distinguishes between "none granted" (`✗`), "partial" (`◐` with the list of missing items), and "all granted" (`✓`).
 
 ### 3. Querying Metrics
 
@@ -52,7 +53,8 @@ lifecycleScope.launch {
     val movies     = runCatching { tracker.queryMovieWatching() }.getOrNull()
     val steps      = runCatching { tracker.queryStepCounting() }.getOrNull()
     val meditation = runCatching { tracker.queryMeditation() }.getOrNull()
-    displayResults(language, reading, social, movies, steps, meditation)
+    val exercise   = runCatching { tracker.queryExercise() }.getOrNull()
+    displayResults(language, reading, social, movies, steps, meditation, exercise)
 }
 ```
 
@@ -68,8 +70,11 @@ Each metric is shown as a single line:
 - **Movies**: `🎬 Movies    3 films · HIGH · 95%`
 - **Steps**: `👣 Steps    7,622 steps · HIGH · 99%`
 - **Meditation**: `🧘 Meditation    15 min · 1 session · HC+Usage · 97%`
+- **Exercise**: `🏃 Exercise    45 min · 2 sessions · Running, Strength Training · 99%`
 
 For meditation, the sample renders the active data sources inline: `HC` for Health Connect, `Usage` for UsageStats, `HC+Usage` when both contributed and were merged. `—` is shown when the result is null (no data or no permission granted on either source).
+
+For exercise, the sample lists the distinct exercise types that appeared in the window (title-cased, comma-separated), deduplicated across sessions. Confidence is a flat 99% since all data comes from Health Connect `ExerciseSessionRecord`.
 
 ## How to Run
 
@@ -83,10 +88,10 @@ For meditation, the sample renders the active data sources inline: `HC` for Heal
    - Find "Tracker Demo" in the list and enable "Permit usage access"
    - Return to the app — metrics update automatically
 
-3. **Grant Health Connect** (optional, for step counting and the HealthConnect branch of meditation):
+3. **Grant Health Connect** (optional, for step counting, the HealthConnect branch of meditation, and exercise):
    - Tap "Grant" next to the Health Connect row
-   - Approve both `Steps` and `Mindfulness sessions` in the Health Connect dialog
-   - Return to the app — step count and meditation results appear automatically
+   - Approve `Steps`, `Mindfulness sessions`, and `Exercise sessions` in the Health Connect dialog
+   - Return to the app — step count, meditation, and exercise results appear automatically
 
 4. **Enable Movie Watching** (optional):
    - Set `letterboxdUsername` in `MainActivity.kt` to your Letterboxd username
@@ -102,10 +107,11 @@ MainActivity.kt
 ├── onResume()                  # Update permission UI, auto-query metrics
 ├── updateUsagePermissionUi()   # Show/hide Grant button based on AppOps check
 ├── hasUsageStatsPermission()   # AppOpsManager permission check
-├── updateHcPermissionUi()      # Show/hide Grant button based on HC permission state (steps + mindfulness)
-├── queryMetrics()              # Query all six metrics concurrently using coroutines
+├── updateHcPermissionUi()      # Show/hide Grant button based on HC permission state (steps + mindfulness + exercise)
+├── queryMetrics()              # Query all seven metrics concurrently using coroutines
 ├── displayResults()            # Render one line per metric
-└── sourcesLabel()              # Render MeditationResult.sources as "HC+Usage"
+├── sourcesLabel()              # Render MeditationResult.sources as "HC+Usage"
+└── titleCase()                 # Convert "strength_training" → "Strength Training" for exercise type labels
 ```
 
 ## Key Learnings
@@ -117,6 +123,7 @@ MainActivity.kt
 5. **Health Connect manifest setup**: Both `ACTION_SHOW_PERMISSIONS_RATIONALE` (Android 9–13) and the `VIEW_PERMISSION_USAGE` activity-alias (Android 14+) must be declared for the permission dialog to work
 6. **Step counting deduplication**: Use `queryStepCounting()` rather than summing `StepsRecord` entries manually — Health Connect's aggregation API handles deduplication across Google Fit, the phone step counter, and other sources
 7. **Multi-source fusion for meditation**: `queryMeditation()` merges HealthConnect `MindfulnessSessionRecord`s with foreground sessions of known meditation apps. Overlapping sessions are deduplicated, and the result's `sources` list reflects which sources contributed. If HealthConnect is unavailable, the call gracefully falls back to UsageStats-only.
+8. **Exercise from Health Connect**: `queryExercise()` reads `ExerciseSessionRecord`s written by any fitness app (Strava, Google Fit, Samsung Health, manual log, etc.). Each session exposes both `exerciseTypeId` (the raw HC int) and `exerciseType` (a snake_case string) so the app can choose programmatic or display-friendly treatment. The sample uses a title-case transform (`"strength_training"` → `"Strength Training"`) for display.
 
 ## Testing
 
@@ -151,6 +158,11 @@ The app works best when you have supported apps installed and have used them tod
 - Have a meditation app that writes `MindfulnessSessionRecord`s to Health Connect (e.g. Calm), or log a session manually in the Health Connect app
 - Grant the `Mindfulness sessions` permission when prompted for best results (both sources merged)
 
+**Exercise:**
+- Have any fitness app that writes `ExerciseSessionRecord`s to Health Connect (Strava, Google Fit, Samsung Health, Peloton, etc.), or log a workout manually in the Health Connect app
+- Grant the `Exercise sessions` permission when prompted
+- All exercise types recognised by Health Connect are supported (running, cycling, strength training, yoga, swimming, etc.)
+
 ## Notes
 
 - The sample app requires Android API 26+ (Android 8.0)
@@ -159,3 +171,4 @@ The app works best when you have supported apps installed and have used them tod
 - Queries always cover today from midnight in the device's local timezone
 - On Android 10+, session times use precise `ACTIVITY_RESUMED`/`ACTIVITY_PAUSED` events
 - `MindfulnessSessionRecord` requires a recent `androidx.health.connect:connect-client` release. On older HC installations, the meditation query transparently falls back to UsageStats-only.
+- `ExerciseSessionRecord` is authoritative — confidence is fixed at `0.99` because these records are written by fitness apps or entered manually by the user. Sessions shorter than one minute still appear in `sessions` (rounded to `0 min`) so the session count remains accurate.

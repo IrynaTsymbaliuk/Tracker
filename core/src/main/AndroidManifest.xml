@@ -11,6 +11,9 @@
     <!-- Health Connect: required to read MindfulnessSessionRecord via HealthConnectMindfulnessCollector -->
     <uses-permission android:name="android.permission.health.READ_MINDFULNESS" />
 
+    <!-- Health Connect: required to read ExerciseSessionRecord via HealthConnectExerciseCollector -->
+    <uses-permission android:name="android.permission.health.READ_EXERCISE" />
+
     <!--
         Package visibility queries for Android 11+ (API 30+)
         Declares which apps this library needs to detect.
