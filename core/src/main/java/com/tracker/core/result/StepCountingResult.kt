@@ -6,27 +6,31 @@ import com.tracker.core.types.DataSource
 /**
  * Result for step counting detection.
  *
- * @property sources Data sources that contributed to this result. Typically a single
- * [DataSource.HEALTH_CONNECT] entry; [DataSource.SENSOR] when falling back to the hardware
- * step-counter.
- * @property confidence Confidence score from the winning data source (0.0 to 1.0).
- * Health Connect yields 0.99; the hardware sensor yields 0.85.
- * @property confidenceLevel Categorical confidence level
- * @property timeRange The queried time range
- * @property steps Total steps counted in the time range.
+ * Steps are read from Health Connect and returned as a list of hourly [StepSession] buckets,
+ * so callers querying multiple days can separate steps by hour (and therefore by day).
  *
- * `null` return value means no data available: Health Connect is not installed,
- * the device has no step-counter sensor, or both sources threw a [CollectorException].
+ * Health Connect deduplicates across writing apps (Google Fit, Pixel step counter, Fitbit,
+ * etc.) using the user's data-source priority configuration before returning each bucket's
+ * count.
  *
- * Note: when [sources] contains [DataSource.SENSOR], [steps] reflects the delta since midnight
- * of the first queried day only. Historical range queries return 0 for past days because
- * [android.hardware.Sensor.TYPE_STEP_COUNTER] accumulates from the last device reboot
- * and prior-day baselines are not retained.
+ * @property sources Data sources that contributed to this result. Always
+ * `[DataSource.HEALTH_CONNECT]`.
+ * @property confidence Confidence score (0.99 for Health Connect).
+ * @property confidenceLevel Categorical confidence level.
+ * @property timeRange The queried time range.
+ * @property sessions Hourly step buckets within [timeRange], sorted by [StepSession.startTime]
+ * ascending. Hours with no recorded steps are omitted, so the list may be non-contiguous.
+ * The final bucket may be shorter than an hour when [timeRange] ends mid-hour.
+ *
+ * `null` return value means no data available: Health Connect is not installed, the API
+ * level is below 26, or the `READ_STEPS` permission has not been granted.
  */
 data class StepCountingResult(
     override val sources: List<DataSource>,
     override val confidence: Float,
     override val confidenceLevel: ConfidenceLevel,
     override val timeRange: TimeRange,
-    val steps: Long
-) : HabitResult()
+    val sessions: List<StepSession>
+) : HabitResult() {
+    val totalSteps: Long get() = sessions.sumOf { it.steps }
+}

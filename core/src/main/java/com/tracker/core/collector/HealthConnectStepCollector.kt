@@ -7,14 +7,16 @@ import androidx.annotation.RequiresApi
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.StepsRecord
-import androidx.health.connect.client.request.AggregateRequest
+import androidx.health.connect.client.request.AggregateGroupByDurationRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.tracker.core.common.TAG
+import com.tracker.core.model.StepBucket
 import com.tracker.core.model.StepEvidence
 import com.tracker.core.types.DataSource
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.time.Duration
 import java.time.Instant
 
 /**
@@ -50,13 +52,18 @@ class HealthConnectStepCollector(
     }
 
     /**
-     * Returns the total steps recorded by Health Connect in [[fromMillis], [toMillis]].
-     * Uses [AggregateRequest] with [StepsRecord.COUNT_TOTAL] so Health Connect deduplicates
-     * across data sources (Google Fit, phone step counter, etc.) before returning the count.
+     * Returns steps recorded by Health Connect in [[fromMillis], [toMillis]], sliced into
+     * 1-hour buckets. Uses [AggregateGroupByDurationRequest] with [StepsRecord.COUNT_TOTAL]
+     * so Health Connect deduplicates across writing apps (Google Fit, Pixel step counter,
+     * Fitbit, etc.) according to the user's data-source priority configuration.
+     *
+     * Hours with no recorded steps are omitted by Health Connect and therefore absent from
+     * [StepEvidence.buckets]. The final bucket may be shorter than an hour when [toMillis]
+     * falls mid-hour.
      *
      * @param fromMillis Start of time range (inclusive, milliseconds since epoch)
      * @param toMillis End of time range (inclusive, milliseconds since epoch)
-     * @return [StepEvidence] with [DataSource.HEALTH_CONNECT] and summed step count
+     * @return [StepEvidence] with [DataSource.HEALTH_CONNECT] and the hourly buckets
      */
     suspend fun collect(fromMillis: Long, toMillis: Long): StepEvidence = withContext(dispatcher) {
         Log.d(TAG, "Collecting steps for range: $fromMillis–$toMillis")
@@ -73,21 +80,28 @@ class HealthConnectStepCollector(
             throw PermissionDeniedException("android.permission.health.READ_STEPS")
         }
 
-        val request = AggregateRequest(
+        val request = AggregateGroupByDurationRequest(
             metrics = setOf(StepsRecord.COUNT_TOTAL),
             timeRangeFilter = TimeRangeFilter.between(
                 startTime = Instant.ofEpochMilli(fromMillis),
                 endTime = Instant.ofEpochMilli(toMillis)
-            )
+            ),
+            timeRangeSlicer = Duration.ofHours(1)
         )
-        val totalSteps = client.aggregate(request)[StepsRecord.COUNT_TOTAL] ?: 0L
-        Log.d(TAG, "Collected $totalSteps steps from Health Connect")
+        val buckets = client.aggregateGroupByDuration(request).map { group ->
+            StepBucket(
+                startTime = group.startTime.toEpochMilli(),
+                endTime = group.endTime.toEpochMilli(),
+                steps = group.result[StepsRecord.COUNT_TOTAL] ?: 0L
+            )
+        }
+        Log.d(TAG, "Collected ${buckets.size} hourly step buckets from Health Connect")
 
         StepEvidence(
             source = DataSource.HEALTH_CONNECT,
             confidence = HEALTH_CONNECT_CONFIDENCE,
             metadata = emptyMap(),
-            steps = totalSteps
+            buckets = buckets
         )
     }
 }

@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0]
+
+### Changed
+- **BREAKING**: `StepCountingResult.steps: Long` replaced by `sessions: List<StepSession>` plus a computed `totalSteps: Long` convenience. Each `StepSession` is a 1-hour bucket with `startTime`, `endTime`, and `steps`, letting callers separate today's steps from yesterday's when querying multi-day windows.
+- `HealthConnectStepCollector` now uses `aggregateGroupByDuration` with a 1-hour slice instead of `aggregate`. Health Connect still deduplicates across writing apps per the user's data-source priority configuration. Hours with no recorded steps are omitted from the response.
+
+### Migration
+
+**Step counting result shape:**
+```kotlin
+// Before
+val total = tracker.queryStepCounting()?.steps
+
+// After — same total, plus hourly breakdown
+val result = tracker.queryStepCounting(days = 2)
+val total = result?.totalSteps
+val todaysSteps = result?.sessions
+    ?.filter { it.startTime >= startOfToday }
+    ?.sumOf { it.steps }
+```
+
+---
+
 ## [5.0.0] - 2026-04-14
 
 ### Added

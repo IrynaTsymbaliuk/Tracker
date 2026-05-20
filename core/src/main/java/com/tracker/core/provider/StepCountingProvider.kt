@@ -4,6 +4,7 @@ import android.os.Build
 import com.tracker.core.collector.CollectorException
 import com.tracker.core.collector.HealthConnectStepCollector
 import com.tracker.core.result.StepCountingResult
+import com.tracker.core.result.StepSession
 import com.tracker.core.result.TimeRange
 import com.tracker.core.result.toConfidenceLevel
 
@@ -38,7 +39,13 @@ class StepCountingProvider internal constructor(
             confidence = evidence.confidence,
             confidenceLevel = evidence.confidence.toConfidenceLevel(),
             timeRange = TimeRange(fromMillis, toMillis),
-            steps = evidence.steps
+            sessions = evidence.buckets.map { bucket ->
+                StepSession(
+                    startTime = bucket.startTime,
+                    endTime = bucket.endTime,
+                    steps = bucket.steps
+                )
+            }
         )
     }
 }

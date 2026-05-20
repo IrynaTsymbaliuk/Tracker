@@ -36,5 +36,11 @@ data class StepEvidence(
     override val source: DataSource,
     override val confidence: Float,
     override val metadata: Map<String, Any>,
-    val steps: Long
+    val buckets: List<StepBucket>
 ) : Evidence()
+
+data class StepBucket(
+    val startTime: Long,
+    val endTime: Long,
+    val steps: Long
+)

@@ -179,7 +179,7 @@ class MainActivity : AppCompatActivity() {
             ?: "🎬 Movies    —"
 
         binding.tvSteps.text = steps
-            ?.let { "👣 Steps    ${"%,d".format(it.steps)} steps · ${it.confidenceLevel} · ${pct(it.confidence)}" }
+            ?.let { "👣 Steps    ${"%,d".format(it.totalSteps)} steps · ${it.confidenceLevel} · ${pct(it.confidence)}" }
             ?: "👣 Steps    —"
 
         binding.tvMeditation.text = meditation

@@ -65,8 +65,9 @@ lifecycleScope.launch {
     }
 
     // Step counting via Health Connect — returns null if HC unavailable or permission not granted
-    val steps = tracker.queryStepCounting()
-    steps?.steps           // Long — deduplicated across all data sources
+    val steps = tracker.queryStepCounting(days = 2)
+    steps?.totalSteps      // Long — deduplicated total across the queried window
+    steps?.sessions        // List<StepSession> — one hourly bucket per non-empty hour
     steps?.confidence      // 0.99 when sourced from Health Connect
 
     // Meditation — fuses Health Connect MindfulnessSessionRecord with known-meditation-app
@@ -160,7 +161,7 @@ days = 7  │ ████████ ████████ █████�
 
 **Note on sessions deduplication**: When storing sessions locally across multiple queries, use `(packageName, startTime)` as the composite key. Exception: if `session.startTime == result.timeRange.from`, the session start was inferred (the app was already open at the query boundary) — use `(packageName, endTime)` for those. Sessions under 1 minute have `durationMinutes = 0` but are still present in the list. See `UsageSession` for full details.
 
-**Note on step counting**: `queryStepCounting()` uses Health Connect's aggregation API (`StepsRecord.COUNT_TOTAL`), which deduplicates across all contributing apps (e.g. Google Fit, phone step counter) before returning the total. Returns `null` if Health Connect is unavailable or the `READ_STEPS` permission has not been granted.
+**Note on step counting**: `queryStepCounting(days)` uses Health Connect's `aggregateGroupByDuration` API with a 1-hour slice, which deduplicates across all contributing apps (e.g. Google Fit, phone step counter) before returning each bucket's count. The result exposes hourly `StepSession` buckets in `sessions` (so callers can separate today's steps from yesterday's) and a convenience `totalSteps` sum. Hours with no recorded steps are omitted. Returns `null` if Health Connect is unavailable or the `READ_STEPS` permission has not been granted.
 
 **Note on meditation**: `queryMeditation()` fuses two sources:
 - **Health Connect** `MindfulnessSessionRecord` (authoritative, confidence `0.99`)
