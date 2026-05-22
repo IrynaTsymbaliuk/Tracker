@@ -35,7 +35,7 @@ val tracker = Tracker.Builder(context)
 
 ## Environment
 
-- **Library Version**: 1.0.0
+- **Library Version**: 1.1.0
 - **Android Version**: (e.g., Android 13)
 - **Device**: (e.g., Pixel 6)
 - **Min SDK**: (e.g., 21)

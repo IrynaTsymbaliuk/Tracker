@@ -177,7 +177,7 @@ Sessions that overlap significantly (≥ 50% of the shorter session's duration) 
 
 ```kotlin
 dependencies {
-    implementation("com.tracker:core:5.0.0")
+    implementation("com.tracker:core:1.1.0")
 }
 ```
 
