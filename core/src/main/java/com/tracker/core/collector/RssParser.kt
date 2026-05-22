@@ -2,7 +2,7 @@ package com.tracker.core.collector
 
 import android.util.Log
 import com.tracker.core.common.TAG
-import com.tracker.core.result.MovieInfo
+import com.tracker.core.result.MovieSession
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 import java.io.StringReader
@@ -26,9 +26,9 @@ internal class RssParser {
             timeZone = TimeZone.getTimeZone("UTC")
         }
 
-    fun parse(rssContent: String): List<MovieInfo> {
+    fun parse(rssContent: String): List<MovieSession> {
         val parser = createParser(rssContent)
-        val movies = mutableListOf<MovieInfo>()
+        val movies = mutableListOf<MovieSession>()
         var currentItem: RssItem? = null
 
         while (parser.eventType != XmlPullParser.END_DOCUMENT) {
@@ -39,7 +39,7 @@ internal class RssParser {
 
                 XmlPullParser.END_TAG -> {
                     if (parser.name == "item") {
-                        currentItem?.toMovieInfo(watchedDateFormat)?.let { movies.add(it) }
+                        currentItem?.toMovieSession(watchedDateFormat)?.let { movies.add(it) }
                         currentItem = null
                     }
                 }
@@ -81,12 +81,12 @@ internal class RssParser {
         val pubDate: Long? = null,
         val description: String? = null
     ) {
-        fun toMovieInfo(watchedDateFormat: SimpleDateFormat): MovieInfo? {
+        fun toMovieSession(watchedDateFormat: SimpleDateFormat): MovieSession? {
             val titleValue = title ?: return null
             val pubDateValue = pubDate ?: return null
             val watchedDate = extractWatchedDate(description, watchedDateFormat) ?: pubDateValue
 
-            return MovieInfo(
+            return MovieSession(
                 title = titleValue,
                 publishedDate = pubDateValue,
                 watchedDate = watchedDate

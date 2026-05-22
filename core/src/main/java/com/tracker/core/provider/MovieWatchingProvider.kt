@@ -3,7 +3,7 @@ package com.tracker.core.provider
 import com.tracker.core.collector.InvalidLetterboxdIdException
 import com.tracker.core.collector.LetterboxdCollector
 import com.tracker.core.collector.LetterboxdMetadata
-import com.tracker.core.result.MovieInfo
+import com.tracker.core.result.MovieSession
 import com.tracker.core.result.MovieWatchingResult
 import com.tracker.core.result.TimeRange
 import com.tracker.core.result.toConfidenceLevel
@@ -28,12 +28,10 @@ class MovieWatchingProvider internal constructor(
 
         val evidenceList = letterboxdCollector.collect(fromMillis, toMillis, letterboxdUsername).ifEmpty { return null }
 
-        val totalCounter = evidenceList.sumOf { it.counter }
-
-        val movies = evidenceList.mapNotNull { ev ->
+        val sessions = evidenceList.mapNotNull { ev ->
             val metadata = LetterboxdMetadata.fromMap(ev.metadata) ?: return@mapNotNull null
-            MovieInfo(metadata.title, metadata.publishedDate, metadata.watchedDate)
-        }
+            MovieSession(metadata.title, metadata.publishedDate, metadata.watchedDate)
+        }.sortedBy { it.watchedDate }
 
         val confidence = evidenceList.first().confidence
 
@@ -42,8 +40,7 @@ class MovieWatchingProvider internal constructor(
             confidence = confidence,
             confidenceLevel = confidence.toConfidenceLevel(),
             timeRange = TimeRange(fromMillis, toMillis),
-            count = totalCounter,
-            movies = movies
+            sessions = sessions
         )
 
     }

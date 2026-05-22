@@ -56,8 +56,8 @@ lifecycleScope.launch {
     // Throws IllegalStateException if username is not set
     try {
         val movies = tracker.queryMovieWatching()
-        movies?.count              // number of films logged — null means no films in range
-        movies?.movies             // List<MovieInfo> — title, watchedDate, publishedDate
+        movies?.count              // number of films logged (= sessions.size) — null means no films in range
+        movies?.sessions           // List<MovieSession> — title, watchedDate, publishedDate
     } catch (e: IllegalStateException) {
         // Username not configured — call tracker.setLetterboxdUsername("username") first
     } catch (e: NetworkException) {

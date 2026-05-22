@@ -3,7 +3,7 @@ package com.tracker.core.collector
 import android.util.Log
 import com.tracker.core.common.TAG
 import com.tracker.core.model.CounterEvidence
-import com.tracker.core.result.MovieInfo
+import com.tracker.core.result.MovieSession
 import com.tracker.core.types.DataSource
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -107,7 +107,7 @@ class LetterboxdCollector(
         }
     }
 
-    internal fun parseRssFeed(rssContent: String): List<MovieInfo> {
+    internal fun parseRssFeed(rssContent: String): List<MovieSession> {
         return try {
             RssParser().parse(rssContent)
         } catch (e: Exception) {
