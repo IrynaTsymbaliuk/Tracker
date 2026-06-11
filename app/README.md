@@ -1,6 +1,6 @@
 # Tracker — Sample App
 
-This sample application demonstrates how to integrate and use the **Tracker** library to monitor language learning, reading, social media usage, movie watching, step counting, meditation, and exercise.
+This sample application demonstrates how to integrate and use the **Tracker** library to monitor language learning, reading, social media usage, movie watching, step counting, distance, meditation, and exercise.
 
 ## Features Demonstrated
 
@@ -26,7 +26,7 @@ val mode = appOps.checkOpNoThrow(
 startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
 ```
 
-**Health Connect** — required for step counting (`health.READ_STEPS`), the HealthConnect branch of meditation (`health.READ_MINDFULNESS`), and exercise (`health.READ_EXERCISE`). All three are requested in a single runtime prompt:
+**Health Connect** — required for step counting (`health.READ_STEPS`), distance (`health.READ_DISTANCE`), the HealthConnect branch of meditation (`health.READ_MINDFULNESS`), and exercise (`health.READ_EXERCISE`). All four are requested in a single runtime prompt:
 ```kotlin
 val launcher = registerForActivityResult(
     PermissionController.createRequestPermissionResultContract()
@@ -35,7 +35,8 @@ val launcher = registerForActivityResult(
 launcher.launch(setOf(
     HealthPermission.getReadPermission(StepsRecord::class),
     HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
-    HealthPermission.getReadPermission(ExerciseSessionRecord::class)
+    HealthPermission.getReadPermission(ExerciseSessionRecord::class),
+    HealthPermission.getReadPermission(DistanceRecord::class)
 ))
 ```
 
@@ -52,9 +53,10 @@ lifecycleScope.launch {
     val social     = runCatching { tracker.querySocialMedia() }.getOrNull()
     val movies     = runCatching { tracker.queryMovieWatching() }.getOrNull()
     val steps      = runCatching { tracker.queryStepCounting() }.getOrNull()
+    val distance   = runCatching { tracker.queryDistance() }.getOrNull()
     val meditation = runCatching { tracker.queryMeditation() }.getOrNull()
     val exercise   = runCatching { tracker.queryExercise() }.getOrNull()
-    displayResults(language, reading, social, movies, steps, meditation, exercise)
+    displayResults(language, reading, social, movies, steps, distance, meditation, exercise)
 }
 ```
 
@@ -69,13 +71,14 @@ Each metric is shown as a summary line:
 - **Social**: `📱 Social    120 min · HIGH · 88%`
 - **Movies**: `🎬 Movies    3 films · HIGH · 95%` (expands into one line per film with its TMDB id)
 - **Steps**: `👣 Steps    7,622 steps · HIGH · 99%`
+- **Distance**: `📏 Distance    5.42 km · HIGH · 99%`
 - **Meditation**: `🧘 Meditation    15 min · 1 session · HC+Usage · 97%`
 - **Exercise**: `🏃 Exercise    45 min · 2 sessions · Running, Strength Training · 99%`
 
-**Per-session breakdown.** For the usage-based metrics (Language, Reading, Social) and Steps, the
-sample expands the summary line into one indented line per session, showing **time from – time to**
-and the **app name** (or step count). This comes straight from each result's `sessions` list — the
-library always returns it; the app simply renders it:
+**Per-session breakdown.** For the usage-based metrics (Language, Reading, Social), Steps, and
+Distance, the sample expands the summary line into one indented line per session, showing **time
+from – time to** and the **app name** (or step count / distance). This comes straight from each
+result's `sessions` list — the library always returns it; the app simply renders it:
 
 ```
 📱 Social    120 min · HIGH · 88%
@@ -87,11 +90,17 @@ library always returns it; the app simply renders it:
     • 08:00–09:00 · 1,204 steps
     • 12:00–13:00 · 3,560 steps
     • 18:00–19:00 · 2,858 steps
+
+📏 Distance    5.42 km · HIGH · 99%
+    • 08:00–09:00 · 0.92 km
+    • 12:00–13:00 · 2.74 km
+    • 18:00–19:00 · 1.76 km
 ```
 
 `sessionLines()` formats `UsageSession`s (Language, Reading, Social) as `from–to · appName (N min)`;
-`stepSessionLines()` formats `StepSession`s as `from–to · N steps`. Timestamps are rendered as local
-`HH:mm`. Note that step "sessions" are **hourly Health Connect buckets**, not discrete walking bouts —
+`stepSessionLines()` formats `StepSession`s as `from–to · N steps`; `distanceSessionLines()` formats
+`DistanceSession`s as `from–to · N km` (or `N m` under a kilometre). Timestamps are rendered as local
+`HH:mm`. Note that step and distance "sessions" are **hourly Health Connect buckets**, not discrete walking bouts —
 empty hours are omitted by the library, so every line shown has a non-zero count.
 
 The Movies row gets the same treatment via `movieSessionLines()`, expanding each `MovieSession` into
@@ -146,10 +155,10 @@ sensors rather than a fixed app list.
    - Find "Tracker Demo" in the list and enable "Permit usage access"
    - Return to the app — metrics update automatically
 
-3. **Grant Health Connect** (optional, for step counting, the HealthConnect branch of meditation, and exercise):
+3. **Grant Health Connect** (optional, for step counting, distance, the HealthConnect branch of meditation, and exercise):
    - Tap "Grant" next to the Health Connect row
-   - Approve `Steps`, `Mindfulness sessions`, and `Exercise sessions` in the Health Connect dialog
-   - Return to the app — step count, meditation, and exercise results appear automatically
+   - Approve `Steps`, `Distance`, `Mindfulness sessions`, and `Exercise sessions` in the Health Connect dialog
+   - Return to the app — step count, distance, meditation, and exercise results appear automatically
 
 4. **Enable Movie Watching** (optional):
    - Set `letterboxdUsername` in `MainActivity.kt` to your Letterboxd username
@@ -169,12 +178,13 @@ MainActivity.kt
 ├── updateUsagePermissionUi()   # Show/hide Grant button based on AppOps check
 ├── hasUsageStatsPermission()   # AppOpsManager permission check
 ├── updateHcPermissionUi()      # Show/hide Grant button based on HC permission state (steps + mindfulness + exercise)
-├── queryMetrics()              # Query all seven metrics concurrently using coroutines
+├── queryMetrics()              # Query all eight metrics concurrently using coroutines
 ├── toggleTrackedApps()         # Show/hide the static tracked-apps catalogue (getTracked*Apps())
 ├── trackedAppsBlock()          # Format one habit's tracked apps as "package (confidence)" lines
 ├── displayResults()            # Render the summary line per metric
 ├── sessionLines()              # Expand UsageSession list into "from–to · appName (N min)" lines
 ├── stepSessionLines()          # Expand StepSession list into "from–to · N steps" lines (hourly buckets)
+├── distanceSessionLines()      # Expand DistanceSession list into "from–to · N km" lines (hourly buckets)
 ├── movieSessionLines()         # Expand MovieSession list into "watchedDate · title (tmdb:id)" lines
 ├── sourcesLabel()              # Render MeditationResult.sources as "HC+Usage"
 └── titleCase()                 # Convert "strength_training" → "Strength Training" for exercise type labels
@@ -187,7 +197,7 @@ MainActivity.kt
 3. **Two permission flows**: `PACKAGE_USAGE_STATS` requires a manual system settings redirect; Health Connect permissions use the runtime permission contract
 4. **Multiple Health Connect permissions in one prompt**: pass a `Set` with all required `HealthPermission` strings to `launcher.launch(...)` — the user only sees items they haven't granted
 5. **Health Connect manifest setup**: Both `ACTION_SHOW_PERMISSIONS_RATIONALE` (Android 9–13) and the `VIEW_PERMISSION_USAGE` activity-alias (Android 14+) must be declared for the permission dialog to work
-6. **Step counting deduplication**: Use `queryStepCounting()` rather than summing `StepsRecord` entries manually — Health Connect's aggregation API handles deduplication across Google Fit, the phone step counter, and other sources
+6. **Step counting & distance deduplication**: Use `queryStepCounting()` / `queryDistance()` rather than summing `StepsRecord` / `DistanceRecord` entries manually — Health Connect's aggregation API handles deduplication across Google Fit, the phone step counter, and other sources. Both use the same hourly-bucket shape, so `distanceSessionLines()` is a near-copy of `stepSessionLines()`
 7. **Multi-source fusion for meditation**: `queryMeditation()` merges HealthConnect `MindfulnessSessionRecord`s with foreground sessions of known meditation apps. Overlapping sessions are deduplicated, and the result's `sources` list reflects which sources contributed. If HealthConnect is unavailable, the call gracefully falls back to UsageStats-only.
 8. **Exercise from Health Connect**: `queryExercise()` reads `ExerciseSessionRecord`s written by any fitness app (Strava, Google Fit, Samsung Health, manual log, etc.). Each session exposes both `exerciseTypeId` (the raw HC int) and `exerciseType` (a snake_case string) so the app can choose programmatic or display-friendly treatment. The sample uses a title-case transform (`"strength_training"` → `"Strength Training"`) for display.
 
@@ -219,6 +229,11 @@ The app works best when you have supported apps installed and have used them tod
 **Step counting:**
 - Requires Health Connect to be installed (built-in on Android 14+; available via Google Play on Android 9–13)
 - Grant the `Steps` permission when prompted
+
+**Distance:**
+- Requires Health Connect; distance is written by fitness/step apps (Google Fit, Pixel, Fitbit, etc.) or logged manually
+- Grant the `Distance` permission when prompted
+- Reported in kilometres (rolled up from per-hour buckets); sub-kilometre hours render in meters
 
 **Meditation:**
 - Either: use one of the supported meditation apps (detected via UsageStats), or

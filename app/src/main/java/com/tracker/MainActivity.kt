@@ -14,12 +14,15 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.lifecycle.lifecycleScope
 import com.tracker.core.Tracker
 import com.tracker.core.config.AppMetadata
+import com.tracker.core.result.DistanceResult
+import com.tracker.core.result.DistanceSession
 import com.tracker.core.result.ExerciseResult
 import com.tracker.core.result.LanguageLearningResult
 import com.tracker.core.result.MeditationResult
@@ -100,7 +103,7 @@ class MainActivity : AppCompatActivity() {
             val allGranted = missing.isEmpty()
 
             binding.tvHcStatus.text = when {
-                allGranted -> "Health Connect  ✓ (Steps + Mindfulness + Exercise)"
+                allGranted -> "Health Connect  ✓ (Steps + Mindfulness + Exercise + Distance)"
                 missing.size == REQUIRED_HC_PERMISSIONS.size -> "Health Connect  ✗"
                 else -> {
                     val missingLabels = missing.mapNotNull { HC_PERMISSION_LABELS[it] }
@@ -151,10 +154,11 @@ class MainActivity : AppCompatActivity() {
             val social     = runCatching { tracker.querySocialMedia() }.getOrNull()
             val movies     = runCatching { tracker.queryMovieWatching() }.getOrNull()
             val steps      = runCatching { tracker.queryStepCounting() }.getOrNull()
+            val distance   = runCatching { tracker.queryDistance() }.getOrNull()
             val meditation = runCatching { tracker.queryMeditation() }.getOrNull()
             val exercise   = runCatching { tracker.queryExercise() }.getOrNull()
 
-            displayResults(language, reading, social, movies, steps, meditation, exercise)
+            displayResults(language, reading, social, movies, steps, distance, meditation, exercise)
 
             binding.progressBar.visibility = View.GONE
             binding.btnQuery.isEnabled = true
@@ -210,6 +214,7 @@ class MainActivity : AppCompatActivity() {
         social: SocialMediaResult?,
         movies: MovieWatchingResult?,
         steps: StepCountingResult?,
+        distance: DistanceResult?,
         meditation: MeditationResult?,
         exercise: ExerciseResult?
     ) {
@@ -232,6 +237,10 @@ class MainActivity : AppCompatActivity() {
         binding.tvSteps.text = steps
             ?.let { "👣 Steps    ${"%,d".format(it.totalSteps)} steps · ${it.confidenceLevel} · ${pct(it.confidence)}${stepSessionLines(it.sessions)}" }
             ?: "👣 Steps    —"
+
+        binding.tvDistance.text = distance
+            ?.let { "📏 Distance    ${"%.2f".format(it.totalKilometers)} km · ${it.confidenceLevel} · ${pct(it.confidence)}${distanceSessionLines(it.sessions)}" }
+            ?: "📏 Distance    —"
 
         binding.tvMeditation.text = meditation
             ?.let {
@@ -323,6 +332,32 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
+     * Renders the per-bucket distance breakdown shown under the Distance metric. Like steps,
+     * each [DistanceSession] is an hourly Health Connect bucket, so each line covers one hour:
+     *
+     * ```
+     *     • 08:00–09:00 · 1.20 km
+     * ```
+     *
+     * Distances under a kilometre are shown in meters (e.g. `820 m`). Returns an empty string
+     * when there are no buckets. Empty hours are already omitted by the library, so every line
+     * shown has a non-zero distance.
+     */
+    private fun distanceSessionLines(sessions: List<DistanceSession>): String {
+        if (sessions.isEmpty()) return ""
+        return sessions.joinToString(separator = "\n", prefix = "\n") { session ->
+            val from = SESSION_TIME_FORMAT.format(Instant.ofEpochMilli(session.startTime))
+            val to = SESSION_TIME_FORMAT.format(Instant.ofEpochMilli(session.endTime))
+            val dist = if (session.meters >= 1000.0) {
+                "%.2f km".format(session.meters / 1000.0)
+            } else {
+                "%.0f m".format(session.meters)
+            }
+            "    • $from–$to · $dist"
+        }
+    }
+
+    /**
      * Renders the per-film breakdown shown under the Movies metric. Each [MovieSession] becomes
      * its own indented line showing the **watched date** and the **title**, plus the **TMDB id**
      * when the Letterboxd feed provided one:
@@ -359,6 +394,8 @@ class MainActivity : AppCompatActivity() {
             HealthPermission.getReadPermission(MindfulnessSessionRecord::class)
         private val HC_EXERCISE_PERMISSION =
             HealthPermission.getReadPermission(ExerciseSessionRecord::class)
+        private val HC_DISTANCE_PERMISSION =
+            HealthPermission.getReadPermission(DistanceRecord::class)
 
         /**
          * Every Health Connect permission this sample app wants. Clicking the single
@@ -368,7 +405,8 @@ class MainActivity : AppCompatActivity() {
         private val REQUIRED_HC_PERMISSIONS: Set<String> = setOf(
             HC_STEPS_PERMISSION,
             HC_MINDFULNESS_PERMISSION,
-            HC_EXERCISE_PERMISSION
+            HC_EXERCISE_PERMISSION,
+            HC_DISTANCE_PERMISSION
         )
 
         /**
@@ -378,7 +416,8 @@ class MainActivity : AppCompatActivity() {
         private val HC_PERMISSION_LABELS: Map<String, String> = mapOf(
             HC_STEPS_PERMISSION to "Steps",
             HC_MINDFULNESS_PERMISSION to "Mindfulness",
-            HC_EXERCISE_PERMISSION to "Exercise"
+            HC_EXERCISE_PERMISSION to "Exercise",
+            HC_DISTANCE_PERMISSION to "Distance"
         )
     }
 }

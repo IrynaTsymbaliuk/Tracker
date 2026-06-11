@@ -44,3 +44,16 @@ data class StepBucket(
     val endTime: Long,
     val steps: Long
 )
+
+data class DistanceEvidence(
+    override val source: DataSource,
+    override val confidence: Float,
+    override val metadata: Map<String, Any>,
+    val buckets: List<DistanceBucket>
+) : Evidence()
+
+data class DistanceBucket(
+    val startTime: Long,
+    val endTime: Long,
+    val meters: Double
+)

@@ -3,6 +3,7 @@ package com.tracker.core
 import android.content.Context
 import android.os.Build
 import com.tracker.core.collector.AndroidNetworkConnectivityChecker
+import com.tracker.core.collector.HealthConnectDistanceCollector
 import com.tracker.core.collector.HealthConnectExerciseCollector
 import com.tracker.core.collector.HealthConnectMindfulnessCollector
 import com.tracker.core.collector.HealthConnectStepCollector
@@ -12,6 +13,7 @@ import com.tracker.core.collector.UsageEventsCollector
 import com.tracker.core.config.AppMetadata
 import com.tracker.core.config.KnownApps
 import com.tracker.core.permission.PermissionManager
+import com.tracker.core.provider.DistanceProvider
 import com.tracker.core.provider.ExerciseProvider
 import com.tracker.core.provider.LanguageLearningProvider
 import com.tracker.core.provider.MeditationProvider
@@ -19,6 +21,7 @@ import com.tracker.core.provider.MovieWatchingProvider
 import com.tracker.core.provider.ReadingProvider
 import com.tracker.core.provider.SocialMediaProvider
 import com.tracker.core.provider.StepCountingProvider
+import com.tracker.core.result.DistanceResult
 import com.tracker.core.result.ExerciseResult
 import com.tracker.core.result.LanguageLearningResult
 import com.tracker.core.result.MeditationResult
@@ -85,6 +88,12 @@ class Tracker private constructor(
     private val stepCountingProvider: StepCountingProvider? by lazy {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             StepCountingProvider(HealthConnectStepCollector(appContext))
+        } else null
+    }
+
+    private val distanceProvider: DistanceProvider? by lazy {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            DistanceProvider(HealthConnectDistanceCollector(appContext))
         } else null
     }
 
@@ -226,6 +235,24 @@ class Tracker private constructor(
     suspend fun queryStepCounting(days: Int = 1): StepCountingResult? {
         val (from, to) = queryWindow(days)
         return stepCountingProvider?.query(from, to, minConfidence)
+    }
+
+    /**
+     * Queries distance travelled (walking, running, cycling, etc.) from Health Connect
+     * `DistanceRecord`, returned as hourly buckets so multi-day queries can be split by hour.
+     *
+     * Requires Health Connect to be installed, API 26+, and
+     * [HealthConnectDistanceCollector.READ_DISTANCE_PERMISSION] to be granted at runtime via
+     * [androidx.health.connect.client.PermissionController.createRequestPermissionResultContract].
+     *
+     * @param days Number of days to include: 1 = today from midnight through now,
+     * 2 = yesterday midnight through now, etc. Must be >= 1.
+     * @return Distance data for the requested window, or null if Health Connect is unavailable,
+     * the API level is below 26, or the permission has not been granted.
+     */
+    suspend fun queryDistance(days: Int = 1): DistanceResult? {
+        val (from, to) = queryWindow(days)
+        return distanceProvider?.query(from, to, minConfidence)
     }
 
     /**

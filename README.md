@@ -79,6 +79,13 @@ lifecycleScope.launch {
     steps?.sessions        // List<StepSession> — one hourly bucket per non-empty hour
     steps?.confidence      // 0.99 when sourced from Health Connect
 
+    // Distance via Health Connect — walking, running, cycling, etc. Returns null if HC
+    // unavailable, API < 26, or READ_DISTANCE not granted.
+    val distance = tracker.queryDistance(days = 2)
+    distance?.totalMeters       // Double — deduplicated total across the window, in meters
+    distance?.totalKilometers   // Double — convenience accessor (totalMeters / 1000)
+    distance?.sessions          // List<DistanceSession> — one hourly bucket per non-empty hour
+
     // Meditation — fuses Health Connect MindfulnessSessionRecord with known-meditation-app
     // foreground sessions. Falls back to UsageStats-only if Health Connect is unavailable.
     val meditation = tracker.queryMeditation()
@@ -121,6 +128,7 @@ lifecycleScope.launch {
 - Movie Watching: 3 films · The Matrix (tmdb:603), Inception (tmdb:27205), Interstellar (tmdb:157336) · 95% confidence (HIGH)
 - Social Media: 120 min · 23 sessions · Instagram, Reddit, WhatsApp · 88% confidence (HIGH)
 - Steps: 7,622 steps · 99% confidence (HIGH)
+- Distance: 5.42 km · 99% confidence (HIGH)
 - Meditation: 15 min · 1 session · Calm (HealthConnect + UsageStats merged) · 97% confidence (HIGH)
 - Exercise: 45 min · 2 sessions · Running, Strength Training · 99% confidence (HIGH)
 
@@ -181,6 +189,7 @@ days = 7  │ ████████ ████████ █████�
 | **MOVIE_WATCHING** | Letterboxd RSS | Film titles, watch dates, and TMDB ids from public feed | `INTERNET` (no user prompt) |
 | **SOCIAL_MEDIA** | Foreground session events | Facebook, Instagram, Twitter/X, TikTok, Reddit, WhatsApp, and 9 more | `PACKAGE_USAGE_STATS` |
 | **STEP_COUNTING** | Health Connect | Aggregated across all step sources, deduped by HC | `health.READ_STEPS` · API 26+ |
+| **DISTANCE** | Health Connect | `DistanceRecord` aggregated across all sources (walking, running, cycling, etc.), deduped by HC | `health.READ_DISTANCE` · API 26+ |
 | **MEDITATION** | Health Connect + Foreground session events (fused) | `MindfulnessSessionRecord`s plus Calm, Headspace, Insight Timer, Balance, Waking Up, Smiling Mind, Ten Percent Happier, Medito, MEISOON, Mindvalley | `health.READ_MINDFULNESS` (optional, API 26+) · `PACKAGE_USAGE_STATS` |
 | **EXERCISE** | Health Connect | `ExerciseSessionRecord`s written by any fitness app (Strava, Google Fit, Samsung Health, Peloton, etc.) or logged manually | `health.READ_EXERCISE` · API 26+ |
 
@@ -193,6 +202,8 @@ days = 7  │ ████████ ████████ █████�
 **Note on movie watching**: `queryMovieWatching()` parses the public Letterboxd RSS feed for the configured username. Each `MovieSession` exposes the film `title`, the `watchedDate` and `publishedDate` (milliseconds), and `tmdbId` — the The Movie Database movie id taken from the feed's `tmdb:movieId` element. Use `tmdbId` to look up full details (poster, runtime, cast, etc.) via the TMDB API, e.g. `https://api.themoviedb.org/3/movie/{tmdbId}`. `tmdbId` is `null` when the feed omits it (TV diary entries carry `tmdb:tvId` instead, and a few films are not yet linked to TMDB), so always null-check before using it.
 
 **Note on step counting**: `queryStepCounting(days)` uses Health Connect's `aggregateGroupByDuration` API with a 1-hour slice, which deduplicates across all contributing apps (e.g. Google Fit, phone step counter) before returning each bucket's count. The result exposes hourly `StepSession` buckets in `sessions` (so callers can separate today's steps from yesterday's) and a convenience `totalSteps` sum. Hours with no recorded steps are omitted. Returns `null` if Health Connect is unavailable or the `READ_STEPS` permission has not been granted.
+
+**Note on distance**: `queryDistance(days)` reads Health Connect `DistanceRecord` via the same `aggregateGroupByDuration` 1-hour slicing as step counting, so it deduplicates across all writing apps (Google Fit, Pixel, Fitbit, etc.) by the user's data-source priority before returning each bucket. The result exposes hourly `DistanceSession` buckets in `sessions` plus convenience `totalMeters`/`totalKilometers` sums. Distance is in **meters** (a `Double`, since records are fractional). Hours with no recorded distance are omitted. Returns `null` if Health Connect is unavailable, the API level is below 26, or the `READ_DISTANCE` permission has not been granted.
 
 **Note on meditation**: `queryMeditation()` fuses two sources:
 - **Health Connect** `MindfulnessSessionRecord` (authoritative, confidence `0.99`)
@@ -225,6 +236,9 @@ Add to `AndroidManifest.xml`:
 <!-- Required for step counting via Health Connect -->
 <uses-permission android:name="android.permission.health.READ_STEPS" />
 
+<!-- Required for distance via Health Connect -->
+<uses-permission android:name="android.permission.health.READ_DISTANCE" />
+
 <!-- Optional but recommended for meditation — enables the Health Connect mindfulness source.
      The meditation query falls back to UsageStats-only if this permission is not granted. -->
 <uses-permission android:name="android.permission.health.READ_MINDFULNESS" />
@@ -235,7 +249,7 @@ Add to `AndroidManifest.xml`:
 
 `PACKAGE_USAGE_STATS` is a protected permission — the user must grant it manually via **Settings → Apps → Special app access → Usage access**.
 
-Health Connect permissions (`health.READ_STEPS`, `health.READ_MINDFULNESS`, `health.READ_EXERCISE`) must be requested at runtime using `PermissionController.createRequestPermissionResultContract()`. You can request all of them in a single prompt:
+Health Connect permissions (`health.READ_STEPS`, `health.READ_MINDFULNESS`, `health.READ_EXERCISE`, `health.READ_DISTANCE`) must be requested at runtime using `PermissionController.createRequestPermissionResultContract()`. You can request all of them in a single prompt:
 
 ```kotlin
 val launcher = registerForActivityResult(
@@ -245,7 +259,8 @@ val launcher = registerForActivityResult(
 launcher.launch(setOf(
     HealthPermission.getReadPermission(StepsRecord::class),
     HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
-    HealthPermission.getReadPermission(ExerciseSessionRecord::class)
+    HealthPermission.getReadPermission(ExerciseSessionRecord::class),
+    HealthPermission.getReadPermission(DistanceRecord::class)
 ))
 ```
 
@@ -285,7 +300,7 @@ Add the following to the activity that handles the permission result:
 - **Min SDK**: 21 (Android 5.0)
 - **Target SDK**: 36
 - **Kotlin**: 1.9+
-- **Step counting, meditation (HealthConnect branch), exercise**: require API 26+ and Health Connect
+- **Step counting, distance, meditation (HealthConnect branch), exercise**: require API 26+ and Health Connect
 
 ## Sample App
 
@@ -293,7 +308,7 @@ Add the following to the activity that handles the permission result:
 ./gradlew :app:installDebug
 ```
 
-Demonstrates the full flow: permission setup for `PACKAGE_USAGE_STATS` and Health Connect (steps + mindfulness + exercise, all requested in one prompt), querying all seven metrics for today (language learning, reading, social media, movie watching, step counting, meditation, exercise), and displaying results. For the usage-based metrics (language learning, reading, social media) and step counting, the sample expands each result's `sessions` list into a per-session breakdown — one indented line per session showing **time from – time to** and the **app name** (or step count for hourly step buckets). The movie watching row expands into one line per film showing the **watched date**, **title**, and **TMDB id** (`tmdb:<id>`) when present. The meditation row shows which sources contributed (`HC`, `Usage`, or `HC+Usage`); the exercise row lists the distinct exercise types detected (e.g. `Running, Strength Training`). To enable movie watching, set your Letterboxd username in `MainActivity.kt`.
+Demonstrates the full flow: permission setup for `PACKAGE_USAGE_STATS` and Health Connect (steps + mindfulness + exercise + distance, all requested in one prompt), querying all eight metrics for today (language learning, reading, social media, movie watching, step counting, distance, meditation, exercise), and displaying results. For the usage-based metrics (language learning, reading, social media), step counting, and distance, the sample expands each result's `sessions` list into a per-session breakdown — one indented line per session showing **time from – time to** and the **app name** (or step count / distance for hourly buckets). The movie watching row expands into one line per film showing the **watched date**, **title**, and **TMDB id** (`tmdb:<id>`) when present. The meditation row shows which sources contributed (`HC`, `Usage`, or `HC+Usage`); the exercise row lists the distinct exercise types detected (e.g. `Running, Strength Training`). To enable movie watching, set your Letterboxd username in `MainActivity.kt`.
 
 ## License
 
