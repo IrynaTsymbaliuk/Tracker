@@ -262,7 +262,7 @@ Add the following to the activity that handles the permission result:
 ./gradlew :app:installDebug
 ```
 
-Demonstrates the full flow: permission setup for `PACKAGE_USAGE_STATS` and Health Connect (steps + mindfulness + exercise, all requested in one prompt), querying all seven metrics for today (language learning, reading, social media, movie watching, step counting, meditation, exercise), and displaying results. The meditation row shows which sources contributed (`HC`, `Usage`, or `HC+Usage`); the exercise row lists the distinct exercise types detected (e.g. `Running, Strength Training`). To enable movie watching, set your Letterboxd username in `MainActivity.kt`.
+Demonstrates the full flow: permission setup for `PACKAGE_USAGE_STATS` and Health Connect (steps + mindfulness + exercise, all requested in one prompt), querying all seven metrics for today (language learning, reading, social media, movie watching, step counting, meditation, exercise), and displaying results. For the usage-based metrics (language learning, reading, social media) and step counting, the sample expands each result's `sessions` list into a per-session breakdown — one indented line per session showing **time from – time to** and the **app name** (or step count for hourly step buckets). The meditation row shows which sources contributed (`HC`, `Usage`, or `HC+Usage`); the exercise row lists the distinct exercise types detected (e.g. `Running, Strength Training`). To enable movie watching, set your Letterboxd username in `MainActivity.kt`.
 
 ## License
 

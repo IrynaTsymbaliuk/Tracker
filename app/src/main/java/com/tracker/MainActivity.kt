@@ -26,8 +26,13 @@ import com.tracker.core.result.MovieWatchingResult
 import com.tracker.core.result.ReadingResult
 import com.tracker.core.result.SocialMediaResult
 import com.tracker.core.result.StepCountingResult
+import com.tracker.core.result.StepSession
+import com.tracker.core.result.UsageSession
 import com.tracker.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 class MainActivity : AppCompatActivity() {
 
@@ -163,15 +168,15 @@ class MainActivity : AppCompatActivity() {
         exercise: ExerciseResult?
     ) {
         binding.tvLanguage.text = language
-            ?.let { "📚 Language    ${it.durationMinutes} min · ${it.confidenceLevel} · ${pct(it.confidence)}" }
+            ?.let { "📚 Language    ${it.durationMinutes} min · ${it.confidenceLevel} · ${pct(it.confidence)}${sessionLines(it.sessions)}" }
             ?: "📚 Language    —"
 
         binding.tvReading.text = reading
-            ?.let { "📖 Reading    ${it.durationMinutes} min · ${it.confidenceLevel} · ${pct(it.confidence)}" }
+            ?.let { "📖 Reading    ${it.durationMinutes} min · ${it.confidenceLevel} · ${pct(it.confidence)}${sessionLines(it.sessions)}" }
             ?: "📖 Reading    —"
 
         binding.tvSocial.text = social
-            ?.let { "📱 Social    ${it.durationMinutes} min · ${it.confidenceLevel} · ${pct(it.confidence)}" }
+            ?.let { "📱 Social    ${it.durationMinutes} min · ${it.confidenceLevel} · ${pct(it.confidence)}${sessionLines(it.sessions)}" }
             ?: "📱 Social    —"
 
         binding.tvMovies.text = movies
@@ -179,7 +184,7 @@ class MainActivity : AppCompatActivity() {
             ?: "🎬 Movies    —"
 
         binding.tvSteps.text = steps
-            ?.let { "👣 Steps    ${"%,d".format(it.totalSteps)} steps · ${it.confidenceLevel} · ${pct(it.confidence)}" }
+            ?.let { "👣 Steps    ${"%,d".format(it.totalSteps)} steps · ${it.confidenceLevel} · ${pct(it.confidence)}${stepSessionLines(it.sessions)}" }
             ?: "👣 Steps    —"
 
         binding.tvMeditation.text = meditation
@@ -229,7 +234,53 @@ class MainActivity : AppCompatActivity() {
 
     private fun pct(confidence: Float) = "%.0f%%".format(confidence * 100)
 
+    /**
+     * Renders the per-session breakdown shown under a usage-based metric (Reading,
+     * Language Learning, Social Media). Each session becomes its own indented line:
+     *
+     * ```
+     *     • 09:15–09:42 · Duolingo (27 min)
+     * ```
+     *
+     * Returns an empty string when there are no sessions, so callers can append the
+     * result directly to the summary line. 0-minute sessions are kept so quick app
+     * opens are still visible.
+     */
+    private fun sessionLines(sessions: List<UsageSession>): String {
+        if (sessions.isEmpty()) return ""
+        return sessions.joinToString(separator = "\n", prefix = "\n") { session ->
+            val from = SESSION_TIME_FORMAT.format(Instant.ofEpochMilli(session.startTime))
+            val to = SESSION_TIME_FORMAT.format(Instant.ofEpochMilli(session.endTime))
+            "    • $from–$to · ${session.appName} (${session.durationMinutes} min)"
+        }
+    }
+
+    /**
+     * Renders the per-bucket step breakdown shown under the Steps metric. Each [StepSession]
+     * is an hourly Health Connect bucket (not a discrete walking bout — raw step data has no
+     * walk start/stop), so each line covers one hour:
+     *
+     * ```
+     *     • 08:00–09:00 · 1,234 steps
+     * ```
+     *
+     * Returns an empty string when there are no buckets. Empty hours are already omitted by
+     * the library, so every line shown has a non-zero count.
+     */
+    private fun stepSessionLines(sessions: List<StepSession>): String {
+        if (sessions.isEmpty()) return ""
+        return sessions.joinToString(separator = "\n", prefix = "\n") { session ->
+            val from = SESSION_TIME_FORMAT.format(Instant.ofEpochMilli(session.startTime))
+            val to = SESSION_TIME_FORMAT.format(Instant.ofEpochMilli(session.endTime))
+            "    • $from–$to · ${"%,d".format(session.steps)} steps"
+        }
+    }
+
     companion object {
+        /** Formats session start/end timestamps as local `HH:mm` for the session breakdown. */
+        private val SESSION_TIME_FORMAT: DateTimeFormatter =
+            DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault())
+
         private val HC_STEPS_PERMISSION =
             HealthPermission.getReadPermission(StepsRecord::class)
         private val HC_MINDFULNESS_PERMISSION =

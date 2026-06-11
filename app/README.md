@@ -62,7 +62,7 @@ A `null` result means either no activity in the time range or a missing/denied p
 
 ### 4. Displaying Results
 
-Each metric is shown as a single line:
+Each metric is shown as a summary line:
 
 - **Language**: `📚 Language    45 min · HIGH · 85%`
 - **Reading**: `📖 Reading    30 min · MEDIUM · 75%`
@@ -71,6 +71,28 @@ Each metric is shown as a single line:
 - **Steps**: `👣 Steps    7,622 steps · HIGH · 99%`
 - **Meditation**: `🧘 Meditation    15 min · 1 session · HC+Usage · 97%`
 - **Exercise**: `🏃 Exercise    45 min · 2 sessions · Running, Strength Training · 99%`
+
+**Per-session breakdown.** For the usage-based metrics (Language, Reading, Social) and Steps, the
+sample expands the summary line into one indented line per session, showing **time from – time to**
+and the **app name** (or step count). This comes straight from each result's `sessions` list — the
+library always returns it; the app simply renders it:
+
+```
+📱 Social    120 min · HIGH · 88%
+    • 08:02–08:19 · Instagram (17 min)
+    • 12:40–13:05 · Reddit (25 min)
+    • 21:10–22:28 · Instagram (78 min)
+
+👣 Steps    7,622 steps · HIGH · 99%
+    • 08:00–09:00 · 1,204 steps
+    • 12:00–13:00 · 3,560 steps
+    • 18:00–19:00 · 2,858 steps
+```
+
+`sessionLines()` formats `UsageSession`s (Language, Reading, Social) as `from–to · appName (N min)`;
+`stepSessionLines()` formats `StepSession`s as `from–to · N steps`. Timestamps are rendered as local
+`HH:mm`. Note that step "sessions" are **hourly Health Connect buckets**, not discrete walking bouts —
+empty hours are omitted by the library, so every line shown has a non-zero count.
 
 For meditation, the sample renders the active data sources inline: `HC` for Health Connect, `Usage` for UsageStats, `HC+Usage` when both contributed and were merged. `—` is shown when the result is null (no data or no permission granted on either source).
 
@@ -109,7 +131,9 @@ MainActivity.kt
 ├── hasUsageStatsPermission()   # AppOpsManager permission check
 ├── updateHcPermissionUi()      # Show/hide Grant button based on HC permission state (steps + mindfulness + exercise)
 ├── queryMetrics()              # Query all seven metrics concurrently using coroutines
-├── displayResults()            # Render one line per metric
+├── displayResults()            # Render the summary line per metric
+├── sessionLines()              # Expand UsageSession list into "from–to · appName (N min)" lines
+├── stepSessionLines()          # Expand StepSession list into "from–to · N steps" lines (hourly buckets)
 ├── sourcesLabel()              # Render MeditationResult.sources as "HC+Usage"
 └── titleCase()                 # Convert "strength_training" → "Strength Training" for exercise type labels
 ```
