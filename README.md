@@ -130,6 +130,26 @@ result?.sessions?.size                            // session count
 result?.sessions?.map { it.appName }?.distinct() // app list
 ```
 
+## Listing tracked apps
+
+To discover which apps the library can detect for a habit — independent of what's installed or which permissions are granted — call the matching `getTracked*Apps()` method:
+
+```kotlin
+val readingApps = tracker.getTrackedReadingApps()
+readingApps.forEach { app ->
+    app.packageName            // e.g. "com.amazon.kindle"
+    app.confidenceMultiplier   // base confidence when this app is detected, e.g. 0.82
+}
+
+// Just the package names for the language-learning catalogue:
+val packages = tracker.getTrackedLanguageLearningApps().map { it.packageName }
+
+tracker.getTrackedSocialMediaApps()
+tracker.getTrackedMeditationApps()
+```
+
+These exist only for the habits backed by a known-app list: language learning, reading, social media, and meditation. Movie watching (Letterboxd RSS), step counting, and exercise (Health Connect) are sourced from feeds and sensors rather than a fixed app list, so they have no equivalent. The lists are static configuration — they reflect what the library *can* detect, not what is installed on the current device. Apps are returned in alphabetical order by app name. (Meditation can additionally be detected from Health Connect `MindfulnessSessionRecord`s; `getTrackedMeditationApps()` covers only the known-app source.)
+
 ## Querying by time window
 
 All query methods accept an optional `days` parameter:

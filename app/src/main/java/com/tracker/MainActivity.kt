@@ -19,6 +19,7 @@ import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.lifecycle.lifecycleScope
 import com.tracker.core.Tracker
+import com.tracker.core.config.AppMetadata
 import com.tracker.core.result.ExerciseResult
 import com.tracker.core.result.LanguageLearningResult
 import com.tracker.core.result.MeditationResult
@@ -63,6 +64,7 @@ class MainActivity : AppCompatActivity() {
         }
         binding.btnGrantHc.setOnClickListener { requestMissingHcPermissions() }
         binding.btnQuery.setOnClickListener { queryMetrics() }
+        binding.btnShowApps.setOnClickListener { toggleTrackedApps() }
     }
 
     override fun onResume() {
@@ -157,6 +159,49 @@ class MainActivity : AppCompatActivity() {
             binding.progressBar.visibility = View.GONE
             binding.btnQuery.isEnabled = true
         }
+    }
+
+    /**
+     * Toggles the static tracked-apps catalogue, built from the library's `getTracked*Apps()`
+     * accessors. Unlike the query results above, this is pure configuration — it lists every app
+     * the library *can* detect for each known-app habit, independent of what is installed on the
+     * device or which permissions have been granted. No coroutine needed: the lookups are synchronous.
+     */
+    private fun toggleTrackedApps() {
+        val tv = binding.tvTrackedApps
+        if (tv.visibility == View.VISIBLE) {
+            tv.visibility = View.GONE
+            binding.btnShowApps.text = "Show tracked apps"
+            return
+        }
+
+        tv.text = listOf(
+            "📚 Language" to tracker.getTrackedLanguageLearningApps(),
+            "📖 Reading" to tracker.getTrackedReadingApps(),
+            "📱 Social" to tracker.getTrackedSocialMediaApps(),
+            "🧘 Meditation" to tracker.getTrackedMeditationApps()
+        ).joinToString(separator = "\n\n") { (label, apps) -> trackedAppsBlock(label, apps) }
+
+        tv.visibility = View.VISIBLE
+        binding.btnShowApps.text = "Hide tracked apps"
+    }
+
+    /**
+     * Formats one habit's tracked-apps catalogue: a header with the count followed by one indented
+     * line per app showing its package name and base confidence multiplier.
+     *
+     * ```
+     * 📖 Reading · 27 apps
+     *     • com.amazon.kindle (82%)
+     *     • com.audible.application (90%)
+     * ```
+     */
+    private fun trackedAppsBlock(label: String, apps: List<AppMetadata>): String {
+        val header = "$label · ${apps.size} app${if (apps.size != 1) "s" else ""}"
+        val lines = apps.joinToString(separator = "\n") { app ->
+            "    • ${app.packageName} (${pct(app.confidenceMultiplier)})"
+        }
+        return "$header\n$lines"
     }
 
     private fun displayResults(

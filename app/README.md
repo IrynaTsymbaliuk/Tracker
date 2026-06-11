@@ -113,6 +113,27 @@ For meditation, the sample renders the active data sources inline: `HC` for Heal
 
 For exercise, the sample lists the distinct exercise types that appeared in the window (title-cased, comma-separated), deduplicated across sessions. Confidence is a flat 99% since all data comes from Health Connect `ExerciseSessionRecord`.
 
+### 5. Listing tracked apps
+
+Below the results, a **Show tracked apps** button toggles the library's static app catalogue, built
+from the per-habit accessors `getTrackedLanguageLearningApps()`, `getTrackedReadingApps()`,
+`getTrackedSocialMediaApps()`, and `getTrackedMeditationApps()`. Unlike the query results, this is
+pure configuration — it lists every app the library *can* detect for each known-app habit,
+regardless of what is installed or which permissions are granted, so the lookups are synchronous (no
+coroutine). Each habit shows its app count and one indented line per app with its package name and
+base confidence multiplier:
+
+```
+📖 Reading · 27 apps
+    • com.amazon.kindle (82%)
+    • com.audible.application (90%)
+    ...
+```
+
+`toggleTrackedApps()` shows/hides the block; `trackedAppsBlock()` formats one habit's list. Movie
+watching, step counting, and exercise have no entry here because they are sourced from feeds and
+sensors rather than a fixed app list.
+
 ## How to Run
 
 1. **Install on device**:
@@ -136,6 +157,9 @@ For exercise, the sample lists the distinct exercise types that appeared in the 
 5. **Refresh**:
    - Tap "Query Today" to manually refresh all metrics
 
+6. **Browse tracked apps** (no permissions needed):
+   - Tap "Show tracked apps" to list every app the library can detect for language learning, reading, social media, and meditation, with each app's package name and base confidence
+
 ## Code Structure
 
 ```
@@ -146,6 +170,8 @@ MainActivity.kt
 ├── hasUsageStatsPermission()   # AppOpsManager permission check
 ├── updateHcPermissionUi()      # Show/hide Grant button based on HC permission state (steps + mindfulness + exercise)
 ├── queryMetrics()              # Query all seven metrics concurrently using coroutines
+├── toggleTrackedApps()         # Show/hide the static tracked-apps catalogue (getTracked*Apps())
+├── trackedAppsBlock()          # Format one habit's tracked apps as "package (confidence)" lines
 ├── displayResults()            # Render the summary line per metric
 ├── sessionLines()              # Expand UsageSession list into "from–to · appName (N min)" lines
 ├── stepSessionLines()          # Expand StepSession list into "from–to · N steps" lines (hourly buckets)

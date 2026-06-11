@@ -177,6 +177,36 @@
             android:textColor="?android:textColorSecondary"
             tools:text="🏃 Exercise    45 min · 2 sessions · Running, Strength Training · 99%" />
 
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?android:attr/listDivider"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Tracked-apps catalogue (static config — independent of installed apps) -->
+        <Button
+            android:id="@+id/btnShowApps"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingStart="0dp"
+            android:paddingEnd="0dp"
+            android:text="Show tracked apps" />
+
+        <TextView
+            android:id="@+id/tvTrackedApps"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="13sp"
+            android:textColor="?android:textColorSecondary"
+            android:fontFamily="monospace"
+            android:layout_marginTop="4dp"
+            android:visibility="gone"
+            tools:visibility="visible"
+            tools:text="📚 Language learning · 50 apps" />
+
     </LinearLayout>
 
 </ScrollView>

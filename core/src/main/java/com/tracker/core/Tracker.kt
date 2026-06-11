@@ -9,6 +9,8 @@ import com.tracker.core.collector.HealthConnectStepCollector
 import com.tracker.core.collector.HttpRssFetcher
 import com.tracker.core.collector.LetterboxdCollector
 import com.tracker.core.collector.UsageEventsCollector
+import com.tracker.core.config.AppMetadata
+import com.tracker.core.config.KnownApps
 import com.tracker.core.permission.PermissionManager
 import com.tracker.core.provider.ExerciseProvider
 import com.tracker.core.provider.LanguageLearningProvider
@@ -111,6 +113,49 @@ class Tracker private constructor(
     fun setLetterboxdUsername(username: String?) {
         letterboxdUsername = username
     }
+
+    /**
+     * Returns the apps the library tracks for language learning — the curated set of known apps
+     * whose foreground usage is matched when detecting this habit.
+     *
+     * This is static configuration: it reflects what the library *can* detect, independent of
+     * which apps are actually installed on the device or whether any permission has been granted.
+     * Each [AppMetadata] exposes the app's package name and its base confidence multiplier.
+     *
+     * @return The tracked language learning apps, ordered alphabetically by app name.
+     */
+    fun getTrackedLanguageLearningApps(): List<AppMetadata> =
+        KnownApps.languageLearning.values.toList()
+
+    /**
+     * Returns the apps the library tracks for reading. See [getTrackedLanguageLearningApps] for
+     * notes on what this list represents.
+     *
+     * @return The tracked reading apps, ordered alphabetically by app name.
+     */
+    fun getTrackedReadingApps(): List<AppMetadata> =
+        KnownApps.reading.values.toList()
+
+    /**
+     * Returns the apps the library tracks for social media. See [getTrackedLanguageLearningApps]
+     * for notes on what this list represents.
+     *
+     * @return The tracked social media apps, ordered alphabetically by app name.
+     */
+    fun getTrackedSocialMediaApps(): List<AppMetadata> =
+        KnownApps.socialMedia.values.toList()
+
+    /**
+     * Returns the apps the library tracks for meditation. See [getTrackedLanguageLearningApps] for
+     * notes on what this list represents.
+     *
+     * Note that meditation can additionally be detected from Health Connect
+     * `MindfulnessSessionRecord`s; this list covers only the known-app (UsageStats) source.
+     *
+     * @return The tracked meditation apps, ordered alphabetically by app name.
+     */
+    fun getTrackedMeditationApps(): List<AppMetadata> =
+        KnownApps.meditation.values.toList()
 
     /**
      * @param days Number of days to include: 1 = today from midnight through now,
