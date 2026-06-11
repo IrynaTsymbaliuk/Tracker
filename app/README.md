@@ -67,7 +67,7 @@ Each metric is shown as a summary line:
 - **Language**: `📚 Language    45 min · HIGH · 85%`
 - **Reading**: `📖 Reading    30 min · MEDIUM · 75%`
 - **Social**: `📱 Social    120 min · HIGH · 88%`
-- **Movies**: `🎬 Movies    3 films · HIGH · 95%`
+- **Movies**: `🎬 Movies    3 films · HIGH · 95%` (expands into one line per film with its TMDB id)
 - **Steps**: `👣 Steps    7,622 steps · HIGH · 99%`
 - **Meditation**: `🧘 Meditation    15 min · 1 session · HC+Usage · 97%`
 - **Exercise**: `🏃 Exercise    45 min · 2 sessions · Running, Strength Training · 99%`
@@ -93,6 +93,21 @@ library always returns it; the app simply renders it:
 `stepSessionLines()` formats `StepSession`s as `from–to · N steps`. Timestamps are rendered as local
 `HH:mm`. Note that step "sessions" are **hourly Health Connect buckets**, not discrete walking bouts —
 empty hours are omitted by the library, so every line shown has a non-zero count.
+
+The Movies row gets the same treatment via `movieSessionLines()`, expanding each `MovieSession` into
+`watchedDate · title (tmdb:<id>)`:
+
+```
+🎬 Movies    3 films · HIGH · 95%
+    • Jan 15 · Dune: Part Two (tmdb:693134)
+    • Jan 18 · Poor Things (tmdb:792307)
+    • Jan 22 · The Zone of Interest
+```
+
+`tmdb:<id>` is the film's The Movie Database id, parsed from the feed's `tmdb:movieId` element —
+use it to fetch posters, runtime, cast, etc. from the TMDB API. Films whose feed entry has no id
+(e.g. TV diary entries, or films not yet linked to TMDB) show just the title, as with *The Zone of
+Interest* above.
 
 For meditation, the sample renders the active data sources inline: `HC` for Health Connect, `Usage` for UsageStats, `HC+Usage` when both contributed and were merged. `—` is shown when the result is null (no data or no permission granted on either source).
 
@@ -134,6 +149,7 @@ MainActivity.kt
 ├── displayResults()            # Render the summary line per metric
 ├── sessionLines()              # Expand UsageSession list into "from–to · appName (N min)" lines
 ├── stepSessionLines()          # Expand StepSession list into "from–to · N steps" lines (hourly buckets)
+├── movieSessionLines()         # Expand MovieSession list into "watchedDate · title (tmdb:id)" lines
 ├── sourcesLabel()              # Render MeditationResult.sources as "HC+Usage"
 └── titleCase()                 # Convert "strength_training" → "Strength Training" for exercise type labels
 ```
@@ -172,6 +188,7 @@ The app works best when you have supported apps installed and have used them tod
 
 **Movie watching:**
 - Set `letterboxdUsername` in `MainActivity.kt` to your Letterboxd username
+- Each detected film shows its TMDB id (`tmdb:<id>`) parsed from the feed's `tmdb:movieId` element — use it to look the film up in The Movie Database. Films the feed hasn't linked to TMDB show just the title.
 
 **Step counting:**
 - Requires Health Connect to be installed (built-in on Android 14+; available via Google Play on Android 9–13)

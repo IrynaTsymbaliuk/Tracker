@@ -88,7 +88,8 @@ class LetterboxdCollector(
             val metadata = LetterboxdMetadata(
                 title = movie.title,
                 publishedDate = movie.publishedDate,
-                watchedDate = movie.watchedDate
+                watchedDate = movie.watchedDate,
+                tmdbId = movie.tmdbId
             )
 
             CounterEvidence(

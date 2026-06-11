@@ -13,9 +13,13 @@ package com.tracker.core.result
  * @property publishedDate When the Letterboxd diary entry was published, in milliseconds since epoch.
  * @property watchedDate When the movie was watched according to the diary entry, in milliseconds
  * since epoch (parsed at UTC midnight; falls back to [publishedDate] when the feed omits it).
+ * @property tmdbId The Movie Database (TMDB) movie id from the Letterboxd feed's `tmdb:movieId`
+ * element, used to look up further movie details in TMDB. `null` when the feed omits it (e.g.
+ * TV entries or films not yet linked to TMDB).
  */
 data class MovieSession(
     val title: String,
     val publishedDate: Long,
-    val watchedDate: Long
+    val watchedDate: Long,
+    val tmdbId: Int? = null
 )

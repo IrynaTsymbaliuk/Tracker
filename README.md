@@ -57,7 +57,16 @@ lifecycleScope.launch {
     try {
         val movies = tracker.queryMovieWatching()
         movies?.count              // number of films logged (= sessions.size) — null means no films in range
-        movies?.sessions           // List<MovieSession> — title, watchedDate, publishedDate
+        movies?.sessions           // List<MovieSession> — title, watchedDate, publishedDate, tmdbId
+
+        // Each session carries the film's The Movie Database (TMDB) id from the feed's
+        // tmdb:movieId element — use it to fetch posters, runtime, cast, etc. from TMDB.
+        // tmdbId is null when the feed omits it (e.g. TV entries or unlinked films).
+        movies?.sessions?.forEach { session ->
+            session.tmdbId?.let { id ->
+                // GET https://api.themoviedb.org/3/movie/$id
+            }
+        }
     } catch (e: IllegalStateException) {
         // Username not configured — call tracker.setLetterboxdUsername("username") first
     } catch (e: NetworkException) {
@@ -109,7 +118,7 @@ lifecycleScope.launch {
 **Example output (today):**
 - Reading: 30 min · 2 sessions · Kindle · 75% confidence (MEDIUM)
 - Language Learning: 45 min · 5 sessions · Duolingo, Anki · 85% confidence (HIGH)
-- Movie Watching: 3 films · The Matrix, Inception, Interstellar · 95% confidence (HIGH)
+- Movie Watching: 3 films · The Matrix (tmdb:603), Inception (tmdb:27205), Interstellar (tmdb:157336) · 95% confidence (HIGH)
 - Social Media: 120 min · 23 sessions · Instagram, Reddit, WhatsApp · 88% confidence (HIGH)
 - Steps: 7,622 steps · 99% confidence (HIGH)
 - Meditation: 15 min · 1 session · Calm (HealthConnect + UsageStats merged) · 97% confidence (HIGH)
@@ -149,7 +158,7 @@ days = 7  │ ████████ ████████ █████�
 |---|---|---|---|
 | **LANGUAGE_LEARNING** | Foreground session events | Duolingo, Anki, LingoDeer, Drops, Kanji Study, Renshuu, and 7 more | `PACKAGE_USAGE_STATS` |
 | **READING** | Foreground session events | Kindle, Google Play Books | `PACKAGE_USAGE_STATS` |
-| **MOVIE_WATCHING** | Letterboxd RSS | Film titles and watch dates from public feed | `INTERNET` (no user prompt) |
+| **MOVIE_WATCHING** | Letterboxd RSS | Film titles, watch dates, and TMDB ids from public feed | `INTERNET` (no user prompt) |
 | **SOCIAL_MEDIA** | Foreground session events | Facebook, Instagram, Twitter/X, TikTok, Reddit, WhatsApp, and 9 more | `PACKAGE_USAGE_STATS` |
 | **STEP_COUNTING** | Health Connect | Aggregated across all step sources, deduped by HC | `health.READ_STEPS` · API 26+ |
 | **MEDITATION** | Health Connect + Foreground session events (fused) | `MindfulnessSessionRecord`s plus Calm, Headspace, Insight Timer, Balance, Waking Up, Smiling Mind, Ten Percent Happier, Medito, MEISOON, Mindvalley | `health.READ_MINDFULNESS` (optional, API 26+) · `PACKAGE_USAGE_STATS` |
@@ -160,6 +169,8 @@ days = 7  │ ████████ ████████ █████�
 **Note on session accuracy**: On Android 10+ (API 29), session tracking uses `ACTIVITY_RESUMED`/`ACTIVITY_PAUSED` events for precise per-session start and end times. Consecutive activity transitions within the same app are merged into a single session if the gap between them is under 30 seconds.
 
 **Note on sessions deduplication**: When storing sessions locally across multiple queries, use `(packageName, startTime)` as the composite key. Exception: if `session.startTime == result.timeRange.from`, the session start was inferred (the app was already open at the query boundary) — use `(packageName, endTime)` for those. Sessions under 1 minute have `durationMinutes = 0` but are still present in the list. See `UsageSession` for full details.
+
+**Note on movie watching**: `queryMovieWatching()` parses the public Letterboxd RSS feed for the configured username. Each `MovieSession` exposes the film `title`, the `watchedDate` and `publishedDate` (milliseconds), and `tmdbId` — the The Movie Database movie id taken from the feed's `tmdb:movieId` element. Use `tmdbId` to look up full details (poster, runtime, cast, etc.) via the TMDB API, e.g. `https://api.themoviedb.org/3/movie/{tmdbId}`. `tmdbId` is `null` when the feed omits it (TV diary entries carry `tmdb:tvId` instead, and a few films are not yet linked to TMDB), so always null-check before using it.
 
 **Note on step counting**: `queryStepCounting(days)` uses Health Connect's `aggregateGroupByDuration` API with a 1-hour slice, which deduplicates across all contributing apps (e.g. Google Fit, phone step counter) before returning each bucket's count. The result exposes hourly `StepSession` buckets in `sessions` (so callers can separate today's steps from yesterday's) and a convenience `totalSteps` sum. Hours with no recorded steps are omitted. Returns `null` if Health Connect is unavailable or the `READ_STEPS` permission has not been granted.
 
@@ -262,7 +273,7 @@ Add the following to the activity that handles the permission result:
 ./gradlew :app:installDebug
 ```
 
-Demonstrates the full flow: permission setup for `PACKAGE_USAGE_STATS` and Health Connect (steps + mindfulness + exercise, all requested in one prompt), querying all seven metrics for today (language learning, reading, social media, movie watching, step counting, meditation, exercise), and displaying results. For the usage-based metrics (language learning, reading, social media) and step counting, the sample expands each result's `sessions` list into a per-session breakdown — one indented line per session showing **time from – time to** and the **app name** (or step count for hourly step buckets). The meditation row shows which sources contributed (`HC`, `Usage`, or `HC+Usage`); the exercise row lists the distinct exercise types detected (e.g. `Running, Strength Training`). To enable movie watching, set your Letterboxd username in `MainActivity.kt`.
+Demonstrates the full flow: permission setup for `PACKAGE_USAGE_STATS` and Health Connect (steps + mindfulness + exercise, all requested in one prompt), querying all seven metrics for today (language learning, reading, social media, movie watching, step counting, meditation, exercise), and displaying results. For the usage-based metrics (language learning, reading, social media) and step counting, the sample expands each result's `sessions` list into a per-session breakdown — one indented line per session showing **time from – time to** and the **app name** (or step count for hourly step buckets). The movie watching row expands into one line per film showing the **watched date**, **title**, and **TMDB id** (`tmdb:<id>`) when present. The meditation row shows which sources contributed (`HC`, `Usage`, or `HC+Usage`); the exercise row lists the distinct exercise types detected (e.g. `Running, Strength Training`). To enable movie watching, set your Letterboxd username in `MainActivity.kt`.
 
 ## License
 

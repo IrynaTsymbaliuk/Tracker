@@ -22,6 +22,7 @@ import com.tracker.core.Tracker
 import com.tracker.core.result.ExerciseResult
 import com.tracker.core.result.LanguageLearningResult
 import com.tracker.core.result.MeditationResult
+import com.tracker.core.result.MovieSession
 import com.tracker.core.result.MovieWatchingResult
 import com.tracker.core.result.ReadingResult
 import com.tracker.core.result.SocialMediaResult
@@ -180,7 +181,7 @@ class MainActivity : AppCompatActivity() {
             ?: "📱 Social    —"
 
         binding.tvMovies.text = movies
-            ?.let { "🎬 Movies    ${it.count} film${if (it.count != 1) "s" else ""} · ${it.confidenceLevel} · ${pct(it.confidence)}" }
+            ?.let { "🎬 Movies    ${it.count} film${if (it.count != 1) "s" else ""} · ${it.confidenceLevel} · ${pct(it.confidence)}${movieSessionLines(it.sessions)}" }
             ?: "🎬 Movies    —"
 
         binding.tvSteps.text = steps
@@ -276,10 +277,36 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Renders the per-film breakdown shown under the Movies metric. Each [MovieSession] becomes
+     * its own indented line showing the **watched date** and the **title**, plus the **TMDB id**
+     * when the Letterboxd feed provided one:
+     *
+     * ```
+     *     • Jan 15 · Dune: Part Two (tmdb:693134)
+     * ```
+     *
+     * The `tmdb:<id>` tag is the The Movie Database movie id — use it to fetch full details
+     * (poster, runtime, cast, …) from the TMDB API. Films whose feed entry has no id show just
+     * the title. Returns an empty string when there are no sessions.
+     */
+    private fun movieSessionLines(sessions: List<MovieSession>): String {
+        if (sessions.isEmpty()) return ""
+        return sessions.joinToString(separator = "\n", prefix = "\n") { session ->
+            val watched = MOVIE_DATE_FORMAT.format(Instant.ofEpochMilli(session.watchedDate))
+            val tmdb = session.tmdbId?.let { " (tmdb:$it)" } ?: ""
+            "    • $watched · ${session.title}$tmdb"
+        }
+    }
+
     companion object {
         /** Formats session start/end timestamps as local `HH:mm` for the session breakdown. */
         private val SESSION_TIME_FORMAT: DateTimeFormatter =
             DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault())
+
+        /** Formats a movie's watched date as e.g. `Jan 15` for the Movies breakdown. */
+        private val MOVIE_DATE_FORMAT: DateTimeFormatter =
+            DateTimeFormatter.ofPattern("MMM d").withZone(ZoneId.systemDefault())
 
         private val HC_STEPS_PERMISSION =
             HealthPermission.getReadPermission(StepsRecord::class)

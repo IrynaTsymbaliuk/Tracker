@@ -63,6 +63,7 @@ internal class RssParser {
             "title" -> currentItem?.copy(title = parser.nextText())
             "pubDate" -> currentItem?.copy(pubDate = parseDate(parser.nextText()))
             "description" -> currentItem?.copy(description = parser.nextText())
+            "tmdb:movieId" -> currentItem?.copy(tmdbId = parseTmdbId(parser.nextText()))
             else -> currentItem
         }
     }
@@ -76,10 +77,17 @@ internal class RssParser {
         }
     }
 
+    private fun parseTmdbId(idText: String): Int? {
+        return idText.trim().toIntOrNull().also {
+            if (it == null) Log.w(TAG, "Failed to parse tmdb:movieId: $idText")
+        }
+    }
+
     private data class RssItem(
         val title: String? = null,
         val pubDate: Long? = null,
-        val description: String? = null
+        val description: String? = null,
+        val tmdbId: Int? = null
     ) {
         fun toMovieSession(watchedDateFormat: SimpleDateFormat): MovieSession? {
             val titleValue = title ?: return null
@@ -89,7 +97,8 @@ internal class RssParser {
             return MovieSession(
                 title = titleValue,
                 publishedDate = pubDateValue,
-                watchedDate = watchedDate
+                watchedDate = watchedDate,
+                tmdbId = tmdbId
             )
         }
 
