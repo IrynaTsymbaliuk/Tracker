@@ -89,7 +89,11 @@ class LetterboxdCollector(
                 title = movie.title,
                 publishedDate = movie.publishedDate,
                 watchedDate = movie.watchedDate,
-                tmdbId = movie.tmdbId
+                tmdbId = movie.tmdbId,
+                rating = movie.rating,
+                review = movie.review,
+                isRewatch = movie.isRewatch,
+                isLiked = movie.isLiked
             )
 
             CounterEvidence(

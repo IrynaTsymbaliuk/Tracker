@@ -30,7 +30,16 @@ class MovieWatchingProvider internal constructor(
 
         val sessions = evidenceList.mapNotNull { ev ->
             val metadata = LetterboxdMetadata.fromMap(ev.metadata) ?: return@mapNotNull null
-            MovieSession(metadata.title, metadata.publishedDate, metadata.watchedDate, metadata.tmdbId)
+            MovieSession(
+                title = metadata.title,
+                publishedDate = metadata.publishedDate,
+                watchedDate = metadata.watchedDate,
+                tmdbId = metadata.tmdbId,
+                rating = metadata.rating,
+                review = metadata.review,
+                isRewatch = metadata.isRewatch,
+                isLiked = metadata.isLiked
+            )
         }.sortedBy { it.watchedDate }
 
         val confidence = evidenceList.first().confidence

@@ -69,7 +69,7 @@ Each metric is shown as a summary line:
 - **Language**: `📚 Language    45 min · HIGH · 85%`
 - **Reading**: `📖 Reading    30 min · MEDIUM · 75%`
 - **Social**: `📱 Social    120 min · HIGH · 88%`
-- **Movies**: `🎬 Movies    3 films · HIGH · 95%` (expands into one line per film with its TMDB id)
+- **Movies**: `🎬 Movies    3 films · HIGH · 95%` (expands into one line per film with its TMDB id, star rating, like marker, rewatch marker, and review)
 - **Steps**: `👣 Steps    7,622 steps · HIGH · 99%`
 - **Distance**: `📏 Distance    5.42 km · HIGH · 99%`
 - **Meditation**: `🧘 Meditation    15 min · 1 session · HC+Usage · 97%`
@@ -104,19 +104,22 @@ result's `sessions` list — the library always returns it; the app simply rende
 empty hours are omitted by the library, so every line shown has a non-zero count.
 
 The Movies row gets the same treatment via `movieSessionLines()`, expanding each `MovieSession` into
-`watchedDate · title (tmdb:<id>)`:
+`watchedDate · title (tmdb:<id>) · ★rating ♥ ↻`, with the review on a second indented line:
 
 ```
 🎬 Movies    3 films · HIGH · 95%
-    • Jan 15 · Dune: Part Two (tmdb:693134)
-    • Jan 18 · Poor Things (tmdb:792307)
+    • Jan 15 · Dune: Part Two (tmdb:693134) · ★★★★½ ♥ ↻
+        "Villeneuve outdid himself."
+    • Jan 18 · Poor Things (tmdb:792307) · ★★★★
     • Jan 22 · The Zone of Interest
 ```
 
 `tmdb:<id>` is the film's The Movie Database id, parsed from the feed's `tmdb:movieId` element —
-use it to fetch posters, runtime, cast, etc. from the TMDB API. Films whose feed entry has no id
-(e.g. TV diary entries, or films not yet linked to TMDB) show just the title, as with *The Zone of
-Interest* above.
+use it to fetch posters, runtime, cast, etc. from the TMDB API. The star score comes from
+`MovieSession.rating` (the feed's `letterboxd:memberRating`), `♥` marks `isLiked` (the feed's
+`letterboxd:memberLike`), `↻` marks `isRewatch`, and the quoted line is `review` (plain text). Films
+whose feed entry has no id, rating, or review simply omit those parts — e.g. *The Zone of Interest*
+above was logged unrated, without a review.
 
 For meditation, the sample renders the active data sources inline: `HC` for Health Connect, `Usage` for UsageStats, `HC+Usage` when both contributed and were merged. `—` is shown when the result is null (no data or no permission granted on either source).
 
@@ -185,7 +188,8 @@ MainActivity.kt
 ├── sessionLines()              # Expand UsageSession list into "from–to · appName (N min)" lines
 ├── stepSessionLines()          # Expand StepSession list into "from–to · N steps" lines (hourly buckets)
 ├── distanceSessionLines()      # Expand DistanceSession list into "from–to · N km" lines (hourly buckets)
-├── movieSessionLines()         # Expand MovieSession list into "watchedDate · title (tmdb:id)" lines
+├── movieSessionLines()         # Expand MovieSession list into "watchedDate · title (tmdb:id) · ★rating ♥ ↻ + review" lines
+├── starRating()                # Render a 0.5–5.0 rating as ★ glyphs (e.g. 4.5 → ★★★★½)
 ├── sourcesLabel()              # Render MeditationResult.sources as "HC+Usage"
 └── titleCase()                 # Convert "strength_training" → "Strength Training" for exercise type labels
 ```
@@ -225,6 +229,7 @@ The app works best when you have supported apps installed and have used them tod
 **Movie watching:**
 - Set `letterboxdUsername` in `MainActivity.kt` to your Letterboxd username
 - Each detected film shows its TMDB id (`tmdb:<id>`) parsed from the feed's `tmdb:movieId` element — use it to look the film up in The Movie Database. Films the feed hasn't linked to TMDB show just the title.
+- Each `MovieSession` also exposes the user's own log data: `rating` (0.5–5.0 stars, `null` when unrated), `review` (plain text, `null` when there's no written review), `isRewatch`, and `isLiked`. The sample renders these as `★★★★½`, a `♥` marker, a `↻` marker, and a quoted review line.
 
 **Step counting:**
 - Requires Health Connect to be installed (built-in on Android 14+; available via Google Play on Android 9–13)

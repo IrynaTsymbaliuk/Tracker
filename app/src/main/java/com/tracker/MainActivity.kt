@@ -359,24 +359,39 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Renders the per-film breakdown shown under the Movies metric. Each [MovieSession] becomes
-     * its own indented line showing the **watched date** and the **title**, plus the **TMDB id**
-     * when the Letterboxd feed provided one:
+     * its own indented line showing the **watched date**, the **title**, the **TMDB id** (when the
+     * feed provided one), the user's **star rating**, a **♥** like marker and **↻** rewatch marker
+     * (when present), and a second indented line with the **review** text when the entry has one:
      *
      * ```
-     *     • Jan 15 · Dune: Part Two (tmdb:693134)
+     *     • Jan 15 · Dune: Part Two (tmdb:693134) · ★★★★½ ♥ ↻
+     *         "Villeneuve outdid himself."
      * ```
      *
      * The `tmdb:<id>` tag is the The Movie Database movie id — use it to fetch full details
-     * (poster, runtime, cast, …) from the TMDB API. Films whose feed entry has no id show just
-     * the title. Returns an empty string when there are no sessions.
+     * (poster, runtime, cast, …) from the TMDB API. Films whose feed entry has no id, rating, or
+     * review simply omit those parts. Returns an empty string when there are no sessions.
      */
     private fun movieSessionLines(sessions: List<MovieSession>): String {
         if (sessions.isEmpty()) return ""
         return sessions.joinToString(separator = "\n", prefix = "\n") { session ->
             val watched = MOVIE_DATE_FORMAT.format(Instant.ofEpochMilli(session.watchedDate))
             val tmdb = session.tmdbId?.let { " (tmdb:$it)" } ?: ""
-            "    • $watched · ${session.title}$tmdb"
+            val rating = session.rating?.let { " · ${starRating(it)}" } ?: ""
+            val liked = if (session.isLiked) " ♥" else ""
+            val rewatch = if (session.isRewatch) " ↻" else ""
+            val review = session.review?.let { "\n        \"$it\"" } ?: ""
+            "    • $watched · ${session.title}$tmdb$rating$liked$rewatch$review"
         }
+    }
+
+    /**
+     * Renders a 0.5–5.0 star rating as filled/half/empty star glyphs, e.g. `4.5` → `★★★★½`.
+     */
+    private fun starRating(rating: Float): String {
+        val full = rating.toInt()
+        val half = (rating - full) >= 0.5f
+        return "★".repeat(full) + (if (half) "½" else "")
     }
 
     companion object {
