@@ -226,7 +226,7 @@ Sessions that overlap significantly (≥ 50% of the shorter session's duration) 
 
 ```kotlin
 dependencies {
-    implementation("com.tracker:core:1.2.0")
+    implementation("com.tracker:core:1.2.1")
 }
 ```
 

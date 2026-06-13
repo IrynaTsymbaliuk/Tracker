@@ -11,12 +11,12 @@ android {
     defaultConfig {
         minSdk = 21
 
-        version = "1.2.0"
+        version = "1.2.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
 
-        buildConfigField("String", "LIBRARY_VERSION", "\"1.2.0\"")
+        buildConfigField("String", "LIBRARY_VERSION", "\"1.2.1\"")
         buildConfigField("String", "LIBRARY_NAME", "\"Tracker\"")
     }
 
@@ -64,7 +64,7 @@ afterEvaluate {
 
                 groupId = "com.github.IrynaTsymbaliuk"
                 artifactId = "tracker"
-                version = "1.2.0"
+                version = "1.2.1"
 
                 pom {
                     name.set("Tracker")
