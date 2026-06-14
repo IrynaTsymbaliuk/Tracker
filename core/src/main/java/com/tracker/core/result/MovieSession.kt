@@ -9,7 +9,10 @@ package com.tracker.core.result
  *
  * Sessions are exposed via [MovieWatchingResult.sessions].
  *
- * @property title Movie title as it appears in the Letterboxd entry.
+ * @property title Movie title from the feed's `letterboxd:filmTitle` element (falls back to the
+ * entry `<title>` with its rating suffix stripped when the feed omits it).
+ * @property year Release year from the feed's `letterboxd:filmYear` element. `null` when the feed
+ * omits it.
  * @property publishedDate When the Letterboxd diary entry was published, in milliseconds since epoch.
  * @property watchedDate When the movie was watched according to the diary entry, in milliseconds
  * since epoch (parsed at UTC midnight; falls back to [publishedDate] when the feed omits it).
@@ -20,6 +23,8 @@ package com.tracker.core.result
  * 0.5–5.0 scale (half-star increments). `null` when the entry was logged without a rating.
  * @property review The user's written review as plain text (the feed's HTML is stripped, and the
  * poster image and "Watched on …" boilerplate are removed). `null` when the entry has no review.
+ * @property posterUrl The poster image URL extracted from the diary entry description's `<img>`.
+ * `null` when the feed omits it.
  * @property isRewatch Whether the entry is marked as a rewatch, from the feed's
  * `letterboxd:rewatch` element. Defaults to `false` when the feed omits it.
  * @property isLiked Whether the user liked (hearted) the film, from the feed's
@@ -27,11 +32,13 @@ package com.tracker.core.result
  */
 data class MovieSession(
     val title: String,
+    val year: Int? = null,
     val publishedDate: Long,
     val watchedDate: Long,
     val tmdbId: Int? = null,
     val rating: Float? = null,
     val review: String? = null,
+    val posterUrl: String? = null,
     val isRewatch: Boolean = false,
     val isLiked: Boolean = false
 )

@@ -30,6 +30,13 @@ internal class RssParser {
 
         /** Matches any HTML tag, used to reduce the description HTML to plain text. */
         val htmlTag = Regex("<[^>]+>")
+
+        /**
+         * Matches the poster `<img>` Letterboxd embeds in the description CDATA, e.g.
+         * `<p><img src="https://…jpg"/> …</p>`. Captures the `src` URL so it can be exposed as the
+         * session's poster.
+         */
+        val posterImage = Regex("<img[^>]*\\bsrc=\"([^\"]+)\"")
     }
 
     private val dateFormat =
@@ -39,6 +46,12 @@ internal class RssParser {
 
     private val watchedDateFormat =
         SimpleDateFormat("MMM dd, yyyy", Locale.ENGLISH).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+
+    /** Parses the feed's authoritative `letterboxd:watchedDate`, e.g. `2026-06-13`, at UTC midnight. */
+    private val isoWatchedDateFormat =
+        SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH).apply {
             timeZone = TimeZone.getTimeZone("UTC")
         }
 
@@ -55,7 +68,8 @@ internal class RssParser {
 
                 XmlPullParser.END_TAG -> {
                     if (parser.name == "item") {
-                        currentItem?.toMovieSession(watchedDateFormat)?.let { movies.add(it) }
+                        currentItem?.toMovieSession(isoWatchedDateFormat, watchedDateFormat)
+                            ?.let { movies.add(it) }
                         currentItem = null
                     }
                 }
@@ -80,6 +94,9 @@ internal class RssParser {
             "pubDate" -> currentItem?.copy(pubDate = parseDate(parser.nextText()))
             "description" -> currentItem?.copy(description = parser.nextText())
             "tmdb:movieId" -> currentItem?.copy(tmdbId = parseTmdbId(parser.nextText()))
+            "letterboxd:watchedDate" -> currentItem?.copy(watchedDate = parser.nextText().trim())
+            "letterboxd:filmTitle" -> currentItem?.copy(filmTitle = parser.nextText())
+            "letterboxd:filmYear" -> currentItem?.copy(filmYear = parseYear(parser.nextText()))
             "letterboxd:memberRating" -> currentItem?.copy(rating = parseRating(parser.nextText()))
             "letterboxd:rewatch" -> currentItem?.copy(rewatch = parseBoolean(parser.nextText()))
             "letterboxd:memberLike" -> currentItem?.copy(liked = parseBoolean(parser.nextText()))
@@ -102,6 +119,12 @@ internal class RssParser {
         }
     }
 
+    private fun parseYear(yearText: String): Int? {
+        return yearText.trim().toIntOrNull().also {
+            if (it == null) Log.w(TAG, "Failed to parse letterboxd:filmYear: $yearText")
+        }
+    }
+
     private fun parseRating(ratingText: String): Float? {
         return ratingText.trim().toFloatOrNull().also {
             if (it == null) Log.w(TAG, "Failed to parse letterboxd:memberRating: $ratingText")
@@ -116,6 +139,9 @@ internal class RssParser {
 
     private data class RssItem(
         val title: String? = null,
+        val filmTitle: String? = null,
+        val filmYear: Int? = null,
+        val watchedDate: String? = null,
         val pubDate: Long? = null,
         val description: String? = null,
         val tmdbId: Int? = null,
@@ -123,21 +149,42 @@ internal class RssParser {
         val rewatch: Boolean = false,
         val liked: Boolean = false
     ) {
-        fun toMovieSession(watchedDateFormat: SimpleDateFormat): MovieSession? {
-            val titleValue = ratingSuffix.replace(title ?: return null, "").trim()
+        fun toMovieSession(
+            isoWatchedDateFormat: SimpleDateFormat,
+            watchedDateFormat: SimpleDateFormat
+        ): MovieSession? {
+            // Prefer the dedicated letterboxd:filmTitle element; fall back to stripping the rating
+            // suffix off the entry <title> for feeds/entries that omit it.
+            val titleValue = filmTitle?.trim()?.ifBlank { null }
+                ?: ratingSuffix.replace(title ?: return null, "").trim()
             val pubDateValue = pubDate ?: return null
-            val watchedDate = extractWatchedDate(description, watchedDateFormat) ?: pubDateValue
+            // Prefer the authoritative letterboxd:watchedDate element; fall back to scraping the
+            // "Watched on …" line out of the description, then finally to the publish date.
+            val watchedDate = parseIsoWatchedDate(watchedDate, isoWatchedDateFormat)
+                ?: extractWatchedDate(description, watchedDateFormat)
+                ?: pubDateValue
 
             return MovieSession(
                 title = titleValue,
+                year = filmYear,
                 publishedDate = pubDateValue,
                 watchedDate = watchedDate,
                 tmdbId = tmdbId,
                 rating = rating,
                 review = extractReview(description),
+                posterUrl = extractPosterUrl(description),
                 isRewatch = rewatch,
                 isLiked = liked
             )
+        }
+
+        /**
+         * Extracts the poster image URL from the description's `<img src="…">`, or `null` when the
+         * description has no embedded poster.
+         */
+        private fun extractPosterUrl(description: String?): String? {
+            if (description == null) return null
+            return posterImage.find(description)?.groupValues?.get(1)?.trim()?.ifBlank { null }
         }
 
         /**
@@ -156,6 +203,20 @@ internal class RssParser {
                 .trim()
 
             return plain.ifBlank { null }
+        }
+
+        /** Parses the `letterboxd:watchedDate` value (`yyyy-MM-dd`) to UTC-midnight millis. */
+        private fun parseIsoWatchedDate(
+            watchedDate: String?,
+            isoWatchedDateFormat: SimpleDateFormat
+        ): Long? {
+            if (watchedDate.isNullOrBlank()) return null
+            return try {
+                isoWatchedDateFormat.parse(watchedDate)?.time
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to parse letterboxd:watchedDate: $watchedDate", e)
+                null
+            }
         }
 
         private fun extractWatchedDate(

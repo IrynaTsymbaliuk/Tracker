@@ -87,11 +87,13 @@ class LetterboxdCollector(
         filtered.map { movie ->
             val metadata = LetterboxdMetadata(
                 title = movie.title,
+                year = movie.year,
                 publishedDate = movie.publishedDate,
                 watchedDate = movie.watchedDate,
                 tmdbId = movie.tmdbId,
                 rating = movie.rating,
                 review = movie.review,
+                posterUrl = movie.posterUrl,
                 isRewatch = movie.isRewatch,
                 isLiked = movie.isLiked
             )

@@ -32,11 +32,13 @@ class MovieWatchingProvider internal constructor(
             val metadata = LetterboxdMetadata.fromMap(ev.metadata) ?: return@mapNotNull null
             MovieSession(
                 title = metadata.title,
+                year = metadata.year,
                 publishedDate = metadata.publishedDate,
                 watchedDate = metadata.watchedDate,
                 tmdbId = metadata.tmdbId,
                 rating = metadata.rating,
                 review = metadata.review,
+                posterUrl = metadata.posterUrl,
                 isRewatch = metadata.isRewatch,
                 isLiked = metadata.isLiked
             )
