@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2026-06-14
+
+### Added
+- `MovieSession.year: Int?` — the film's release year from the Letterboxd feed's `letterboxd:filmYear` element. `null` when the feed omits it.
+- `MovieSession.posterUrl: String?` — the poster image URL extracted from the diary entry description's `<img>` tag. `null` when the feed omits it.
+
+### Changed
+- Movie titles are now read from the feed's dedicated `letterboxd:filmTitle` element instead of being scraped from the entry `<title>` (with its `, <year>` and rating suffix). The old `<title>` parsing remains as a fallback for entries that omit `letterboxd:filmTitle`.
+- Updated the demo app and READMEs to surface the new `year` and `posterUrl` fields.
+
+### Fixed
+- `MovieSession.watchedDate` is now read from the feed's authoritative `letterboxd:watchedDate` element (parsed at UTC midnight). Previously it was scraped from the description's "Watched on …" sentence, whose regex required a comma after the weekday that current Letterboxd feeds omit — so it silently fell back to the entry's publish date, which could be off by days for films logged after the fact. The description scrape and publish date are retained as fallbacks.
+
 ## [1.2.1] - 2026-06-13
 
 ### Added
@@ -60,5 +73,6 @@ val movies = tracker.queryMovieWatching()
 movies?.sessions?.forEach { show(it.title, it.watchedDate) }
 ```
 
+[1.2.2]: https://github.com/IrynaTsymbaliuk/Tracker/releases/tag/v1.2.2
 [1.2.1]: https://github.com/IrynaTsymbaliuk/Tracker/releases/tag/v1.2.1
 [1.2.0]: https://github.com/IrynaTsymbaliuk/Tracker/releases/tag/v1.2.0

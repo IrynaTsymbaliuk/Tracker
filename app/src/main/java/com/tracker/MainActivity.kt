@@ -359,29 +359,33 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Renders the per-film breakdown shown under the Movies metric. Each [MovieSession] becomes
-     * its own indented line showing the **watched date**, the **title**, the **TMDB id** (when the
-     * feed provided one), the user's **star rating**, a **♥** like marker and **↻** rewatch marker
-     * (when present), and a second indented line with the **review** text when the entry has one:
+     * its own indented line showing the **watched date**, the **title** with its **release year**
+     * (when present), the **TMDB id** (when the feed provided one), the user's **star rating**, a
+     * **♥** like marker and **↻** rewatch marker (when present), followed by indented lines for the
+     * **poster URL** and the **review** text when the entry has them:
      *
      * ```
-     *     • Jan 15 · Dune: Part Two (tmdb:693134) · ★★★★½ ♥ ↻
+     *     • Jan 15 · Dune: Part Two (2024) (tmdb:693134) · ★★★★½ ♥ ↻
+     *         🖼 https://a.ltrbxd.com/resized/film-poster/…-crop.jpg
      *         "Villeneuve outdid himself."
      * ```
      *
      * The `tmdb:<id>` tag is the The Movie Database movie id — use it to fetch full details
-     * (poster, runtime, cast, …) from the TMDB API. Films whose feed entry has no id, rating, or
-     * review simply omit those parts. Returns an empty string when there are no sessions.
+     * (runtime, cast, …) from the TMDB API. Films whose feed entry has no year, id, rating, poster,
+     * or review simply omit those parts. Returns an empty string when there are no sessions.
      */
     private fun movieSessionLines(sessions: List<MovieSession>): String {
         if (sessions.isEmpty()) return ""
         return sessions.joinToString(separator = "\n", prefix = "\n") { session ->
             val watched = MOVIE_DATE_FORMAT.format(Instant.ofEpochMilli(session.watchedDate))
+            val year = session.year?.let { " ($it)" } ?: ""
             val tmdb = session.tmdbId?.let { " (tmdb:$it)" } ?: ""
             val rating = session.rating?.let { " · ${starRating(it)}" } ?: ""
             val liked = if (session.isLiked) " ♥" else ""
             val rewatch = if (session.isRewatch) " ↻" else ""
+            val poster = session.posterUrl?.let { "\n        🖼 $it" } ?: ""
             val review = session.review?.let { "\n        \"$it\"" } ?: ""
-            "    • $watched · ${session.title}$tmdb$rating$liked$rewatch$review"
+            "    • $watched · ${session.title}$year$tmdb$rating$liked$rewatch$poster$review"
         }
     }
 
