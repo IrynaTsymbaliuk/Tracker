@@ -4,6 +4,9 @@ plugins {
     id("maven-publish")
 }
 
+group = "com.github.IrynaTsymbaliuk"
+version = "1.2.2"
+
 android {
     namespace = "com.tracker.core"
     compileSdk = 36
@@ -11,12 +14,12 @@ android {
     defaultConfig {
         minSdk = 21
 
-        version = "1.2.2"
+        version = project.version.toString()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
 
-        buildConfigField("String", "LIBRARY_VERSION", "\"1.2.2\"")
+        buildConfigField("String", "LIBRARY_VERSION", "\"${project.version}\"")
         buildConfigField("String", "LIBRARY_NAME", "\"Tracker\"")
     }
 
@@ -62,9 +65,9 @@ afterEvaluate {
             create<MavenPublication>("release") {
                 from(components["release"])
 
-                groupId = "com.github.IrynaTsymbaliuk"
+                groupId = project.group.toString()
                 artifactId = "tracker"
-                version = "1.2.2"
+                version = project.version.toString()
 
                 pom {
                     name.set("Tracker")
