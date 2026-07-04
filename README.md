@@ -225,9 +225,25 @@ Sessions that overlap significantly (≥ 50% of the shorter session's duration) 
 
 ## Installation
 
+Tracker is published through JitPack.
+
+Add JitPack to your project repositories:
+
+```kotlin
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven("https://jitpack.io")
+    }
+}
+```
+
+Then add the library dependency:
+
 ```kotlin
 dependencies {
-    implementation("com.tracker:core:1.2.2")
+    implementation("com.github.IrynaTsymbaliuk:tracker:1.2.2")
 }
 ```
 
