@@ -262,4 +262,4 @@ The app works best when you have supported apps installed and have used them tod
 - Queries always cover today from midnight in the device's local timezone
 - On Android 10+, session times use precise `ACTIVITY_RESUMED`/`ACTIVITY_PAUSED` events
 - `MindfulnessSessionRecord` requires a recent `androidx.health.connect:connect-client` release. On older HC installations, the meditation query transparently falls back to UsageStats-only.
-- `ExerciseSessionRecord` is authoritative — confidence is fixed at `0.99` because these records are written by fitness apps or entered manually by the user. Sessions shorter than one minute still appear in `sessions` (rounded to `0 min`) so the session count remains accurate.
+- `ExerciseSessionRecord` is authoritative because these records are written by fitness apps or entered manually by the user. Sessions shorter than one minute still appear in `sessions` (rounded to `0 min`) so the session count remains accurate.

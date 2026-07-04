@@ -33,7 +33,6 @@ import com.tracker.core.result.SocialMediaResult
 import com.tracker.core.result.StepCountingResult
 import com.tracker.core.result.StepSession
 import com.tracker.core.result.UsageSession
-import com.tracker.core.result.toConfidenceLevel
 import com.tracker.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -216,34 +215,34 @@ class MainActivity : AppCompatActivity() {
         exercise: ExerciseResult?
     ) {
         binding.tvLanguage.text = language
-            ?.let { "📚 Language    ${it.durationMinutes} min · ${it.confidence.toConfidenceLevel()} · ${pct(it.confidence)}${sessionLines(it.sessions)}" }
+            ?.let { "📚 Language    ${it.durationMinutes} min${sessionLines(it.sessions)}" }
             ?: "📚 Language    —"
 
         binding.tvReading.text = reading
-            ?.let { "📖 Reading    ${it.durationMinutes} min · ${it.confidence.toConfidenceLevel()} · ${pct(it.confidence)}${sessionLines(it.sessions)}" }
+            ?.let { "📖 Reading    ${it.durationMinutes} min${sessionLines(it.sessions)}" }
             ?: "📖 Reading    —"
 
         binding.tvSocial.text = social
-            ?.let { "📱 Social    ${it.durationMinutes} min · ${it.confidence.toConfidenceLevel()} · ${pct(it.confidence)}${sessionLines(it.sessions)}" }
+            ?.let { "📱 Social    ${it.durationMinutes} min${sessionLines(it.sessions)}" }
             ?: "📱 Social    —"
 
         binding.tvMovies.text = movies
-            ?.let { "🎬 Movies    ${it.count} film${if (it.count != 1) "s" else ""} · ${it.confidence.toConfidenceLevel()} · ${pct(it.confidence)}${movieSessionLines(it.sessions)}" }
+            ?.let { "🎬 Movies    ${it.count} film${if (it.count != 1) "s" else ""}${movieSessionLines(it.sessions)}" }
             ?: "🎬 Movies    —"
 
         binding.tvSteps.text = steps
-            ?.let { "👣 Steps    ${"%,d".format(it.totalSteps)} steps · ${it.confidence.toConfidenceLevel()} · ${pct(it.confidence)}${stepSessionLines(it.sessions)}" }
+            ?.let { "👣 Steps    ${"%,d".format(it.totalSteps)} steps${stepSessionLines(it.sessions)}" }
             ?: "👣 Steps    —"
 
         binding.tvDistance.text = distance
-            ?.let { "📏 Distance    ${"%.2f".format(it.totalKilometers)} km · ${it.confidence.toConfidenceLevel()} · ${pct(it.confidence)}${distanceSessionLines(it.sessions)}" }
+            ?.let { "📏 Distance    ${"%.2f".format(it.totalKilometers)} km${distanceSessionLines(it.sessions)}" }
             ?: "📏 Distance    —"
 
         binding.tvMeditation.text = meditation
             ?.let {
                 val sessionCount = it.sessions.size
                 val sessionLabel = if (sessionCount == 1) "session" else "sessions"
-                "🧘 Meditation    ${it.durationMinutes} min · $sessionCount $sessionLabel · ${sourcesLabel(it)} · ${pct(it.confidence)}"
+                "🧘 Meditation    ${it.durationMinutes} min · $sessionCount $sessionLabel · ${sourcesLabel(it)}"
             }
             ?: "🧘 Meditation    —"
 
@@ -256,7 +255,7 @@ class MainActivity : AppCompatActivity() {
                     .distinct()
                     .joinToString(", ")
                 val typesSuffix = if (types.isNotEmpty()) " · $types" else ""
-                "🏃 Exercise    ${it.durationMinutes} min · $sessionCount $sessionLabel$typesSuffix · ${pct(it.confidence)}"
+                "🏃 Exercise    ${it.durationMinutes} min · $sessionCount $sessionLabel$typesSuffix"
             }
             ?: "🏃 Exercise    —"
     }
@@ -274,6 +273,9 @@ class MainActivity : AppCompatActivity() {
             }
     }
 
+    /** Formats a 0.0–1.0 multiplier as a whole-number percentage, e.g. `0.82` → `"82%"`. */
+    private fun pct(value: Float) = "%.0f%%".format(value * 100)
+
     /** Short human-readable label for the list of contributing data sources. */
     private fun sourcesLabel(result: MeditationResult): String = result.sources
         .joinToString("+") { src ->
@@ -283,8 +285,6 @@ class MainActivity : AppCompatActivity() {
                 else -> src.name
             }
         }
-
-    private fun pct(confidence: Float) = "%.0f%%".format(confidence * 100)
 
     /**
      * Renders the per-session breakdown shown under a usage-based metric (Reading,

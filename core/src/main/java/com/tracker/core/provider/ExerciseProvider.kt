@@ -54,15 +54,9 @@ class ExerciseProvider internal constructor(
         if (sessions.isEmpty()) return null
 
         val totalDuration = sessions.sumOf { it.durationMinutes }
-        // All evidence shares the same HealthConnect confidence, so the weighted
-        // average collapses to that value. We still call weightedAverage() to stay
-        // consistent with the other providers and to correctly handle any future
-        // per-session confidence adjustments.
-        val combinedConfidence = weightedAverage(evidenceList)
 
         return ExerciseResult(
             sources = listOf(DataSource.HEALTH_CONNECT),
-            confidence = combinedConfidence,
             timeRange = TimeRange(fromMillis, toMillis),
             durationMinutes = totalDuration,
             sessions = sessions

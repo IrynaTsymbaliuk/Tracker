@@ -42,11 +42,8 @@ class MovieWatchingProvider internal constructor(
             )
         }.sortedBy { it.watchedDate }
 
-        val confidence = evidenceList.first().confidence
-
         return MovieWatchingResult(
             sources = listOf(DataSource.LETTERBOXD_RSS),
-            confidence = confidence,
             timeRange = TimeRange(fromMillis, toMillis),
             sessions = sessions
         )

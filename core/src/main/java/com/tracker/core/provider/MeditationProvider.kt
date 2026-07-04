@@ -55,15 +55,10 @@ class MeditationProvider internal constructor(
             if (usageStatsEvidence.isNotEmpty()) add(DataSource.USAGE_STATS)
         }
 
-        val combinedConfidence = weightedAverage(
-            healthConnectEvidence + usageStatsEvidence
-        )
-
         val totalDuration = mergedSessions.sumOf { it.durationMinutes }
 
         return MeditationResult(
             sources = sources,
-            confidence = combinedConfidence,
             timeRange = TimeRange(fromMillis, toMillis),
             durationMinutes = totalDuration,
             sessions = mergedSessions

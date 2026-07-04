@@ -34,7 +34,6 @@ class StepCountingProvider internal constructor(
 
         return StepCountingResult(
             sources = listOf(evidence.source),
-            confidence = evidence.confidence,
             timeRange = TimeRange(fromMillis, toMillis),
             sessions = evidence.buckets.map { bucket ->
                 StepSession(

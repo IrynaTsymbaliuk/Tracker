@@ -21,7 +21,7 @@ import org.robolectric.annotation.Config
 class ProviderAggregationTest {
 
     @Test
-    fun languageLearning_filtersZeroMinuteSessions_weightsConfidenceByDuration_andSortsSessions() = runBlocking {
+    fun languageLearning_filtersZeroMinuteSessions_sumsDuration_andSortsSessions() = runBlocking {
         val collector = mockk<UsageEventsCollector>()
         every { collector.collect(FROM, TO, KnownApps.languageLearning) } returns listOf(
             usageEvidence(
@@ -54,12 +54,11 @@ class ProviderAggregationTest {
             ?: error("Expected language learning result")
 
         assertEquals(10, result.durationMinutes)
-        assertEquals(0.74f, result.confidence, 0.0001f)
         assertEquals(listOf("com.example.early", "com.example.late"), result.sessions.map { it.packageName })
     }
 
     @Test
-    fun reading_combinesConfidenceOncePerUniqueAppButKeepsAllSessionsInDuration() = runBlocking {
+    fun reading_keepsAllSessionsInDurationAndSortsByStartTime() = runBlocking {
         val collector = mockk<UsageEventsCollector>()
         every { collector.collect(FROM, TO, KnownApps.reading) } returns listOf(
             usageEvidence(
@@ -92,7 +91,6 @@ class ProviderAggregationTest {
             ?: error("Expected reading result")
 
         assertEquals(30, result.durationMinutes)
-        assertEquals(0.90f, result.confidence, 0.0001f)
         assertEquals(
             listOf("com.example.reader", "com.example.reader", "com.example.audio"),
             result.sessions.map { it.packageName }

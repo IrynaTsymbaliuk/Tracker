@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Simplified CI to use the Gradle build as the single verification entry point.
 
 ### Removed
-- **Breaking:** removed the `confidenceLevel` property from `HabitResult` and all result types. It was a pure derivation of `confidence` and baked fixed HIGH/MEDIUM/LOW thresholds into the API. Callers who want the banding can opt in via the existing `Float.toConfidenceLevel()` extension: `result.confidence.toConfidenceLevel()`.
+- **Breaking:** removed the `confidence` and `confidenceLevel` properties from `HabitResult` and all result types, along with the `ConfidenceLevel` enum and `Float.toConfidenceLevel()` extension. The scores were uncalibrated heuristics, computed inconsistently across providers, and largely redundant with `sources` (Health Connect / Letterboxd results were a constant tied 1:1 to the source). Use `sources: List<DataSource>` to distinguish authoritative sensor/log data from inferred app usage. Per-app base multipliers remain available as reference data via `AppMetadata.confidenceMultiplier` (`getTracked*Apps()`). Warrants a `2.0.0` release when the next batch of breaking changes ships.
 
 ### Fixed
 - Removed sample-app hardcoded strings and the personal Letterboxd default from the demo.

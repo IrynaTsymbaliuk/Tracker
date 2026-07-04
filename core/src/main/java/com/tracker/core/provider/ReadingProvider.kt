@@ -27,12 +27,6 @@ class ReadingProvider internal constructor(
             it.durationMinutes > 0
         }.ifEmpty { return null }
 
-        // Deduplicate to one confidence per unique app before combining — sessions from the
-        // same app are not independent events, so combining per-session would inflate the result.
-        val uniqueAppConfidences = validEvidenceList
-            .distinctBy { UsageStatsMetadata.fromMap(it.metadata)?.packageName }
-            .map { it.confidence }
-        val combinedConfidence = combineProbabilities(uniqueAppConfidences)
         val totalDuration = validEvidenceList.sumOf { it.durationMinutes }
 
         val sessions = validEvidenceList.mapNotNull { ev ->
@@ -48,29 +42,9 @@ class ReadingProvider internal constructor(
 
         return ReadingResult(
             sources = listOf(DataSource.USAGE_STATS),
-            confidence = combinedConfidence,
             timeRange = TimeRange(fromMillis, toMillis),
             durationMinutes = totalDuration,
             sessions = sessions
         )
-    }
-
-    /**
-     * Combine independent probabilities using the formula:
-     * combined = 1 - ∏(1 - p_i)
-     *
-     * This represents the probability that at least one of the independent
-     * events is true (i.e., at least one session was genuine).
-     */
-    private fun combineProbabilities(confidences: List<Float>): Float {
-        if (confidences.isEmpty()) return 0f
-        if (confidences.size == 1) return confidences.first()
-
-        var product = 1.0f
-        for (confidence in confidences) {
-            product *= (1.0f - confidence)
-        }
-
-        return 1.0f - product
     }
 }

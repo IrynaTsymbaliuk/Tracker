@@ -36,8 +36,6 @@ class SocialMediaProvider internal constructor(
         val validEvidenceList =
             evidenceList.filter { it.durationMinutes > 0 }.ifEmpty { return null }
 
-        val combinedConfidence = weightedAverage(validEvidenceList)
-
         val totalDuration = validEvidenceList.sumOf { it.durationMinutes }
 
         val sessions = validEvidenceList.mapNotNull { ev ->
@@ -53,7 +51,6 @@ class SocialMediaProvider internal constructor(
 
         return SocialMediaResult(
             sources = listOf(DataSource.USAGE_STATS),
-            confidence = combinedConfidence,
             timeRange = TimeRange(fromMillis, toMillis),
             durationMinutes = totalDuration,
             sessions = sessions

@@ -19,7 +19,6 @@ import com.tracker.core.types.DataSource
  *
  * @property sources Data sources that contributed to this result (always contains
  * [DataSource.HEALTH_CONNECT] for this habit).
- * @property confidence Combined confidence score (0.99 when sourced from Health Connect).
  * @property timeRange The queried time range.
  * @property durationMinutes Total exercise time across all sessions.
  * @property sessions Individual exercise sessions, sorted by [ExerciseSession.startTime]
@@ -30,7 +29,6 @@ import com.tracker.core.types.DataSource
  */
 data class ExerciseResult(
     override val sources: List<DataSource>,
-    override val confidence: Float,
     override val timeRange: TimeRange,
     val durationMinutes: Int,
     val sessions: List<ExerciseSession> = emptyList()

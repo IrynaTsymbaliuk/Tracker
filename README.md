@@ -2,13 +2,13 @@
 
 **Detect user habits from Android system data and third-party services — no user input required.**
 
-Tracker is an Android library that automatically identifies behaviors like language learning, reading, movie watching, social media usage, step counting, meditation, and exercise by analyzing device usage, Health Connect data, and third-party feeds. Your app gets structured habit data with confidence scores, without asking users to log anything manually.
+Tracker is an Android library that automatically identifies behaviors like language learning, reading, movie watching, social media usage, step counting, meditation, and exercise by analyzing device usage, Health Connect data, and third-party feeds. Your app gets structured habit data — each result tagged with the data source it came from — without asking users to log anything manually.
 
 ## Is This for You?
 
 - ✅ Building a habit tracking, wellness, or productivity app
 - ✅ Want to detect behaviors without manual logging
-- ✅ Need confidence scores for detected activities
+- ✅ Want to know each detection's data source (authoritative sensor/log vs. inferred app usage)
 - ✅ Want graceful degradation when permissions are missing
 
 - ❌ You just need step counting — use Health Connect directly
@@ -29,8 +29,7 @@ lifecycleScope.launch {
 
         // Reading — null means no activity in the time range
         reading?.durationMinutes   // total minutes across all sessions
-        reading?.confidence        // 0.0–1.0
-        reading?.confidence?.toConfidenceLevel()  // optional LOW / MEDIUM / HIGH banding (extension)
+        reading?.sources           // [USAGE_STATS] — where the detection came from
         reading?.sessions          // List<UsageSession> sorted by startTime
 
         // Language learning
@@ -85,7 +84,7 @@ lifecycleScope.launch {
     val steps = tracker.queryStepCounting(days = 2)
     steps?.totalSteps      // Long — deduplicated total across the queried window
     steps?.sessions        // List<StepSession> — one hourly bucket per non-empty hour
-    steps?.confidence      // 0.99 when sourced from Health Connect
+    steps?.sources         // [HEALTH_CONNECT]
 
     // Distance via Health Connect — walking, running, cycling, etc. Returns null if HC
     // unavailable, API < 26, or READ_DISTANCE not granted.
@@ -113,7 +112,7 @@ lifecycleScope.launch {
     val exercise = tracker.queryExercise()
     exercise?.durationMinutes  // total exercise time across all sessions
     exercise?.sessions         // List<ExerciseSession> sorted by startTime
-    exercise?.confidence       // 0.99 — ExerciseSessionRecord is authoritative
+    exercise?.sources          // [HEALTH_CONNECT] — ExerciseSessionRecord is authoritative
 
     // Each session exposes both the raw HC type id and a snake_case string:
     exercise?.sessions?.forEach { s ->
@@ -131,14 +130,14 @@ lifecycleScope.launch {
 ```
 
 **Example output (today):**
-- Reading: 30 min · 2 sessions · Kindle · 75% confidence (MEDIUM)
-- Language Learning: 45 min · 5 sessions · Duolingo, Anki · 85% confidence (HIGH)
-- Movie Watching: 3 films · The Matrix (tmdb:603), Inception (tmdb:27205), Interstellar (tmdb:157336) · 95% confidence (HIGH)
-- Social Media: 120 min · 23 sessions · Instagram, Reddit, WhatsApp · 88% confidence (HIGH)
-- Steps: 7,622 steps · 99% confidence (HIGH)
-- Distance: 5.42 km · 99% confidence (HIGH)
-- Meditation: 15 min · 1 session · Calm (HealthConnect + UsageStats merged) · 97% confidence (HIGH)
-- Exercise: 45 min · 2 sessions · Running, Strength Training · 99% confidence (HIGH)
+- Reading: 30 min · 2 sessions · Kindle
+- Language Learning: 45 min · 5 sessions · Duolingo, Anki
+- Movie Watching: 3 films · The Matrix (tmdb:603), Inception (tmdb:27205), Interstellar (tmdb:157336)
+- Social Media: 120 min · 23 sessions · Instagram, Reddit, WhatsApp
+- Steps: 7,622 steps
+- Distance: 5.42 km
+- Meditation: 15 min · 1 session · Calm (HealthConnect + UsageStats merged)
+- Exercise: 45 min · 2 sessions · Running, Strength Training
 
 Session count and app list are derived from `sessions`:
 ```kotlin
@@ -201,7 +200,7 @@ days = 7  │ ████████ ████████ █████�
 | **MEDITATION** | Health Connect + Foreground session events (fused) | `MindfulnessSessionRecord`s plus Calm, Headspace, Insight Timer, Balance, Waking Up, Smiling Mind, Ten Percent Happier, Medito, MEISOON, Mindvalley | `health.READ_MINDFULNESS` (optional, API 26+) · `PACKAGE_USAGE_STATS` |
 | **EXERCISE** | Health Connect | `ExerciseSessionRecord`s written by any fitness app (Strava, Google Fit, Samsung Health, Peloton, etc.) or logged manually | `health.READ_EXERCISE` · API 26+ |
 
-**Note on Social Media**: Includes messaging apps (WhatsApp, Telegram) with lower confidence scores (0.75) as they may be used for work or family communication.
+**Note on Social Media**: Includes messaging apps (WhatsApp, Telegram) with a lower base `confidenceMultiplier` (0.75, exposed via `getTrackedSocialMediaApps()`) as they may be used for work or family communication.
 
 **Note on session accuracy**: On Android 10+ (API 29), session tracking uses `ACTIVITY_RESUMED`/`ACTIVITY_PAUSED` events for precise per-session start and end times. Consecutive activity transitions within the same app are merged into a single session if the gap between them is under 30 seconds.
 
@@ -214,12 +213,12 @@ days = 7  │ ████████ ████████ █████�
 **Note on distance**: `queryDistance(days)` reads Health Connect `DistanceRecord` via the same `aggregateGroupByDuration` 1-hour slicing as step counting, so it deduplicates across all writing apps (Google Fit, Pixel, Fitbit, etc.) by the user's data-source priority before returning each bucket. The result exposes hourly `DistanceSession` buckets in `sessions` plus convenience `totalMeters`/`totalKilometers` sums. Distance is in **meters** (a `Double`, since records are fractional). Hours with no recorded distance are omitted. Returns `null` if Health Connect is unavailable, the API level is below 26, or the `READ_DISTANCE` permission has not been granted.
 
 **Note on meditation**: `queryMeditation()` fuses two sources:
-- **Health Connect** `MindfulnessSessionRecord` (authoritative, confidence `0.99`)
-- **UsageStats** foreground sessions of known meditation apps (confidence `0.85`–`0.95` per app)
+- **Health Connect** `MindfulnessSessionRecord` (authoritative)
+- **UsageStats** foreground sessions of known meditation apps (base `confidenceMultiplier` `0.85`–`0.95` per app, exposed via `getTrackedMeditationApps()`)
 
 Sessions that overlap significantly (≥ 50% of the shorter session's duration) are deduplicated into a single `MeditationSession` whose `sources` list contains both `HEALTH_CONNECT` and `USAGE_STATS`. The result's top-level `sources` reports every source that contributed. If Health Connect is unavailable, the record type is unsupported on this device, or the `READ_MINDFULNESS` permission is denied, the query automatically falls back to UsageStats-only. Returns `null` only when **neither** source produced any sessions.
 
-**Note on exercise**: `queryExercise()` reads `ExerciseSessionRecord`s from Health Connect — these are authoritative entries written by fitness apps (Strava, Google Fit, Samsung Health, Peloton, Nike Run Club, and many others) or logged manually by the user. Confidence is fixed at `0.99`. No minimum-duration filter is applied: short sessions appear in `sessions` with `durationMinutes = 0` (rounded from seconds) so the session count stays accurate. Each `ExerciseSession` exposes both `exerciseTypeId` (the raw Health Connect integer, useful for programmatic mapping) and `exerciseType` (a snake_case string, e.g. `"running"`, `"strength_training"`, `"yoga"`). Returns `null` if Health Connect is unavailable, the API level is below 26, the `READ_EXERCISE` permission has not been granted, or no sessions exist in the window.
+**Note on exercise**: `queryExercise()` reads `ExerciseSessionRecord`s from Health Connect — these are authoritative entries written by fitness apps (Strava, Google Fit, Samsung Health, Peloton, Nike Run Club, and many others) or logged manually by the user — authoritative entries, so no heuristic scoring is applied. No minimum-duration filter is applied: short sessions appear in `sessions` with `durationMinutes = 0` (rounded from seconds) so the session count stays accurate. Each `ExerciseSession` exposes both `exerciseTypeId` (the raw Health Connect integer, useful for programmatic mapping) and `exerciseType` (a snake_case string, e.g. `"running"`, `"strength_training"`, `"yoga"`). Returns `null` if Health Connect is unavailable, the API level is below 26, the `READ_EXERCISE` permission has not been granted, or no sessions exist in the window.
 
 **Note on the `sources` field**: every `HabitResult` exposes `sources: List<DataSource>` (not `source`). Single-source results contain a one-element list; meditation may contain one or two elements depending on which sources contributed.
 

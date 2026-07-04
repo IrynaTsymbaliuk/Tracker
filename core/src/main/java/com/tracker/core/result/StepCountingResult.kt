@@ -14,7 +14,6 @@ import com.tracker.core.types.DataSource
  *
  * @property sources Data sources that contributed to this result. Always
  * `[DataSource.HEALTH_CONNECT]`.
- * @property confidence Confidence score (0.99 for Health Connect).
  * @property timeRange The queried time range.
  * @property sessions Hourly step buckets within [timeRange], sorted by [StepSession.startTime]
  * ascending. Hours with no recorded steps are omitted, so the list may be non-contiguous.
@@ -25,7 +24,6 @@ import com.tracker.core.types.DataSource
  */
 data class StepCountingResult(
     override val sources: List<DataSource>,
-    override val confidence: Float,
     override val timeRange: TimeRange,
     val sessions: List<StepSession>
 ) : HabitResult() {

@@ -22,7 +22,6 @@ import com.tracker.core.types.DataSource
  *
  * @property sources Data sources that contributed to this result. Possible values:
  * `[HEALTH_CONNECT]`, `[USAGE_STATS]`, or `[HEALTH_CONNECT, USAGE_STATS]`.
- * @property confidence Combined confidence score (0.0 to 1.0), weighted by session duration.
  * @property timeRange The queried time range.
  * @property durationMinutes Total meditation time across all (deduplicated) sessions.
  * @property sessions Individual meditation sessions, sorted by [MeditationSession.startTime]
@@ -32,7 +31,6 @@ import com.tracker.core.types.DataSource
  */
 data class MeditationResult(
     override val sources: List<DataSource>,
-    override val confidence: Float,
     override val timeRange: TimeRange,
     val durationMinutes: Int,
     val sessions: List<MeditationSession> = emptyList()

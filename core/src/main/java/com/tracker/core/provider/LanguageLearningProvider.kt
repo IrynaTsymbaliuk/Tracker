@@ -26,8 +26,6 @@ class LanguageLearningProvider internal constructor(
         val validEvidenceList =
             evidenceList.filter { it.durationMinutes > 0 }.ifEmpty { return null }
 
-        val combinedConfidence = weightedAverage(validEvidenceList)
-
         val totalDuration = validEvidenceList.sumOf { it.durationMinutes }
 
         val sessions = validEvidenceList.mapNotNull { ev ->
@@ -43,7 +41,6 @@ class LanguageLearningProvider internal constructor(
 
         return LanguageLearningResult(
             sources = listOf(DataSource.USAGE_STATS),
-            confidence = combinedConfidence,
             timeRange = TimeRange(fromMillis, toMillis),
             durationMinutes = totalDuration,
             sessions = sessions

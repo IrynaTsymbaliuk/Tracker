@@ -34,7 +34,6 @@ class DistanceProvider internal constructor(
 
         return DistanceResult(
             sources = listOf(evidence.source),
-            confidence = evidence.confidence,
             timeRange = TimeRange(fromMillis, toMillis),
             sessions = evidence.buckets.map { bucket ->
                 DistanceSession(
