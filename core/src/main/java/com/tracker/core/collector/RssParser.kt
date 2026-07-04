@@ -13,7 +13,7 @@ import java.util.TimeZone
 internal class RssParser {
 
     private companion object {
-        val watchedDatePattern = Regex("Watched on [A-Za-z]+, ([A-Za-z]+ \\d+, \\d{4})")
+        val watchedDatePattern = Regex("Watched on [A-Za-z]+,?\\s+([A-Za-z]+ \\d+, \\d{4})")
 
         /**
          * Matches the "Watched on …" boilerplate Letterboxd puts in the description of an entry
@@ -200,6 +200,7 @@ internal class RssParser {
                 .let { watchedOnSentence.replace(it, " ") }
                 .replace("&nbsp;", " ")
                 .replace(Regex("\\s+"), " ")
+                .replace(Regex("\\s+([.,!?;:])"), "$1")
                 .trim()
 
             return plain.ifBlank { null }
