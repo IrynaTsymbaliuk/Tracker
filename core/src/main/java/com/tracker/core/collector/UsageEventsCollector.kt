@@ -42,12 +42,14 @@ class UsageEventsCollector(
         // a single continuous session (e.g. navigating between screens within the app).
         val SESSION_GAP_MILLIS = TimeUnit.SECONDS.toMillis(30)
 
+        @Suppress("DEPRECATION")
         val FOREGROUND_EVENT = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             UsageEvents.Event.ACTIVITY_RESUMED
         } else {
             UsageEvents.Event.MOVE_TO_FOREGROUND
         }
 
+        @Suppress("DEPRECATION")
         val BACKGROUND_EVENT = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             UsageEvents.Event.ACTIVITY_PAUSED
         } else {

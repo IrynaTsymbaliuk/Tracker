@@ -192,10 +192,10 @@ days = 7  │ ████████ ████████ █████�
 
 | Metric | Source | Apps / Data | Permission |
 |---|---|---|---|
-| **LANGUAGE_LEARNING** | Foreground session events | Duolingo, Anki, LingoDeer, Drops, Kanji Study, Renshuu, and 7 more | `PACKAGE_USAGE_STATS` |
-| **READING** | Foreground session events | Kindle, Google Play Books | `PACKAGE_USAGE_STATS` |
+| **LANGUAGE_LEARNING** | Foreground session events | Expanded known-app catalog including Duolingo, Anki, Drops, Busuu, Babbel, LingQ, Quizlet, Renshuu, and other study apps | `PACKAGE_USAGE_STATS` |
+| **READING** | Foreground session events | Expanded known-app catalog including Kindle, Google Play Books, Audible, Libby, Kobo, ReadEra, Moon+ Reader, Pocket, Substack, and other reading/listening apps | `PACKAGE_USAGE_STATS` |
 | **MOVIE_WATCHING** | Letterboxd RSS | Film titles, release years, watch dates, TMDB ids, poster URLs, plus the user's rating, review, rewatch flag, and like flag from public feed | `INTERNET` (no user prompt) |
-| **SOCIAL_MEDIA** | Foreground session events | Facebook, Instagram, Twitter/X, TikTok, Reddit, WhatsApp, and 9 more | `PACKAGE_USAGE_STATS` |
+| **SOCIAL_MEDIA** | Foreground session events | Expanded known-app catalog including Facebook, Instagram, X/Twitter, TikTok, Reddit, WhatsApp, Telegram, LINE, Discord, Bluesky, Mastodon, and other social/messaging apps | `PACKAGE_USAGE_STATS` |
 | **STEP_COUNTING** | Health Connect | Aggregated across all step sources, deduped by HC | `health.READ_STEPS` · API 26+ |
 | **DISTANCE** | Health Connect | `DistanceRecord` aggregated across all sources (walking, running, cycling, etc.), deduped by HC | `health.READ_DISTANCE` · API 26+ |
 | **MEDITATION** | Health Connect + Foreground session events (fused) | `MindfulnessSessionRecord`s plus Calm, Headspace, Insight Timer, Balance, Waking Up, Smiling Mind, Ten Percent Happier, Medito, MEISOON, Mindvalley | `health.READ_MINDFULNESS` (optional, API 26+) · `PACKAGE_USAGE_STATS` |
@@ -323,7 +323,7 @@ Add the following to the activity that handles the permission result:
 
 - **Min SDK**: 21 (Android 5.0)
 - **Target SDK**: 36
-- **Kotlin**: 1.9+
+- **Kotlin**: 2.0.21
 - **Step counting, distance, meditation (HealthConnect branch), exercise**: require API 26+ and Health Connect
 
 ## Sample App

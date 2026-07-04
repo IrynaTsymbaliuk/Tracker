@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Tracker Demo</string>
+    <string name="button_grant">Grant</string>
+    <string name="button_query_today">Query Today</string>
+    <string name="button_show_tracked_apps">Show tracked apps</string>
+    <string name="button_hide_tracked_apps">Hide tracked apps</string>
 </resources>

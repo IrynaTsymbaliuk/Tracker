@@ -16,7 +16,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Tracker Demo"
+            android:text="@string/app_name"
             android:textSize="22sp"
             android:textStyle="bold"
             android:textColor="?android:textColorPrimary"
@@ -45,7 +45,7 @@
                 style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Grant"
+                android:text="@string/button_grant"
                 android:visibility="gone"
                 tools:visibility="visible" />
 
@@ -76,7 +76,7 @@
                 style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Grant"
+                android:text="@string/button_grant"
                 android:visibility="gone"
                 tools:visibility="visible" />
 
@@ -95,7 +95,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Query Today" />
+                android:text="@string/button_query_today" />
 
             <ProgressBar
                 android:id="@+id/progressBar"
@@ -202,7 +202,7 @@
             android:layout_height="wrap_content"
             android:paddingStart="0dp"
             android:paddingEnd="0dp"
-            android:text="Show tracked apps" />
+            android:text="@string/button_show_tracked_apps" />
 
         <TextView
             android:id="@+id/tvTrackedApps"

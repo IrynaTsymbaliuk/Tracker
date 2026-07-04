@@ -7,9 +7,9 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Process
 import android.provider.Settings
-import android.view.View
 import androidx.activity.result.ActivityResultLauncher
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi
@@ -76,7 +76,7 @@ class MainActivity : AppCompatActivity() {
     private fun updateUsagePermissionUi() {
         val granted = hasUsageStatsPermission()
         binding.tvUsageStatus.text = if (granted) "Usage access  ✓" else "Usage access  ✗"
-        binding.btnGrantUsage.visibility = if (granted) View.GONE else View.VISIBLE
+        binding.btnGrantUsage.isVisible = !granted
     }
 
     private fun hasUsageStatsPermission(): Boolean {
@@ -106,10 +106,10 @@ class MainActivity : AppCompatActivity() {
                     "Health Connect  ◐ (missing: ${missingLabels.joinToString(", ")})"
                 }
             }
-            binding.btnGrantHc.visibility = if (allGranted) View.GONE else View.VISIBLE
-            binding.layoutHcPermission.visibility = View.VISIBLE
+            binding.btnGrantHc.isVisible = !allGranted
+            binding.layoutHcPermission.isVisible = true
         } else {
-            binding.layoutHcPermission.visibility = View.GONE
+            binding.layoutHcPermission.isVisible = false
         }
     }
 
@@ -141,7 +141,7 @@ class MainActivity : AppCompatActivity() {
             .permissionController.getGrantedPermissions()
 
     private fun queryMetrics() {
-        binding.progressBar.visibility = View.VISIBLE
+        binding.progressBar.isVisible = true
         binding.btnQuery.isEnabled = false
 
         lifecycleScope.launch {
@@ -156,7 +156,7 @@ class MainActivity : AppCompatActivity() {
 
             displayResults(language, reading, social, movies, steps, distance, meditation, exercise)
 
-            binding.progressBar.visibility = View.GONE
+            binding.progressBar.isVisible = false
             binding.btnQuery.isEnabled = true
         }
     }
@@ -169,9 +169,9 @@ class MainActivity : AppCompatActivity() {
      */
     private fun toggleTrackedApps() {
         val tv = binding.tvTrackedApps
-        if (tv.visibility == View.VISIBLE) {
-            tv.visibility = View.GONE
-            binding.btnShowApps.text = "Show tracked apps"
+        if (tv.isVisible) {
+            tv.isVisible = false
+            binding.btnShowApps.setText(R.string.button_show_tracked_apps)
             return
         }
 
@@ -182,8 +182,8 @@ class MainActivity : AppCompatActivity() {
             "🧘 Meditation" to tracker.getTrackedMeditationApps()
         ).joinToString(separator = "\n\n") { (label, apps) -> trackedAppsBlock(label, apps) }
 
-        tv.visibility = View.VISIBLE
-        binding.btnShowApps.text = "Hide tracked apps"
+        tv.isVisible = true
+        binding.btnShowApps.setText(R.string.button_hide_tracked_apps)
     }
 
     /**
