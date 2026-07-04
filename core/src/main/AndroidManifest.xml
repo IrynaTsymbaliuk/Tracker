@@ -18,61 +18,159 @@
     <uses-permission android:name="android.permission.health.READ_DISTANCE" />
 
     <!--
-        Package visibility queries for Android 11+ (API 30+)
-        Declares which apps this library needs to detect.
-        Required for getInstalledApplications() to return language learning apps.
+        Package visibility queries for Android 11+ (API 30+).
+        Keep this list in sync with KnownApps.kt.
     -->
     <queries>
-        <!-- Language Learning Apps -->
-        <package android:name="com.mindtwisted.kanjistudy" />
-        <package android:name="com.lulilanguages.j5a" />
-        <package android:name="com.ichi2.anki" />
-        <package android:name="com.eup.mytest" />
-        <package android:name="mobi.eup.jpnews" />
-        <package android:name="com.duolingo" />
-        <package android:name="com.eup.heyjapan" />
-        <package android:name="com.appsci.tenwords" />
-        <package android:name="com.languagedrops.drops.international" />
-        <package android:name="com.languagedrops.drops.learn.learning.speak.language.japanese.kanji.katakana.hiragana.romaji.words" />
-        <package android:name="com.lingodeer" />
-        <package android:name="com.lulilanguages.j5KjAnd" />
-        <package android:name="com.renshuu.renshuu_org" />
-
-        <!-- Reading Apps -->
-        <package android:name="com.google.android.apps.books" />
+        <package android:name="ai.talkpal" />
+        <package android:name="air.com.rosettastone.mobile.CoursePlayer" />
+        <package android:name="ak.alizandro.smartaudiobookplayer" />
+        <package android:name="app.librivox.android" />
+        <package android:name="bn.ereader" />
+        <package android:name="com.abuk" />
         <package android:name="com.amazon.kindle" />
-
-        <!-- Health Connect -->
-        <package android:name="com.google.android.apps.healthdata" />
-
-        <!-- Social Media Apps -->
-        <package android:name="com.facebook.katana" />
-        <package android:name="com.instagram.android" />
-        <package android:name="com.twitter.android" />
-        <package android:name="com.zhiliaoapp.musically" />
-        <package android:name="com.snapchat.android" />
-        <package android:name="com.linkedin.android" />
-        <package android:name="com.reddit.frontpage" />
-        <package android:name="com.pinterest" />
-        <package android:name="com.whatsapp" />
-        <package android:name="org.telegram.messenger" />
-        <package android:name="com.discord" />
-        <package android:name="com.instagram.barcelona" />
-        <package android:name="org.joinmastodon.android" />
-        <package android:name="xyz.blueskyweb.app" />
-        <package android:name="com.tumblr" />
-
-        <!-- Meditation Apps -->
+        <package android:name="com.atistudios.mondly.languages" />
+        <package android:name="com.audible.application" />
+        <package android:name="com.audiobookshelf.app" />
+        <package android:name="com.audioteka" />
+        <package android:name="com.babbel.mobile.android.en" />
+        <package android:name="com.bd.nproject" />
+        <package android:name="com.bereal.ft" />
+        <package android:name="com.blinkslabs.blinkist.android" />
+        <package android:name="com.bookmate" />
+        <package android:name="com.bunpoapp" />
+        <package android:name="com.busuu.android.enc" />
         <package android:name="com.calm.android" />
-        <package android:name="com.getsomeheadspace.android" />
-        <package android:name="com.spotlightsix.zentimerlite2" />
+        <package android:name="com.cambly.cambly" />
+        <package android:name="com.cherkaskyi.underbooks" />
+        <package android:name="com.clozemaster.v2" />
+        <package android:name="com.colt" />
+        <package android:name="com.david.android.languageswitch" />
+        <package android:name="com.devhd.feedly" />
+        <package android:name="com.discord" />
+        <package android:name="com.duolingo" />
+        <package android:name="com.ef.efhello" />
         <package android:name="com.elevatelabs.geonosis" />
-        <package android:name="org.wakingup.android" />
-        <package android:name="com.smilingmind.app" />
-        <package android:name="com.tenpercent.tph" />
-        <package android:name="jp.relook.meisoon" />
-        <package android:name="meditation.relax.sleep.sounds" />
+        <package android:name="com.empik.empikgo" />
+        <package android:name="com.ewa.ewaapp" />
+        <package android:name="com.facebook.katana" />
+        <package android:name="com.facebook.lite" />
+        <package android:name="com.facebook.orca" />
+        <package android:name="com.flyersoft.moonreader" />
+        <package android:name="com.fullreader" />
+        <package android:name="com.funeasylearn.ukrainian" />
+        <package android:name="com.getsomeheadspace.android" />
+        <package android:name="com.glossika.ai" />
+        <package android:name="com.google.android.apps.books" />
+        <package android:name="com.google.android.apps.healthdata" />
+        <package android:name="com.hellochinese" />
+        <package android:name="com.hellotalk" />
+        <package android:name="com.hoopladigital.android" />
+        <package android:name="com.ichi2.anki" />
+        <package android:name="com.ideashower.readitlater.pro" />
+        <package android:name="com.innovativelanguage.innovativelanguage101" />
+        <package android:name="com.instagram.android" />
+        <package android:name="com.instagram.barcelona" />
+        <package android:name="com.instagram.lite" />
+        <package android:name="com.instapaper.android" />
+        <package android:name="com.italki.app" />
+        <package android:name="com.kakao.talk" />
+        <package android:name="com.kobobooks.android" />
+        <package android:name="com.lang8.hinative" />
+        <package android:name="com.languagedrops.drops.international" />
+        <package android:name="com.languagedrops.drops.kids.letters.fun.write.words.learn.abc.alphabet.chinese.english.french.droplets" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.arabic.words" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.chinese.cantonese.hanzi.pinyin.words" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.chinese.mandarin.hanzi.pinyin.words" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.dutch.words" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.el.greek.greece.words" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.english.american.us.usa.words" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.english.british.gb.words" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.estonian.words" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.finnish.finland.words" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.french.words" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.german.words" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.hebrew.words" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.hungarian.words" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.icelandic.words" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.italian.words" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.japanese.kanji.katakana.hiragana.romaji.words" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.korean.hangul.words" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.norwegian.words" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.portuguese.brazilian.words" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.portuguese.european.words" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.spanish.castilian.words" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.swedish.words" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.tagalog.filipino.words" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.thai.words" />
+        <package android:name="com.languagedrops.drops.learn.learning.speak.language.turkish.words" />
+        <package android:name="com.languagelearning.tutor.speakfluently" />
+        <package android:name="com.lingo.play.ukrainian" />
+        <package android:name="com.lingodeer" />
+        <package android:name="com.lingopie.android.stg" />
+        <package android:name="com.linguist" />
+        <package android:name="com.linkedin.android" />
+        <package android:name="com.luvlingua.learnukrainian" />
+        <package android:name="com.mangolanguages.app" />
+        <package android:name="com.medium.reader" />
+        <package android:name="com.memrise.android.memrisecompanion" />
+        <package android:name="com.mindtwisted.kanjistudy" />
         <package android:name="com.mindvalley.mva" />
+        <package android:name="com.mosalingua.enfree" />
+        <package android:name="com.newspaperdirect.pressreader.android" />
+        <package android:name="com.nextdoor" />
+        <package android:name="com.obreey.reader" />
+        <package android:name="com.overdrive.mobile.android.libby" />
+        <package android:name="com.owlab.speakly" />
+        <package android:name="com.pinterest" />
+        <package android:name="com.preply" />
+        <package android:name="com.prestigio.ereader" />
+        <package android:name="com.qidian.Int.reader" />
+        <package android:name="com.quizlet.quizletandroid" />
+        <package android:name="com.quora.android" />
+        <package android:name="com.reader.books" />
+        <package android:name="com.readwise" />
+        <package android:name="com.reddit.frontpage" />
+        <package android:name="com.renshuu.renshuu_org" />
+        <package android:name="com.scribd.app.reader0" />
+        <package android:name="com.selabs.speak" />
+        <package android:name="com.simonandschuster.pimsleur.unified.android" />
+        <package android:name="com.sina.weibo" />
+        <package android:name="com.smilingmind.app" />
+        <package android:name="com.snapchat.android" />
+        <package android:name="com.sonnar.sonnarlibrary" />
+        <package android:name="com.spotlightsix.zentimerlite2" />
+        <package android:name="com.substack.app" />
+        <package android:name="com.tencent.mm" />
+        <package android:name="com.tenpercent.tph" />
+        <package android:name="com.tumblr" />
+        <package android:name="com.twitter.android" />
+        <package android:name="com.viber.voip" />
+        <package android:name="com.whatsapp" />
+        <package android:name="com.xingin.xhs" />
+        <package android:name="com.zhiliaoapp.musically" />
+        <package android:name="com.zhiliaoapp.musically.go" />
+        <package android:name="de.ph1b.audiobook" />
+        <package android:name="grit.storytel.app" />
+        <package android:name="io.lingvist.android" />
+        <package android:name="jp.naver.line.android" />
+        <package android:name="jp.relook.meisoon" />
+        <package android:name="me.mycake" />
+        <package android:name="meditation.relax.sleep.sounds" />
+        <package android:name="net.tandem" />
+        <package android:name="org.geometerplus.zlibrary.ui.android" />
+        <package android:name="org.joinmastodon.android" />
+        <package android:name="org.readera" />
+        <package android:name="org.telegram.messenger" />
+        <package android:name="org.thoughtcrime.securesms" />
+        <package android:name="org.thunderdog.challegram" />
+        <package android:name="org.wakingup.android" />
+        <package android:name="ru.ipartner.lingo" />
+        <package android:name="ua.booknet" />
+        <package android:name="ua.yakaboo" />
+        <package android:name="us.nobarriers.elsa" />
+        <package android:name="wp.wattpad" />
+        <package android:name="xyz.blueskyweb.app" />
     </queries>
 
 </manifest>
