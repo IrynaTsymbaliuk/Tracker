@@ -164,7 +164,7 @@ tracker.getTrackedSocialMediaApps()
 tracker.getTrackedMeditationApps()
 ```
 
-These exist only for the habits backed by a known-app list: language learning, reading, social media, and meditation. Movie watching (Letterboxd RSS), step counting, and exercise (Health Connect) are sourced from feeds and sensors rather than a fixed app list, so they have no equivalent. The lists are static configuration — they reflect what the library *can* detect, not what is installed on the current device. Apps are returned in alphabetical order by app name. (Meditation can additionally be detected from Health Connect `MindfulnessSessionRecord`s; `getTrackedMeditationApps()` covers only the known-app source.)
+These exist only for the habits backed by a known-app list: language learning, reading, social media, and meditation. Movie watching (Letterboxd RSS), step counting, and exercise (Health Connect) are sourced from feeds and sensors rather than a fixed app list, so they have no equivalent. The lists are static configuration — they reflect what the library *can* detect, not what is installed on the current device. (Meditation can additionally be detected from Health Connect `MindfulnessSessionRecord`s; `getTrackedMeditationApps()` covers only the known-app source.)
 
 ## Querying by time window
 

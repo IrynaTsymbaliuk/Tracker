@@ -128,7 +128,7 @@ class Tracker private constructor(
      * which apps are actually installed on the device or whether any permission has been granted.
      * Each [AppMetadata] exposes the app's package name and its base confidence multiplier.
      *
-     * @return The tracked language learning apps, ordered alphabetically by app name.
+     * @return The tracked language learning apps.
      */
     fun getTrackedLanguageLearningApps(): List<AppMetadata> =
         KnownApps.languageLearning.values.toList()
@@ -137,7 +137,7 @@ class Tracker private constructor(
      * Returns the apps the library tracks for reading. See [getTrackedLanguageLearningApps] for
      * notes on what this list represents.
      *
-     * @return The tracked reading apps, ordered alphabetically by app name.
+     * @return The tracked reading apps.
      */
     fun getTrackedReadingApps(): List<AppMetadata> =
         KnownApps.reading.values.toList()
@@ -146,7 +146,7 @@ class Tracker private constructor(
      * Returns the apps the library tracks for social media. See [getTrackedLanguageLearningApps]
      * for notes on what this list represents.
      *
-     * @return The tracked social media apps, ordered alphabetically by app name.
+     * @return The tracked social media apps.
      */
     fun getTrackedSocialMediaApps(): List<AppMetadata> =
         KnownApps.socialMedia.values.toList()
@@ -158,7 +158,7 @@ class Tracker private constructor(
      * Note that meditation can additionally be detected from Health Connect
      * `MindfulnessSessionRecord`s; this list covers only the known-app (UsageStats) source.
      *
-     * @return The tracked meditation apps, ordered alphabetically by app name.
+     * @return The tracked meditation apps.
      */
     fun getTrackedMeditationApps(): List<AppMetadata> =
         KnownApps.meditation.values.toList()
