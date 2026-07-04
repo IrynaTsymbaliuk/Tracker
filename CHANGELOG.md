@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- Clarified release/install documentation, Kotlin requirements, tracked-app catalog examples, and default query-window wording.
+- Simplified CI to use the Gradle build as the single verification entry point.
+
+### Fixed
+- Removed sample-app hardcoded strings and the personal Letterboxd default from the demo.
+- Cleaned Android lint warnings around API-level usage and sample visibility checks.
+- Improved `HttpRssFetcher` timeout, retry, and cancellation behavior; HTTP retry classification now uses typed status failures instead of parsing exception messages.
+
+### Tests
+- Added focused coverage for RSS retry/cancellation, query windows, known-app manifest parity, and provider aggregation edge cases.
+
 ## [1.2.2] - 2026-06-14
 
 ### Added
@@ -30,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Distance tracking via Health Connect.** New `Tracker.queryDistance(...)` API, backed by `HealthConnectDistanceCollector` and `DistanceProvider`. Returns a `DistanceResult` containing hourly `DistanceSession` buckets (`startTime`, `endTime`, `meters`), aggregated and deduplicated by Health Connect across writing apps per the user's data-source priority. Buckets are anchored to local midnight; hours with no recorded distance are omitted (the list is not guaranteed to be contiguous). Requires the Health Connect distance read permission.
-- **Discoverable tracked-app lists.** New `getTrackedLanguageLearningApps()` and `getTrackedReadingApps()` on `Tracker`, each returning the curated `AppMetadata` (package name + base confidence multiplier) for the apps the library can detect. This is static configuration — independent of what is installed or whether permission has been granted — ordered alphabetically by app name.
+- **Discoverable tracked-app lists.** New `getTrackedLanguageLearningApps()` and `getTrackedReadingApps()` on `Tracker`, each returning the curated `AppMetadata` (package name + base confidence multiplier) for the apps the library can detect. This is static configuration, independent of what is installed or whether permission has been granted.
 - `MovieSession.tmdbId: Int?` — The Movie Database (TMDB) movie id from the Letterboxd feed's `tmdb:movieId` element, for looking up further movie details. `null` for TV entries or films not yet linked to TMDB.
 - `MovieSession.rating: Float?` — the user's star rating (0.5–5.0 scale, half-star increments) from `letterboxd:memberRating`. `null` when the entry has no rating.
 - `MovieSession.review: String?` — the user's written review as plain text (feed HTML is stripped, and the poster image and "Watched on …" boilerplate are removed). `null` when there is no review.
@@ -73,6 +87,7 @@ val movies = tracker.queryMovieWatching()
 movies?.sessions?.forEach { show(it.title, it.watchedDate) }
 ```
 
+[Unreleased]: https://github.com/IrynaTsymbaliuk/Tracker/compare/v1.2.2...HEAD
 [1.2.2]: https://github.com/IrynaTsymbaliuk/Tracker/releases/tag/v1.2.2
 [1.2.1]: https://github.com/IrynaTsymbaliuk/Tracker/releases/tag/v1.2.1
 [1.2.0]: https://github.com/IrynaTsymbaliuk/Tracker/releases/tag/v1.2.0

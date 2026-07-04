@@ -39,6 +39,23 @@ class HttpRssFetcherTest {
     }
 
     @Test
+    fun fetch_doesNotRetryNonRetryableHttpError() {
+        TestHttpServer { socket, _ ->
+            socket.respond(status = 404)
+        }.use { server ->
+            val fetcher = HttpRssFetcher(maxRetries = 2, retryDelayMs = 1)
+
+            assertThrows(NetworkException::class.java) {
+                runBlocking {
+                    fetcher.fetch(server.url)
+                }
+            }
+
+            assertEquals(1, server.attempts)
+        }
+    }
+
+    @Test
     fun fetch_retriesSocketTimeout_andReturnsSuccessfulBody() = runBlocking {
         TestHttpServer { socket, attempt ->
             if (attempt == 1) {

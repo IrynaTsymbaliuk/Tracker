@@ -109,14 +109,7 @@ class HttpRssFetcher(
         return when (e) {
             is SocketTimeoutException -> true
             is UnknownHostException -> false // DNS failures not retryable
-            is NetworkException -> {
-                val statusCode = e.message?.let { msg ->
-                    "HTTP error code: (\\d+)".toRegex().find(msg)?.groupValues?.get(1)
-                        ?.toIntOrNull()
-                }
-                statusCode in RETRYABLE_STATUS_CODES
-            }
-
+            is HttpStatusException -> e.statusCode in RETRYABLE_STATUS_CODES
             else -> false
         }
     }
@@ -134,11 +127,13 @@ class HttpRssFetcher(
             val responseCode = connection.responseCode
             if (responseCode != HttpURLConnection.HTTP_OK) {
                 Log.e(TAG, "HTTP error while fetching RSS feed: $responseCode from $url")
-                throw NetworkException("HTTP error code: $responseCode")
+                throw HttpStatusException(responseCode)
             }
 
             return connection.inputStream.bufferedReader().use { it.readText() }
         } catch (e: CancellationException) {
+            throw e
+        } catch (e: HttpStatusException) {
             throw e
         } catch (e: NetworkException) {
             throw e
@@ -156,3 +151,7 @@ class HttpRssFetcher(
         }
     }
 }
+
+private class HttpStatusException(
+    val statusCode: Int
+) : Exception("HTTP error code: $statusCode")

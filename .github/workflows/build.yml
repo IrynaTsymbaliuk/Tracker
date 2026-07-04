@@ -27,12 +27,14 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build --no-daemon
 
-      - name: Run tests
-        run: ./gradlew test --no-daemon
-
-      - name: Upload test results
+      - name: Upload verification reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
-          path: core/build/reports/tests/
+          name: verification-reports
+          path: |
+            **/build/reports/tests/
+            **/build/test-results/
+            **/build/reports/lint-results*.html
+            **/build/reports/lint-results*.xml
+          if-no-files-found: ignore

@@ -45,7 +45,7 @@ import com.tracker.core.result.StepCountingResult
  * // Or set/update username later
  * tracker.setLetterboxdUsername("username")
  *
- * // Query metrics (last 24 hours)
+ * // Query metrics for the current local day by default
  * val languageLearning = tracker.queryLanguageLearning()
  * val reading = tracker.queryReading()
  * val movieWatching = tracker.queryMovieWatching()  // throws if username not set
