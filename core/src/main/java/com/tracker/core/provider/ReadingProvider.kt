@@ -6,7 +6,6 @@ import com.tracker.core.config.KnownApps
 import com.tracker.core.result.ReadingResult
 import com.tracker.core.result.TimeRange
 import com.tracker.core.result.UsageSession
-import com.tracker.core.result.toConfidenceLevel
 import com.tracker.core.types.DataSource
 
 class ReadingProvider internal constructor(
@@ -50,7 +49,6 @@ class ReadingProvider internal constructor(
         return ReadingResult(
             sources = listOf(DataSource.USAGE_STATS),
             confidence = combinedConfidence,
-            confidenceLevel = combinedConfidence.toConfidenceLevel(),
             timeRange = TimeRange(fromMillis, toMillis),
             durationMinutes = totalDuration,
             sessions = sessions

@@ -10,7 +10,6 @@ import com.tracker.core.model.DurationEvidence
 import com.tracker.core.result.MeditationResult
 import com.tracker.core.result.MeditationSession
 import com.tracker.core.result.TimeRange
-import com.tracker.core.result.toConfidenceLevel
 import com.tracker.core.types.DataSource
 
 /**
@@ -65,7 +64,6 @@ class MeditationProvider internal constructor(
         return MeditationResult(
             sources = sources,
             confidence = combinedConfidence,
-            confidenceLevel = combinedConfidence.toConfidenceLevel(),
             timeRange = TimeRange(fromMillis, toMillis),
             durationMinutes = totalDuration,
             sessions = mergedSessions

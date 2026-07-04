@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Clarified release/install documentation, Kotlin requirements, tracked-app catalog examples, and default query-window wording.
 - Simplified CI to use the Gradle build as the single verification entry point.
 
+### Removed
+- **Breaking:** removed the `confidenceLevel` property from `HabitResult` and all result types. It was a pure derivation of `confidence` and baked fixed HIGH/MEDIUM/LOW thresholds into the API. Callers who want the banding can opt in via the existing `Float.toConfidenceLevel()` extension: `result.confidence.toConfidenceLevel()`.
+
 ### Fixed
 - Removed sample-app hardcoded strings and the personal Letterboxd default from the demo.
 - Cleaned Android lint warnings around API-level usage and sample visibility checks.

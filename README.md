@@ -30,7 +30,7 @@ lifecycleScope.launch {
         // Reading — null means no activity in the time range
         reading?.durationMinutes   // total minutes across all sessions
         reading?.confidence        // 0.0–1.0
-        reading?.confidenceLevel   // LOW / MEDIUM / HIGH
+        reading?.confidence?.toConfidenceLevel()  // optional LOW / MEDIUM / HIGH banding (extension)
         reading?.sessions          // List<UsageSession> sorted by startTime
 
         // Language learning

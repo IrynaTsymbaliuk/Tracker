@@ -1,6 +1,5 @@
 package com.tracker.core.result
 
-import com.tracker.core.types.ConfidenceLevel
 import com.tracker.core.types.DataSource
 
 /**
@@ -9,7 +8,6 @@ import com.tracker.core.types.DataSource
  * @property sources Data sources that contributed to this result (always contains
  * [DataSource.LETTERBOXD_RSS] for this habit)
  * @property confidence Confidence score from the data source (0.0 to 1.0, typically 0.95 for Letterboxd RSS)
- * @property confidenceLevel Categorical confidence level
  * @property timeRange The queried time range
  * @property sessions Movie-watching sessions in the time range, each with a title and
  * timestamps (see [MovieSession]), sorted by [MovieSession.watchedDate] ascending.
@@ -19,7 +17,6 @@ import com.tracker.core.types.DataSource
 data class MovieWatchingResult(
     override val sources: List<DataSource>,
     override val confidence: Float,
-    override val confidenceLevel: ConfidenceLevel,
     override val timeRange: TimeRange,
     val sessions: List<MovieSession> = emptyList()
 ) : HabitResult() {

@@ -6,7 +6,6 @@ import com.tracker.core.collector.HealthConnectDistanceCollector
 import com.tracker.core.result.DistanceResult
 import com.tracker.core.result.DistanceSession
 import com.tracker.core.result.TimeRange
-import com.tracker.core.result.toConfidenceLevel
 
 /**
  * Detects distance travelled (walking, running, cycling, etc.) via Health Connect.
@@ -36,7 +35,6 @@ class DistanceProvider internal constructor(
         return DistanceResult(
             sources = listOf(evidence.source),
             confidence = evidence.confidence,
-            confidenceLevel = evidence.confidence.toConfidenceLevel(),
             timeRange = TimeRange(fromMillis, toMillis),
             sessions = evidence.buckets.map { bucket ->
                 DistanceSession(

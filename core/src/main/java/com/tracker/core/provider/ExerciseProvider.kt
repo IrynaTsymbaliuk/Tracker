@@ -7,7 +7,6 @@ import com.tracker.core.collector.HealthConnectExerciseCollector
 import com.tracker.core.result.ExerciseResult
 import com.tracker.core.result.ExerciseSession
 import com.tracker.core.result.TimeRange
-import com.tracker.core.result.toConfidenceLevel
 import com.tracker.core.types.DataSource
 
 /**
@@ -64,7 +63,6 @@ class ExerciseProvider internal constructor(
         return ExerciseResult(
             sources = listOf(DataSource.HEALTH_CONNECT),
             confidence = combinedConfidence,
-            confidenceLevel = combinedConfidence.toConfidenceLevel(),
             timeRange = TimeRange(fromMillis, toMillis),
             durationMinutes = totalDuration,
             sessions = sessions

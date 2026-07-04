@@ -6,7 +6,6 @@ import com.tracker.core.collector.LetterboxdMetadata
 import com.tracker.core.result.MovieSession
 import com.tracker.core.result.MovieWatchingResult
 import com.tracker.core.result.TimeRange
-import com.tracker.core.result.toConfidenceLevel
 import com.tracker.core.types.DataSource
 
 class MovieWatchingProvider internal constructor(
@@ -48,7 +47,6 @@ class MovieWatchingProvider internal constructor(
         return MovieWatchingResult(
             sources = listOf(DataSource.LETTERBOXD_RSS),
             confidence = confidence,
-            confidenceLevel = confidence.toConfidenceLevel(),
             timeRange = TimeRange(fromMillis, toMillis),
             sessions = sessions
         )

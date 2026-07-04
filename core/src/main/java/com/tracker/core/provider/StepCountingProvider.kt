@@ -6,7 +6,6 @@ import com.tracker.core.collector.HealthConnectStepCollector
 import com.tracker.core.result.StepCountingResult
 import com.tracker.core.result.StepSession
 import com.tracker.core.result.TimeRange
-import com.tracker.core.result.toConfidenceLevel
 
 /**
  * Detects physical activity by counting steps via Health Connect.
@@ -36,7 +35,6 @@ class StepCountingProvider internal constructor(
         return StepCountingResult(
             sources = listOf(evidence.source),
             confidence = evidence.confidence,
-            confidenceLevel = evidence.confidence.toConfidenceLevel(),
             timeRange = TimeRange(fromMillis, toMillis),
             sessions = evidence.buckets.map { bucket ->
                 StepSession(

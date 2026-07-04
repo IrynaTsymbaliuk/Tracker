@@ -33,6 +33,7 @@ import com.tracker.core.result.SocialMediaResult
 import com.tracker.core.result.StepCountingResult
 import com.tracker.core.result.StepSession
 import com.tracker.core.result.UsageSession
+import com.tracker.core.result.toConfidenceLevel
 import com.tracker.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -215,27 +216,27 @@ class MainActivity : AppCompatActivity() {
         exercise: ExerciseResult?
     ) {
         binding.tvLanguage.text = language
-            ?.let { "📚 Language    ${it.durationMinutes} min · ${it.confidenceLevel} · ${pct(it.confidence)}${sessionLines(it.sessions)}" }
+            ?.let { "📚 Language    ${it.durationMinutes} min · ${it.confidence.toConfidenceLevel()} · ${pct(it.confidence)}${sessionLines(it.sessions)}" }
             ?: "📚 Language    —"
 
         binding.tvReading.text = reading
-            ?.let { "📖 Reading    ${it.durationMinutes} min · ${it.confidenceLevel} · ${pct(it.confidence)}${sessionLines(it.sessions)}" }
+            ?.let { "📖 Reading    ${it.durationMinutes} min · ${it.confidence.toConfidenceLevel()} · ${pct(it.confidence)}${sessionLines(it.sessions)}" }
             ?: "📖 Reading    —"
 
         binding.tvSocial.text = social
-            ?.let { "📱 Social    ${it.durationMinutes} min · ${it.confidenceLevel} · ${pct(it.confidence)}${sessionLines(it.sessions)}" }
+            ?.let { "📱 Social    ${it.durationMinutes} min · ${it.confidence.toConfidenceLevel()} · ${pct(it.confidence)}${sessionLines(it.sessions)}" }
             ?: "📱 Social    —"
 
         binding.tvMovies.text = movies
-            ?.let { "🎬 Movies    ${it.count} film${if (it.count != 1) "s" else ""} · ${it.confidenceLevel} · ${pct(it.confidence)}${movieSessionLines(it.sessions)}" }
+            ?.let { "🎬 Movies    ${it.count} film${if (it.count != 1) "s" else ""} · ${it.confidence.toConfidenceLevel()} · ${pct(it.confidence)}${movieSessionLines(it.sessions)}" }
             ?: "🎬 Movies    —"
 
         binding.tvSteps.text = steps
-            ?.let { "👣 Steps    ${"%,d".format(it.totalSteps)} steps · ${it.confidenceLevel} · ${pct(it.confidence)}${stepSessionLines(it.sessions)}" }
+            ?.let { "👣 Steps    ${"%,d".format(it.totalSteps)} steps · ${it.confidence.toConfidenceLevel()} · ${pct(it.confidence)}${stepSessionLines(it.sessions)}" }
             ?: "👣 Steps    —"
 
         binding.tvDistance.text = distance
-            ?.let { "📏 Distance    ${"%.2f".format(it.totalKilometers)} km · ${it.confidenceLevel} · ${pct(it.confidence)}${distanceSessionLines(it.sessions)}" }
+            ?.let { "📏 Distance    ${"%.2f".format(it.totalKilometers)} km · ${it.confidence.toConfidenceLevel()} · ${pct(it.confidence)}${distanceSessionLines(it.sessions)}" }
             ?: "📏 Distance    —"
 
         binding.tvMeditation.text = meditation
