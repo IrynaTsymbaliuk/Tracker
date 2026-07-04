@@ -8,7 +8,6 @@ import com.tracker.core.config.KnownApps
 import com.tracker.core.model.DurationEvidence
 import com.tracker.core.types.DataSource
 import io.mockk.coEvery
-import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -27,7 +26,7 @@ class MeditationProviderTest {
         val hc = mockk<HealthConnectMindfulnessCollector>()
         val usage = mockk<UsageEventsCollector>()
         coEvery { hc.collect(FROM, TO) } returns emptyList()
-        every { usage.collect(FROM, TO, KnownApps.meditation) } returns emptyList()
+        coEvery { usage.collect(FROM, TO, KnownApps.meditation) } returns emptyList()
 
         assertNull(MeditationProvider(hc, usage).query(FROM, TO))
     }
@@ -37,7 +36,7 @@ class MeditationProviderTest {
         val hc = mockk<HealthConnectMindfulnessCollector>()
         val usage = mockk<UsageEventsCollector>()
         coEvery { hc.collect(FROM, TO) } returns listOf(hcEvidence(min(0), min(20), 20))
-        every { usage.collect(FROM, TO, KnownApps.meditation) } returns emptyList()
+        coEvery { usage.collect(FROM, TO, KnownApps.meditation) } returns emptyList()
 
         val result = MeditationProvider(hc, usage).query(FROM, TO) ?: error("expected result")
 
@@ -49,7 +48,7 @@ class MeditationProviderTest {
     @Test
     fun query_fallsBackToUsageStatsOnlyWhenHealthConnectUnavailable() = runBlocking {
         val usage = mockk<UsageEventsCollector>()
-        every { usage.collect(FROM, TO, KnownApps.meditation) } returns listOf(
+        coEvery { usage.collect(FROM, TO, KnownApps.meditation) } returns listOf(
             usageEvidence("com.calm.android", "Calm", min(0), min(10), 10)
         )
 
@@ -65,7 +64,7 @@ class MeditationProviderTest {
         val hc = mockk<HealthConnectMindfulnessCollector>()
         val usage = mockk<UsageEventsCollector>()
         coEvery { hc.collect(FROM, TO) } returns listOf(hcEvidence(min(0), min(20), 20))
-        every { usage.collect(FROM, TO, KnownApps.meditation) } returns listOf(
+        coEvery { usage.collect(FROM, TO, KnownApps.meditation) } returns listOf(
             usageEvidence("com.calm.android", "Calm", min(5), min(15), 10) // overlap 10m of a 10m session
         )
 
@@ -82,7 +81,7 @@ class MeditationProviderTest {
         val hc = mockk<HealthConnectMindfulnessCollector>()
         val usage = mockk<UsageEventsCollector>()
         coEvery { hc.collect(FROM, TO) } returns listOf(hcEvidence(min(0), min(20), 20))
-        every { usage.collect(FROM, TO, KnownApps.meditation) } returns listOf(
+        coEvery { usage.collect(FROM, TO, KnownApps.meditation) } returns listOf(
             // overlap is only [15,20] = 5m of a 20m HC session -> below 50% of shorter -> no merge
             usageEvidence("com.calm.android", "Calm", min(15), min(40), 25)
         )
@@ -101,7 +100,7 @@ class MeditationProviderTest {
         val hc = mockk<HealthConnectMindfulnessCollector>()
         val usage = mockk<UsageEventsCollector>()
         coEvery { hc.collect(FROM, TO) } returns listOf(hcEvidence(min(0), min(30), 30))
-        every { usage.collect(FROM, TO, KnownApps.meditation) } returns listOf(
+        coEvery { usage.collect(FROM, TO, KnownApps.meditation) } returns listOf(
             usageEvidence("com.a", "A", min(2), min(12), 10),  // overlap 10m
             usageEvidence("com.b", "B", min(20), min(28), 8)   // overlap 8m
         )
@@ -122,7 +121,7 @@ class MeditationProviderTest {
         val hc = mockk<HealthConnectMindfulnessCollector>()
         val usage = mockk<UsageEventsCollector>()
         coEvery { hc.collect(FROM, TO) } throws SystemServiceUnavailableException("HC")
-        every { usage.collect(FROM, TO, KnownApps.meditation) } returns listOf(
+        coEvery { usage.collect(FROM, TO, KnownApps.meditation) } returns listOf(
             usageEvidence("com.calm.android", "Calm", min(0), min(10), 10)
         )
 
@@ -136,7 +135,7 @@ class MeditationProviderTest {
         val hc = mockk<HealthConnectMindfulnessCollector>()
         val usage = mockk<UsageEventsCollector>()
         coEvery { hc.collect(FROM, TO) } returns listOf(hcEvidence(min(60), min(70), 10))
-        every { usage.collect(FROM, TO, KnownApps.meditation) } returns listOf(
+        coEvery { usage.collect(FROM, TO, KnownApps.meditation) } returns listOf(
             usageEvidence("com.calm.android", "Calm", min(5), min(15), 10)
         )
 

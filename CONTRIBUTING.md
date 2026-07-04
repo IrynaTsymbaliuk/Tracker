@@ -119,13 +119,14 @@ Follow the [Kotlin Coding Conventions](https://kotlinlang.org/docs/coding-conven
 
 ```kotlin
 /**
- * Aggregates evidence into daily habit results.
+ * Maps collected evidence into a public result for a query window.
  *
- * @param dayMillis Start of day timestamp (00:00:00)
- * @param evidence List of evidence for this day
- * @return Aggregated result with confidence score
+ * @param fromMillis Start of the query window, in milliseconds since epoch
+ * @param toMillis End of the query window, in milliseconds since epoch
+ * @param evidence Collected source evidence for the query window
+ * @return Result for the queried window, or null when no source data is available
  */
-fun aggregate(dayMillis: Long, evidence: List<Evidence>): LanguageLearningResult {
+suspend fun query(fromMillis: Long, toMillis: Long): LanguageLearningResult? {
     // Implementation
 }
 ```
@@ -134,14 +135,16 @@ fun aggregate(dayMillis: Long, evidence: List<Evidence>): LanguageLearningResult
 
 To add a new metric (e.g., workout tracking):
 
-### 1. Add the Metric Type
+### 1. Add Result Types
 
 ```kotlin
-// core/src/main/java/com/tracker/core/types/Metric.kt
-enum class Metric {
-    LANGUAGE_LEARNING,
-    WORKOUT  // Add new metric
-}
+// core/src/main/java/com/tracker/core/result/WorkoutResult.kt
+data class WorkoutResult(
+    override val sources: List<DataSource>,
+    override val timeRange: TimeRange,
+    val durationMinutes: Int,
+    val sessions: List<WorkoutSession> = emptyList()
+) : HabitResult()
 ```
 
 ### 2. Create a Collector
@@ -150,59 +153,67 @@ enum class Metric {
 // core/src/main/java/com/tracker/core/collector/WorkoutCollector.kt
 class WorkoutCollector(
     context: Context,
-    private val permissionManager: PermissionManager
-) : Collector {
-    override suspend fun collect(fromMillis: Long, toMillis: Long): Result<List<Evidence>> {
-        // Implementation to collect workout app usage
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO
+) {
+    suspend fun collect(fromMillis: Long, toMillis: Long): List<DurationEvidence> =
+        withContext(dispatcher) {
+            // Implementation to collect workout app usage
+        }
+}
+```
+
+Collectors that touch Android system services, disk, or network should be safe to call from the main thread by switching to an appropriate dispatcher internally.
+
+### 3. Create a Provider
+
+```kotlin
+// core/src/main/java/com/tracker/core/provider/WorkoutProvider.kt
+class WorkoutProvider internal constructor(
+    private val collector: WorkoutCollector
+) : MetricProvider<WorkoutResult> {
+    override suspend fun query(fromMillis: Long, toMillis: Long): WorkoutResult? {
+        val evidence = collector.collect(fromMillis, toMillis).ifEmpty { return null }
+        val sessions = evidence.map { ev ->
+            WorkoutSession(
+                startTime = ev.startTimeMillis,
+                endTime = ev.endTimeMillis,
+                durationMinutes = ev.durationMinutes
+            )
+        }
+        return WorkoutResult(
+            sources = evidence.map { it.source }.distinct(),
+            timeRange = TimeRange(fromMillis, toMillis),
+            durationMinutes = sessions.sumOf { it.durationMinutes },
+            sessions = sessions.sortedBy { it.startTime }
+        )
     }
 }
 ```
 
-### 3. Create an Aggregator
+### 4. Wire the Tracker Facade
 
 ```kotlin
-// core/src/main/java/com/tracker/core/aggregator/WorkoutAggregator.kt
-class WorkoutAggregator : Aggregator<WorkoutResult> {
-    override fun aggregate(dayMillis: Long, evidence: List<Evidence>): WorkoutResult? {
-        // Implementation to aggregate workout evidence
-    }
+private val workoutProvider by lazy {
+    WorkoutProvider(WorkoutCollector(appContext))
+}
+
+suspend fun queryWorkout(days: Int = 1): WorkoutResult? {
+    val (from, to) = queryWindow(days)
+    return workoutProvider.query(from, to)
 }
 ```
 
-### 4. Create a Result Type
+### 5. Update Configuration
 
-```kotlin
-// core/src/main/java/com/tracker/core/result/WorkoutResult.kt
-data class WorkoutResult(
-    override val occurred: Boolean,
-    override val confidence: Float,
-    override val confidenceLevel: ConfidenceLevel,
-    val durationMinutes: Int?,
-    val workoutType: String?
-) : HabitResult
-```
-
-### 5. Register in HabitEngine
-
-```kotlin
-// core/src/main/java/com/tracker/core/engine/HabitEngine.kt
-val collectors = mapOf(
-    Metric.LANGUAGE_LEARNING to UsageStatsCollector(context, permissionManager),
-    Metric.WORKOUT to WorkoutCollector(context, permissionManager)
-)
-
-val aggregators = mapOf<Metric, Aggregator<out HabitResult>>(
-    Metric.LANGUAGE_LEARNING to LanguageLearningAggregator(),
-    Metric.WORKOUT to WorkoutAggregator()
-)
-```
+If the metric is backed by known apps, add entries to `KnownApps.kt`, keep package names unique, and update the manifest `<queries>` list. If the metric needs a new Android or Health Connect permission, document the manifest and runtime request requirements in `README.md` and the sample app.
 
 ### 6. Add Tests
 
 Create comprehensive tests for the new metric:
 - Collector tests
-- Aggregator tests
-- Integration tests
+- Provider tests
+- Tracker facade tests
+- Manifest/configuration parity tests, when the metric has known apps or permissions
 
 ## Pull Request Process
 
@@ -226,7 +237,6 @@ Look for issues labeled `good first issue` - these are great for new contributor
 ## Community Guidelines
 
 - Be respectful and constructive
-- Follow the [Code of Conduct](CODE_OF_CONDUCT.md)
 - Ask questions if anything is unclear
 - Help others when you can
 

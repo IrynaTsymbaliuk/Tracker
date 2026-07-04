@@ -7,7 +7,8 @@ import com.tracker.core.types.DataSource
  * Collectors return Evidence objects, which are then aggregated to produce final results.
  *
  * @property source Where the data came from
- * @property confidence How confident we are in this evidence (0.0 to 1.0)
+ * @property confidence Internal source weight for this evidence (0.0 to 1.0);
+ * public result types expose [DataSource] values rather than result-level scores.
  * @property metadata Source-specific additional data (app name, package, language, etc.)
  */
 sealed class Evidence {

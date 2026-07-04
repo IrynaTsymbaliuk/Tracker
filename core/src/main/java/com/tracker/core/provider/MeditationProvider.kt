@@ -78,7 +78,7 @@ class MeditationProvider internal constructor(
         }
     }
 
-    private fun collectUsageStats(
+    private suspend fun collectUsageStats(
         fromMillis: Long,
         toMillis: Long
     ): List<DurationEvidence> {

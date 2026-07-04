@@ -11,12 +11,10 @@ import com.tracker.core.types.DataSource
 /**
  * Detects social media usage from app foreground sessions.
  *
- * **Confidence scoring**:
- * - Traditional social apps (Facebook, Instagram, TikTok): 0.90-0.95
- * - Professional/borderline (LinkedIn, Reddit): 0.80-0.85
- * - Messaging apps (WhatsApp, Telegram): 0.75
- *
- * Combined confidence uses weighted average by duration.
+ * The known-app catalogue keeps internal source weights for app categories
+ * (for example, messaging apps are lower-confidence social signals than
+ * dedicated social feeds), but public results expose sources and sessions
+ * rather than result-level confidence scores.
  */
 class SocialMediaProvider internal constructor(
     private val usageEventsCollector: UsageEventsCollector
@@ -33,12 +31,9 @@ class SocialMediaProvider internal constructor(
             KnownApps.socialMedia
         ).ifEmpty { return null }
 
-        val validEvidenceList =
-            evidenceList.filter { it.durationMinutes > 0 }.ifEmpty { return null }
+        val totalDuration = evidenceList.sumOf { it.durationMinutes }
 
-        val totalDuration = validEvidenceList.sumOf { it.durationMinutes }
-
-        val sessions = validEvidenceList.mapNotNull { ev ->
+        val sessions = evidenceList.mapNotNull { ev ->
             val metadata = UsageStatsMetadata.fromMap(ev.metadata) ?: return@mapNotNull null
             UsageSession(
                 startTime = ev.startTimeMillis,

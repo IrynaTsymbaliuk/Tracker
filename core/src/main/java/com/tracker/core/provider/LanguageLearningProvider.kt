@@ -23,12 +23,9 @@ class LanguageLearningProvider internal constructor(
             KnownApps.languageLearning
         ).ifEmpty { return null }
 
-        val validEvidenceList =
-            evidenceList.filter { it.durationMinutes > 0 }.ifEmpty { return null }
+        val totalDuration = evidenceList.sumOf { it.durationMinutes }
 
-        val totalDuration = validEvidenceList.sumOf { it.durationMinutes }
-
-        val sessions = validEvidenceList.mapNotNull { ev ->
+        val sessions = evidenceList.mapNotNull { ev ->
             val metadata = UsageStatsMetadata.fromMap(ev.metadata) ?: return@mapNotNull null
             UsageSession(
                 startTime = ev.startTimeMillis,

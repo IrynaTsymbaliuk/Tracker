@@ -22,11 +22,8 @@ Describe how you envision this feature working.
 
 ```kotlin
 // Show how the API might look with this feature
-val tracker = Tracker.Builder(context)
-    .requestMetrics(Metric.YOUR_NEW_FEATURE)
-    .build()
-
-val result = tracker.queryAsync()
+val tracker = Tracker.Builder(context).build()
+val result = tracker.queryYourFeature(days = 1)
 // What would the result look like?
 ```
 

@@ -12,6 +12,8 @@ import com.tracker.core.permission.PermissionManager
 import com.tracker.core.permission.PermissionStatus
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Before
@@ -198,15 +200,19 @@ class UsageEventsCollectorTest {
         }
 
         assertThrows(SystemServiceUnavailableException::class.java) {
-            UsageEventsCollector(nullServiceContext, permissionManager)
-                .collect(0L, 1_000_000L, knownApps)
+            runBlocking {
+                UsageEventsCollector(nullServiceContext, permissionManager, Dispatchers.Unconfined)
+                    .collect(0L, 1_000_000L, knownApps)
+            }
         }
     }
 
     // --- helpers ---
 
-    private fun collect(from: Long = 0L, to: Long = 1_000_000L) =
-        UsageEventsCollector(context, permissionManager).collect(from, to, knownApps)
+    private fun collect(from: Long = 0L, to: Long = 1_000_000L) = runBlocking {
+        UsageEventsCollector(context, permissionManager, Dispatchers.Unconfined)
+            .collect(from, to, knownApps)
+    }
 
     private fun installApp(pkg: String) {
         val info = PackageInfo().apply {

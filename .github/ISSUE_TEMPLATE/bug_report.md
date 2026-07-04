@@ -28,9 +28,8 @@ What actually happened.
 
 ```kotlin
 // Minimal code to reproduce the issue
-val tracker = Tracker.Builder(context)
-    .requestMetrics(Metric.LANGUAGE_LEARNING)
-    .build()
+val tracker = Tracker.Builder(context).build()
+val reading = tracker.queryReading(days = 1)
 ```
 
 ## Environment

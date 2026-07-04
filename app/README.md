@@ -67,14 +67,14 @@ A `null` result means either no activity in the time range or a missing/denied p
 
 Each metric is shown as a summary line:
 
-- **Language**: `📚 Language    45 min · HIGH · 85%`
-- **Reading**: `📖 Reading    30 min · MEDIUM · 75%`
-- **Social**: `📱 Social    120 min · HIGH · 88%`
-- **Movies**: `🎬 Movies    3 films · HIGH · 95%` (expands into one line per film with its release year, TMDB id, star rating, like marker, rewatch marker, poster URL, and review)
-- **Steps**: `👣 Steps    7,622 steps · HIGH · 99%`
-- **Distance**: `📏 Distance    5.42 km · HIGH · 99%`
-- **Meditation**: `🧘 Meditation    15 min · 1 session · HC+Usage · 97%`
-- **Exercise**: `🏃 Exercise    45 min · 2 sessions · Running, Strength Training · 99%`
+- **Language**: `📚 Language    45 min`
+- **Reading**: `📖 Reading    30 min`
+- **Social**: `📱 Social    120 min`
+- **Movies**: `🎬 Movies    3 films` (expands into one line per film with its release year, TMDB id, star rating, like marker, rewatch marker, poster URL, and review)
+- **Steps**: `👣 Steps    7,622 steps`
+- **Distance**: `📏 Distance    5.42 km`
+- **Meditation**: `🧘 Meditation    15 min · 1 session · HC+Usage`
+- **Exercise**: `🏃 Exercise    45 min · 2 sessions · Running, Strength Training`
 
 **Per-session breakdown.** For the usage-based metrics (Language, Reading, Social), Steps, and
 Distance, the sample expands the summary line into one indented line per session, showing **time
@@ -82,17 +82,17 @@ from – time to** and the **app name** (or step count / distance). This comes s
 result's `sessions` list — the library always returns it; the app simply renders it:
 
 ```
-📱 Social    120 min · HIGH · 88%
+📱 Social    120 min
     • 08:02–08:19 · Instagram (17 min)
     • 12:40–13:05 · Reddit (25 min)
     • 21:10–22:28 · Instagram (78 min)
 
-👣 Steps    7,622 steps · HIGH · 99%
+👣 Steps    7,622 steps
     • 08:00–09:00 · 1,204 steps
     • 12:00–13:00 · 3,560 steps
     • 18:00–19:00 · 2,858 steps
 
-📏 Distance    5.42 km · HIGH · 99%
+📏 Distance    5.42 km
     • 08:00–09:00 · 0.92 km
     • 12:00–13:00 · 2.74 km
     • 18:00–19:00 · 1.76 km
@@ -109,7 +109,7 @@ The Movies row gets the same treatment via `movieSessionLines()`, expanding each
 indented lines:
 
 ```
-🎬 Movies    3 films · HIGH · 95%
+🎬 Movies    3 films
     • Jan 15 · Dune: Part Two (2024) (tmdb:693134) · ★★★★½ ♥ ↻
         🖼 https://a.ltrbxd.com/resized/film-poster/…-crop.jpg
         "Villeneuve outdid himself."
@@ -127,7 +127,7 @@ omit those parts — e.g. *The Zone of Interest* above was logged unrated, witho
 
 For meditation, the sample renders the active data sources inline: `HC` for Health Connect, `Usage` for UsageStats, `HC+Usage` when both contributed and were merged. `—` is shown when the result is null (no data or no permission granted on either source).
 
-For exercise, the sample lists the distinct exercise types that appeared in the window (title-cased, comma-separated), deduplicated across sessions. Confidence is a flat 99% since all data comes from Health Connect `ExerciseSessionRecord`.
+For exercise, the sample lists the distinct exercise types that appeared in the window (title-cased, comma-separated), deduplicated across sessions.
 
 ### 5. Listing tracked apps
 
@@ -174,7 +174,7 @@ sensors rather than a fixed app list.
    - Tap "Query Today" to manually refresh all metrics
 
 6. **Browse tracked apps** (no permissions needed):
-   - Tap "Show tracked apps" to list every app the library can detect for language learning, reading, social media, and meditation, with each app's package name and base confidence
+   - Tap "Show tracked apps" to list every app the library can detect for language learning, reading, social media, and meditation, with each app's package name and base confidence multiplier
 
 ## Code Structure
 
@@ -185,9 +185,9 @@ MainActivity.kt
 ├── updateUsagePermissionUi()   # Show/hide Grant button based on AppOps check
 ├── hasUsageStatsPermission()   # AppOpsManager permission check
 ├── updateHcPermissionUi()      # Show/hide Grant button based on HC permission state (steps + mindfulness + exercise)
-├── queryMetrics()              # Query all eight metrics concurrently using coroutines
+├── queryMetrics()              # Query all eight metrics independently in one coroutine
 ├── toggleTrackedApps()         # Show/hide the static tracked-apps catalogue (getTracked*Apps())
-├── trackedAppsBlock()          # Format one habit's tracked apps as "package (confidence)" lines
+├── trackedAppsBlock()          # Format one habit's tracked apps as "package (multiplier)" lines
 ├── displayResults()            # Render the summary line per metric
 ├── sessionLines()              # Expand UsageSession list into "from–to · appName (N min)" lines
 ├── stepSessionLines()          # Expand StepSession list into "from–to · N steps" lines (hourly buckets)

@@ -7,7 +7,6 @@ import com.tracker.core.config.KnownApps
 import com.tracker.core.model.DurationEvidence
 import com.tracker.core.types.DataSource
 import io.mockk.coEvery
-import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -21,9 +20,9 @@ import org.robolectric.annotation.Config
 class ProviderAggregationTest {
 
     @Test
-    fun languageLearning_filtersZeroMinuteSessions_sumsDuration_andSortsSessions() = runBlocking {
+    fun languageLearning_keepsZeroMinuteSessions_sumsDuration_andSortsSessions() = runBlocking {
         val collector = mockk<UsageEventsCollector>()
-        every { collector.collect(FROM, TO, KnownApps.languageLearning) } returns listOf(
+        coEvery { collector.collect(FROM, TO, KnownApps.languageLearning) } returns listOf(
             usageEvidence(
                 packageName = "com.example.late",
                 appName = "Late",
@@ -54,13 +53,16 @@ class ProviderAggregationTest {
             ?: error("Expected language learning result")
 
         assertEquals(10, result.durationMinutes)
-        assertEquals(listOf("com.example.early", "com.example.late"), result.sessions.map { it.packageName })
+        assertEquals(
+            listOf("com.example.early", "com.example.zero", "com.example.late"),
+            result.sessions.map { it.packageName }
+        )
     }
 
     @Test
     fun reading_keepsAllSessionsInDurationAndSortsByStartTime() = runBlocking {
         val collector = mockk<UsageEventsCollector>()
-        every { collector.collect(FROM, TO, KnownApps.reading) } returns listOf(
+        coEvery { collector.collect(FROM, TO, KnownApps.reading) } returns listOf(
             usageEvidence(
                 packageName = "com.example.reader",
                 appName = "Reader",
@@ -105,7 +107,7 @@ class ProviderAggregationTest {
             healthConnectEvidence(start = minutes(0), end = minutes(20), durationMinutes = 20),
             healthConnectEvidence(start = minutes(60), end = minutes(70), durationMinutes = 10)
         )
-        every { usageEventsCollector.collect(FROM, TO, KnownApps.meditation) } returns listOf(
+        coEvery { usageEventsCollector.collect(FROM, TO, KnownApps.meditation) } returns listOf(
             usageEvidence(
                 packageName = "com.calm.android",
                 appName = "Calm",

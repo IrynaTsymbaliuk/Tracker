@@ -11,6 +11,9 @@ import com.tracker.core.permission.Permission
 import com.tracker.core.permission.PermissionManager
 import com.tracker.core.permission.PermissionStatus
 import com.tracker.core.types.DataSource
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 
 /**
@@ -31,7 +34,8 @@ import java.util.concurrent.TimeUnit
  */
 class UsageEventsCollector(
     private val context: Context,
-    private val permissionManager: PermissionManager
+    private val permissionManager: PermissionManager,
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
 
     companion object {
@@ -66,17 +70,17 @@ class UsageEventsCollector(
      * @throws PackageManagerException if querying installed apps fails.
      * @throws NoMonitorableAppsException if none of the [knownApps] are installed.
      */
-    fun collect(
+    suspend fun collect(
         fromMillis: Long,
         toMillis: Long,
         knownApps: Map<String, AppMetadata>
-    ): List<DurationEvidence> {
+    ): List<DurationEvidence> = withContext(dispatcher) {
 
         checkPermissions()
 
         val installedApps = getInstalledApps(knownApps)
 
-        return buildSessions(fromMillis, toMillis, knownApps, installedApps)
+        buildSessions(fromMillis, toMillis, knownApps, installedApps)
     }
 
     private fun checkPermissions() {

@@ -5,7 +5,7 @@ import com.tracker.core.collector.UsageStatsMetadata
 import com.tracker.core.config.KnownApps
 import com.tracker.core.model.DurationEvidence
 import com.tracker.core.types.DataSource
-import io.mockk.every
+import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -20,25 +20,28 @@ class UsageStatsProvidersTest {
     @Test
     fun socialMedia_emptyEvidence_returnsNull() = runBlocking {
         val collector = mockk<UsageEventsCollector>()
-        every { collector.collect(FROM, TO, KnownApps.socialMedia) } returns emptyList()
+        coEvery { collector.collect(FROM, TO, KnownApps.socialMedia) } returns emptyList()
 
         assertNull(SocialMediaProvider(collector).query(FROM, TO))
     }
 
     @Test
-    fun socialMedia_allZeroDurationSessions_returnsNull() = runBlocking {
+    fun socialMedia_allZeroDurationSessions_returnsResultWithZeroDurationSession() = runBlocking {
         val collector = mockk<UsageEventsCollector>()
-        every { collector.collect(FROM, TO, KnownApps.socialMedia) } returns listOf(
+        coEvery { collector.collect(FROM, TO, KnownApps.socialMedia) } returns listOf(
             usageEvidence("com.x", "X", 1_000L, 1_000L, 0)
         )
 
-        assertNull(SocialMediaProvider(collector).query(FROM, TO))
+        val result = SocialMediaProvider(collector).query(FROM, TO) ?: error("expected result")
+
+        assertEquals(0, result.durationMinutes)
+        assertEquals(listOf("com.x"), result.sessions.map { it.packageName })
     }
 
     @Test
     fun socialMedia_sumsDurationAndSortsByStartTime() = runBlocking {
         val collector = mockk<UsageEventsCollector>()
-        every { collector.collect(FROM, TO, KnownApps.socialMedia) } returns listOf(
+        coEvery { collector.collect(FROM, TO, KnownApps.socialMedia) } returns listOf(
             usageEvidence("com.late", "Late", 9_000L, 12_000L, 3),
             usageEvidence("com.early", "Early", 1_000L, 6_000L, 5)
         )
@@ -55,19 +58,22 @@ class UsageStatsProvidersTest {
     @Test
     fun reading_emptyEvidence_returnsNull() = runBlocking {
         val collector = mockk<UsageEventsCollector>()
-        every { collector.collect(FROM, TO, KnownApps.reading) } returns emptyList()
+        coEvery { collector.collect(FROM, TO, KnownApps.reading) } returns emptyList()
 
         assertNull(ReadingProvider(collector).query(FROM, TO))
     }
 
     @Test
-    fun reading_onlyZeroDurationSessions_returnsNull() = runBlocking {
+    fun reading_onlyZeroDurationSessions_returnsResultWithZeroDurationSession() = runBlocking {
         val collector = mockk<UsageEventsCollector>()
-        every { collector.collect(FROM, TO, KnownApps.reading) } returns listOf(
+        coEvery { collector.collect(FROM, TO, KnownApps.reading) } returns listOf(
             usageEvidence("com.amazon.kindle", "Kindle", 1_000L, 1_000L, 0)
         )
 
-        assertNull(ReadingProvider(collector).query(FROM, TO))
+        val result = ReadingProvider(collector).query(FROM, TO) ?: error("expected result")
+
+        assertEquals(0, result.durationMinutes)
+        assertEquals(listOf("com.amazon.kindle"), result.sessions.map { it.packageName })
     }
 
     // --- LanguageLearning ---
@@ -75,7 +81,7 @@ class UsageStatsProvidersTest {
     @Test
     fun languageLearning_emptyEvidence_returnsNull() = runBlocking {
         val collector = mockk<UsageEventsCollector>()
-        every { collector.collect(FROM, TO, KnownApps.languageLearning) } returns emptyList()
+        coEvery { collector.collect(FROM, TO, KnownApps.languageLearning) } returns emptyList()
 
         assertNull(LanguageLearningProvider(collector).query(FROM, TO))
     }
