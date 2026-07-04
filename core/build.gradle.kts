@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     id("maven-publish")
+    id("jacoco")
 }
 
 group = "com.github.IrynaTsymbaliuk"
@@ -56,6 +57,70 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+}
+
+jacoco {
+    toolVersion = "0.8.12"
+}
+
+tasks.withType<Test>().configureEach {
+    configure<JacocoTaskExtension> {
+        isIncludeNoLocationClasses = true
+        excludes = listOf("jdk.internal.*")
+    }
+}
+
+val jacocoExcludes = listOf(
+    "**/R.class",
+    "**/R$*.class",
+    "**/BuildConfig.*",
+    "**/Manifest*.*",
+)
+
+fun coverageClassDirs() =
+    fileTree(layout.buildDirectory.dir("tmp/kotlin-classes/debug").get().asFile) {
+        exclude(jacocoExcludes)
+    }
+
+fun coverageExecData() =
+    fileTree(layout.buildDirectory.get().asFile) {
+        include("**/testDebugUnitTest.exec")
+    }
+
+tasks.register<JacocoReport>("jacocoTestReport") {
+    dependsOn("testDebugUnitTest")
+    group = "verification"
+    description = "Generates a JaCoCo coverage report from the debug unit tests."
+
+    reports {
+        html.required.set(true)
+        xml.required.set(true)
+        csv.required.set(false)
+    }
+
+    classDirectories.setFrom(coverageClassDirs())
+    sourceDirectories.setFrom(files("src/main/java"))
+    executionData.setFrom(coverageExecData())
+}
+
+tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
+    dependsOn("testDebugUnitTest")
+    group = "verification"
+    description = "Fails the build if line coverage drops below 80%."
+
+    classDirectories.setFrom(coverageClassDirs())
+    sourceDirectories.setFrom(files("src/main/java"))
+    executionData.setFrom(coverageExecData())
+
+    violationRules {
+        rule {
+            limit {
+                counter = "LINE"
+                value = "COVEREDRATIO"
+                minimum = "0.80".toBigDecimal()
+            }
+        }
+    }
 }
 
 // Maven publishing configuration for JitPack
