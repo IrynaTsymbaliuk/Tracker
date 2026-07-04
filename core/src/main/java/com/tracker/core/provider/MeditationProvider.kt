@@ -40,8 +40,7 @@ class MeditationProvider internal constructor(
 
     override suspend fun query(
         fromMillis: Long,
-        toMillis: Long,
-        minConfidence: Float
+        toMillis: Long
     ): MeditationResult? {
 
         val healthConnectEvidence = collectHealthConnect(fromMillis, toMillis)

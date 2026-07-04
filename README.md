@@ -19,7 +19,6 @@ Tracker is an Android library that automatically identifies behaviors like langu
 ```kotlin
 val tracker = Tracker.Builder(context)
     .setLetterboxdUsername("your_username")  // optional: required only for movie watching
-    .setMinConfidence(0.50f)
     .build()
 
 lifecycleScope.launch {

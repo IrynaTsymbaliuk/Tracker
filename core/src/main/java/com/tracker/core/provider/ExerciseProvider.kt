@@ -29,8 +29,7 @@ class ExerciseProvider internal constructor(
 
     override suspend fun query(
         fromMillis: Long,
-        toMillis: Long,
-        minConfidence: Float
+        toMillis: Long
     ): ExerciseResult? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return null
 

@@ -41,7 +41,6 @@ import java.util.Calendar
  * ```
  * val tracker = Tracker.Builder(context)
  *     .setLetterboxdUsername("username")  // Optional: can also be set later
- *     .setMinConfidence(0.50f)
  *     .build()
  *
  * // Or set/update username later
@@ -57,7 +56,6 @@ import java.util.Calendar
  * ```
  */
 class Tracker private constructor(
-    val minConfidence: Float,
     private val appContext: Context,
     letterboxdUsername: String?,
     internal val timeProvider: TimeProvider // internal for testing
@@ -175,7 +173,7 @@ class Tracker private constructor(
      */
     suspend fun queryLanguageLearning(days: Int = 1): LanguageLearningResult? {
         val (from, to) = queryWindow(days)
-        return languageLearningProvider.query(from, to, minConfidence)
+        return languageLearningProvider.query(from, to)
     }
 
     /**
@@ -187,7 +185,7 @@ class Tracker private constructor(
      */
     suspend fun queryReading(days: Int = 1): ReadingResult? {
         val (from, to) = queryWindow(days)
-        return readingProvider.query(from, to, minConfidence)
+        return readingProvider.query(from, to)
     }
 
     /**
@@ -208,7 +206,7 @@ class Tracker private constructor(
         }
         movieWatchingProvider.setUsername(username)
         val (from, to) = queryWindow(days)
-        return movieWatchingProvider.query(from, to, minConfidence)
+        return movieWatchingProvider.query(from, to)
     }
 
     /**
@@ -220,7 +218,7 @@ class Tracker private constructor(
      */
     suspend fun querySocialMedia(days: Int = 1): SocialMediaResult? {
         val (from, to) = queryWindow(days)
-        return socialMediaProvider.query(from, to, minConfidence)
+        return socialMediaProvider.query(from, to)
     }
 
     /**
@@ -234,7 +232,7 @@ class Tracker private constructor(
      */
     suspend fun queryStepCounting(days: Int = 1): StepCountingResult? {
         val (from, to) = queryWindow(days)
-        return stepCountingProvider?.query(from, to, minConfidence)
+        return stepCountingProvider?.query(from, to)
     }
 
     /**
@@ -252,7 +250,7 @@ class Tracker private constructor(
      */
     suspend fun queryDistance(days: Int = 1): DistanceResult? {
         val (from, to) = queryWindow(days)
-        return distanceProvider?.query(from, to, minConfidence)
+        return distanceProvider?.query(from, to)
     }
 
     /**
@@ -276,7 +274,7 @@ class Tracker private constructor(
      */
     suspend fun queryMeditation(days: Int = 1): MeditationResult? {
         val (from, to) = queryWindow(days)
-        return meditationProvider.query(from, to, minConfidence)
+        return meditationProvider.query(from, to)
     }
 
     /**
@@ -295,7 +293,7 @@ class Tracker private constructor(
      */
     suspend fun queryExercise(days: Int = 1): ExerciseResult? {
         val (from, to) = queryWindow(days)
-        return exerciseProvider?.query(from, to, minConfidence)
+        return exerciseProvider?.query(from, to)
     }
 
     /**
@@ -324,20 +322,9 @@ class Tracker private constructor(
      * Builder for creating [Tracker] instances.
      */
     class Builder(private val context: Context) {
-        private var minConfidence: Float = 0.50f
         internal var timeProvider: TimeProvider =
             TimeProvider { System.currentTimeMillis() } // internal for testing
         private var letterboxdUsername: String? = null
-
-        /**
-         * @param confidence Minimum confidence threshold (0.0 to 1.0, default: 0.50)
-         * @return This builder for chaining
-         */
-        fun setMinConfidence(confidence: Float): Builder {
-            require(confidence in 0.0f..1.0f) { "Confidence must be between 0.0 and 1.0" }
-            this.minConfidence = confidence
-            return this
-        }
 
         /**
          * Sets Letterboxd username for movie watching queries.
@@ -356,7 +343,6 @@ class Tracker private constructor(
          */
         fun build(): Tracker {
             return Tracker(
-                minConfidence = minConfidence,
                 appContext = context.applicationContext,
                 letterboxdUsername = letterboxdUsername,
                 timeProvider = timeProvider

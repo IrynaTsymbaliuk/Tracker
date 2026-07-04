@@ -15,8 +15,7 @@ class LanguageLearningProvider internal constructor(
 
     override suspend fun query(
         fromMillis: Long,
-        toMillis: Long,
-        minConfidence: Float
+        toMillis: Long
     ): LanguageLearningResult? {
 
         val evidenceList = usageEventsCollector.collect(

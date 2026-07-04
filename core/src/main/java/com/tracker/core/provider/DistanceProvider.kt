@@ -23,8 +23,7 @@ class DistanceProvider internal constructor(
 
     override suspend fun query(
         fromMillis: Long,
-        toMillis: Long,
-        minConfidence: Float
+        toMillis: Long
     ): DistanceResult? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return null
 

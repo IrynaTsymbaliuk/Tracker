@@ -15,8 +15,7 @@ class ReadingProvider internal constructor(
 
     override suspend fun query(
         fromMillis: Long,
-        toMillis: Long,
-        minConfidence: Float
+        toMillis: Long
     ): ReadingResult? {
 
         val evidenceList = usageEventsCollector.collect(

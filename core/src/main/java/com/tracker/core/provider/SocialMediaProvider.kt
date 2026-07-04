@@ -25,8 +25,7 @@ class SocialMediaProvider internal constructor(
 
     override suspend fun query(
         fromMillis: Long,
-        toMillis: Long,
-        minConfidence: Float
+        toMillis: Long
     ): SocialMediaResult? {
 
         val evidenceList = usageEventsCollector.collect(

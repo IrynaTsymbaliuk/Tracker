@@ -21,8 +21,7 @@ class MovieWatchingProvider internal constructor(
 
     override suspend fun query(
         fromMillis: Long,
-        toMillis: Long,
-        minConfidence: Float
+        toMillis: Long
     ): MovieWatchingResult? {
         if (letterboxdUsername.isNullOrBlank()) throw InvalidLetterboxdIdException("Letterboxd username is not set")
 
