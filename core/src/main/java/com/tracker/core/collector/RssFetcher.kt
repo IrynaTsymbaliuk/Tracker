@@ -4,6 +4,7 @@ import android.os.Build
 import android.util.Log
 import com.tracker.core.BuildConfig
 import com.tracker.core.common.TAG
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
@@ -74,6 +75,8 @@ class HttpRssFetcher(
                 }
 
                 return performFetch(url)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 lastException = e
 
@@ -135,7 +138,15 @@ class HttpRssFetcher(
             }
 
             return connection.inputStream.bufferedReader().use { it.readText() }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: NetworkException) {
+            throw e
+        } catch (e: SocketTimeoutException) {
+            Log.e(TAG, "Timed out while fetching RSS feed from $url: ${e.message}", e)
+            throw e
+        } catch (e: UnknownHostException) {
+            Log.e(TAG, "Failed to resolve RSS feed host for $url: ${e.message}", e)
             throw e
         } catch (e: Exception) {
             Log.e(TAG, "Failed to fetch RSS feed from $url: ${e.message}", e)

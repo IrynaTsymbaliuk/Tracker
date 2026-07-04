@@ -29,7 +29,6 @@ import com.tracker.core.result.MovieWatchingResult
 import com.tracker.core.result.ReadingResult
 import com.tracker.core.result.SocialMediaResult
 import com.tracker.core.result.StepCountingResult
-import java.util.Calendar
 
 /**
  * Main entry point for the library. This is the only class the host app needs to interact with.
@@ -305,17 +304,7 @@ class Tracker private constructor(
      * Anchors midnight calculation to [timeProvider] so tests can control the result.
      */
     private fun queryWindow(days: Int): Pair<Long, Long> {
-        require(days >= 1) { "days must be >= 1, was $days" }
-        val now = timeProvider.now()
-        val calendar = Calendar.getInstance().apply {
-            timeInMillis = now
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-            add(Calendar.DAY_OF_YEAR, -(days - 1))
-        }
-        return calendar.timeInMillis to now
+        return QueryWindowCalculator.calculate(days, timeProvider.now())
     }
 
     /**
