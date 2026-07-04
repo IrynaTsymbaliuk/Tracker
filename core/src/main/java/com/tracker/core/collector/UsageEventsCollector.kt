@@ -35,6 +35,9 @@ class UsageEventsCollector(
 ) {
 
     companion object {
+        // Context.USAGE_STATS_SERVICE is API 22, but UsageStatsManager exists from API 21.
+        private const val USAGE_STATS_SERVICE_NAME = "usagestats"
+
         // Maximum gap between two activity transitions of the same app that is still considered
         // a single continuous session (e.g. navigating between screens within the app).
         val SESSION_GAP_MILLIS = TimeUnit.SECONDS.toMillis(30)
@@ -108,7 +111,7 @@ class UsageEventsCollector(
         installedApps: Set<String>
     ): List<DurationEvidence> {
         val usageStatsManager =
-            context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
+            context.getSystemService(USAGE_STATS_SERVICE_NAME) as? UsageStatsManager
                 ?: throw SystemServiceUnavailableException("UsageStatsManager")
 
         val usageEvents = usageStatsManager.queryEvents(fromMillis, toMillis)
