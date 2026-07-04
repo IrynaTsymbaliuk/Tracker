@@ -7,10 +7,11 @@ This sample application demonstrates how to integrate and use the **Tracker** li
 ### 1. Library Setup
 
 ```kotlin
-val tracker = Tracker.Builder(context)
-    .setLetterboxdUsername("your_username")  // optional: required only for movie watching
-    .build()
+val tracker = Tracker.Builder(context).build()
 ```
+
+Movie watching is optional. To enable it, add `.setLetterboxdUsername("your_username")` when
+building `Tracker`.
 
 ### 2. Permission Handling
 
@@ -167,7 +168,7 @@ sensors rather than a fixed app list.
    - Return to the app — step count, distance, meditation, and exercise results appear automatically
 
 4. **Enable Movie Watching** (optional):
-   - Set `letterboxdUsername` in `MainActivity.kt` to your Letterboxd username
+   - Add `.setLetterboxdUsername("your_username")` when building `Tracker` in `MainActivity.kt`
 
 5. **Refresh**:
    - Tap "Query Today" to manually refresh all metrics
@@ -230,7 +231,7 @@ The app works best when you have supported apps installed and have used them tod
 - Smiling Mind, Ten Percent Happier, Medito, MEISOON, Mindvalley
 
 **Movie watching:**
-- Set `letterboxdUsername` in `MainActivity.kt` to your Letterboxd username
+- Add `.setLetterboxdUsername("your_username")` when building `Tracker` in `MainActivity.kt`
 - Each detected film shows its title and release `year` (from the feed's `letterboxd:filmTitle` and `letterboxd:filmYear` elements) plus its TMDB id (`tmdb:<id>`) parsed from the feed's `tmdb:movieId` element — use it to look the film up in The Movie Database. Films the feed hasn't linked to TMDB show just the title.
 - Each `MovieSession` also exposes the user's own log data: `rating` (0.5–5.0 stars, `null` when unrated), `review` (plain text, `null` when there's no written review), `posterUrl` (the poster image URL from the feed, `null` when omitted), `isRewatch`, and `isLiked`. The sample renders these as `★★★★½`, a `♥` marker, a `↻` marker, a `🖼` poster URL line, and a quoted review line.
 

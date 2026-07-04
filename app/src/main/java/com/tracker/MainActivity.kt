@@ -41,8 +41,6 @@ import java.time.format.DateTimeFormatter
 
 class MainActivity : AppCompatActivity() {
 
-    private val letterboxdUsername = "Ts_Irena"
-
     private lateinit var binding: ActivityMainBinding
     private lateinit var tracker: Tracker
 
@@ -58,9 +56,7 @@ class MainActivity : AppCompatActivity() {
             lifecycleScope.launch { updateHcPermissionUi() }
         }
 
-        tracker = Tracker.Builder(this)
-            .setLetterboxdUsername(letterboxdUsername)
-            .build()
+        tracker = Tracker.Builder(this).build()
 
         binding.btnGrantUsage.setOnClickListener {
             startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
