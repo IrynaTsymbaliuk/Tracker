@@ -27,7 +27,7 @@ val mode = appOps.checkOpNoThrow(
 startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
 ```
 
-**Health Connect** — required for step counting (`health.READ_STEPS`), distance (`health.READ_DISTANCE`), the HealthConnect branch of meditation (`health.READ_MINDFULNESS`), and exercise (`health.READ_EXERCISE`). All four are requested in a single runtime prompt:
+**Health Connect** — required for step counting (`health.READ_STEPS`), distance (`health.READ_DISTANCE`), the HealthConnect branch of meditation (`health.READ_MINDFULNESS`), exercise (`health.READ_EXERCISE`), and sleep (`health.READ_SLEEP`). All are requested in a single runtime prompt:
 ```kotlin
 val launcher = registerForActivityResult(
     PermissionController.createRequestPermissionResultContract()
@@ -37,7 +37,8 @@ launcher.launch(setOf(
     HealthPermission.getReadPermission(StepsRecord::class),
     HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
     HealthPermission.getReadPermission(ExerciseSessionRecord::class),
-    HealthPermission.getReadPermission(DistanceRecord::class)
+    HealthPermission.getReadPermission(DistanceRecord::class),
+    HealthPermission.getReadPermission(SleepSessionRecord::class)
 ))
 ```
 
@@ -57,7 +58,8 @@ lifecycleScope.launch {
     val distance   = runCatching { tracker.queryDistance() }.getOrNull()
     val meditation = runCatching { tracker.queryMeditation() }.getOrNull()
     val exercise   = runCatching { tracker.queryExercise() }.getOrNull()
-    displayResults(language, reading, social, movies, steps, distance, meditation, exercise)
+    val sleep      = runCatching { tracker.querySleep() }.getOrNull()
+    displayResults(language, reading, social, movies, steps, distance, meditation, exercise, sleep)
 }
 ```
 
@@ -75,6 +77,7 @@ Each metric is shown as a summary line:
 - **Distance**: `📏 Distance    5.42 km`
 - **Meditation**: `🧘 Meditation    15 min · 1 session · HC+Usage`
 - **Exercise**: `🏃 Exercise    45 min · 2 sessions · Running, Strength Training`
+- **Sleep**: `😴 Sleep    7h 32m · 1 session` (expands into one line per night with fall-asleep/wake times, efficiency, quality, and a stage breakdown)
 
 **Per-session breakdown.** For the usage-based metrics (Language, Reading, Social), Steps, and
 Distance, the sample expands the summary line into one indented line per session, showing **time
@@ -96,13 +99,22 @@ result's `sessions` list — the library always returns it; the app simply rende
     • 08:00–09:00 · 0.92 km
     • 12:00–13:00 · 2.74 km
     • 18:00–19:00 · 1.76 km
+
+😴 Sleep    7h 32m · 1 session
+    • asleep 23:15 → woke 07:02 · 7h 32m · 89% · GOOD
+        deep 1h05m · REM 1h40m · light 4h47m · awake 0h32m
 ```
 
 `sessionLines()` formats `UsageSession`s (Language, Reading, Social) as `from–to · appName (N min)`;
 `stepSessionLines()` formats `StepSession`s as `from–to · N steps`; `distanceSessionLines()` formats
 `DistanceSession`s as `from–to · N km` (or `N m` under a kilometre). Timestamps are rendered as local
-`HH:mm`. Note that step and distance "sessions" are **hourly Health Connect buckets**, not discrete walking bouts —
+`HH:mm`. Note that step and distance "sessions" are **hourly Health Connect buckets**, not discrete bouts —
 empty hours are omitted by the library, so every line shown has a non-zero count.
+
+`sleepSessionLines()` is different: each `SleepSession` is one whole night (a Health Connect
+`SleepSessionRecord`), so it renders `asleep <fell-asleep> → woke <woke> · <time asleep> · <efficiency>% · <quality>`
+with a second indented line for the stage split (`deep`/`REM`/`light`/`awake`). Efficiency and quality
+are omitted when the source recorded no stages (there is no awake data to measure).
 
 The Movies row gets the same treatment via `movieSessionLines()`, expanding each `MovieSession` into
 `watchedDate · title (year) (tmdb:<id>) · ★rating ♥ ↻`, with the poster URL and review on further
@@ -162,10 +174,10 @@ sensors rather than a fixed app list.
    - Find "Tracker Demo" in the list and enable "Permit usage access"
    - Return to the app — metrics update automatically
 
-3. **Grant Health Connect** (optional, for step counting, distance, the HealthConnect branch of meditation, and exercise):
+3. **Grant Health Connect** (optional, for step counting, distance, the HealthConnect branch of meditation, exercise, and sleep):
    - Tap "Grant" next to the Health Connect row
-   - Approve `Steps`, `Distance`, `Mindfulness sessions`, and `Exercise sessions` in the Health Connect dialog
-   - Return to the app — step count, distance, meditation, and exercise results appear automatically
+   - Approve `Steps`, `Distance`, `Mindfulness sessions`, `Exercise sessions`, and `Sleep sessions` in the Health Connect dialog
+   - Return to the app — step count, distance, meditation, exercise, and sleep results appear automatically
 
 4. **Enable Movie Watching** (optional):
    - Add `.setLetterboxdUsername("your_username")` when building `Tracker` in `MainActivity.kt`
@@ -184,14 +196,16 @@ MainActivity.kt
 ├── onResume()                  # Update permission UI, auto-query metrics
 ├── updateUsagePermissionUi()   # Show/hide Grant button based on AppOps check
 ├── hasUsageStatsPermission()   # AppOpsManager permission check
-├── updateHcPermissionUi()      # Show/hide Grant button based on HC permission state (steps + mindfulness + exercise)
-├── queryMetrics()              # Query all eight metrics independently in one coroutine
+├── updateHcPermissionUi()      # Show/hide Grant button based on HC permission state (steps + mindfulness + exercise + distance + sleep)
+├── queryMetrics()              # Query all nine metrics independently in one coroutine
 ├── toggleTrackedApps()         # Show/hide the static tracked-apps catalogue (getTracked*Apps())
 ├── trackedAppsBlock()          # Format one habit's tracked apps as "package (multiplier)" lines
 ├── displayResults()            # Render the summary line per metric
 ├── sessionLines()              # Expand UsageSession list into "from–to · appName (N min)" lines
 ├── stepSessionLines()          # Expand StepSession list into "from–to · N steps" lines (hourly buckets)
 ├── distanceSessionLines()      # Expand DistanceSession list into "from–to · N km" lines (hourly buckets)
+├── sleepSessionLines()         # Expand SleepSession list into "asleep→woke · duration · efficiency · quality" + stage lines (one per night)
+├── hoursMinutes()              # Format a minute count as "Xh Ym" for the Sleep summary
 ├── movieSessionLines()         # Expand MovieSession list into "watchedDate · title (year) (tmdb:id) · ★rating ♥ ↻ + poster + review" lines
 ├── starRating()                # Render a 0.5–5.0 rating as ★ glyphs (e.g. 4.5 → ★★★★½)
 ├── sourcesLabel()              # Render MeditationResult.sources as "HC+Usage"
@@ -254,6 +268,11 @@ The app works best when you have supported apps installed and have used them tod
 - Grant the `Exercise sessions` permission when prompted
 - All exercise types recognised by Health Connect are supported (running, cycling, strength training, yoga, swimming, etc.)
 
+**Sleep:**
+- Have any app that writes `SleepSessionRecord`s to Health Connect (Fitbit, Samsung Health, Google Fit, Pixel Watch, etc.), or log sleep manually in the Health Connect app
+- Grant the `Sleep sessions` permission when prompted
+- Each night shows fall-asleep/wake times, minutes asleep, and — when the source recorded sleep stages — efficiency, a quality band, and the deep/REM/light/awake split. Trackers that log only a bare session (no stages) show duration but no efficiency/quality
+
 ## Notes
 
 - The sample app requires Android API 26+ (Android 8.0)
@@ -263,3 +282,4 @@ The app works best when you have supported apps installed and have used them tod
 - On Android 10+, session times use precise `ACTIVITY_RESUMED`/`ACTIVITY_PAUSED` events
 - `MindfulnessSessionRecord` requires a recent `androidx.health.connect:connect-client` release. On older HC installations, the meditation query transparently falls back to UsageStats-only.
 - `ExerciseSessionRecord` is authoritative because these records are written by fitness apps or entered manually by the user. Sessions shorter than one minute still appear in `sessions` (rounded to `0 min`) so the session count remains accurate.
+- Sleep reads raw `SleepSessionRecord`s (via `readRecords`, like exercise — not the hourly aggregation used for steps/distance), so each night keeps its real fall-asleep/wake times and stage intervals. `quality` is a non-clinical band the library derives from **sleep efficiency** (time asleep ÷ time in bed); the sample shows it only when the source recorded stages, and apps wanting their own scoring can use the exposed `deepMinutes`/`remMinutes`/`lightMinutes`/`awakeMinutes` instead.

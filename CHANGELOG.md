@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Sleep tracking via Health Connect: `Tracker.querySleep(days)` reads raw `SleepSessionRecord`s and returns a `SleepResult` with one `SleepSession` per night/nap. Each session exposes when the user fell asleep (`startTime`) and woke (`endTime`), minutes actually asleep (`asleepMinutes`), the stage breakdown (`deepMinutes`/`remMinutes`/`lightMinutes`/`awakeMinutes`, `timeInBedMinutes`, and the raw `stages: List<SleepStage>`), `efficiency` (asleep ÷ time in bed, `null` when the source wrote no stages), and a derived `quality` band. New public types: `SleepStage`, `SleepStageType`, and `SleepQuality` (a non-clinical band derived from sleep efficiency). `SleepResult.totalSleepMinutes`/`totalSleepHours` sum time asleep across sessions. Requires the `health.READ_SLEEP` permission and API 26+; returns `null` when Health Connect is unavailable or the permission is not granted. Sessions are read via `readRecords` (like exercise) with no cross-source deduplication.
+
 ### Changed
 - Clarified release/install documentation, Kotlin requirements, tracked-app catalog examples, and default query-window wording.
 - Simplified CI to use the Gradle build as the single verification entry point.

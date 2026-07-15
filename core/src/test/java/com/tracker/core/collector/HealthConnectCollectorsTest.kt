@@ -6,11 +6,13 @@ import androidx.health.connect.client.aggregate.AggregationResult
 import androidx.health.connect.client.aggregate.AggregationResultGroupedByDuration
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.response.ReadRecordsResponse
 import androidx.health.connect.client.units.Length
 import com.tracker.core.types.DataSource
+import com.tracker.core.types.SleepStageType
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -113,6 +115,72 @@ class HealthConnectCollectorsTest {
         assertEquals(1500.0, evidence.buckets[0].meters, 0.0001)
     }
 
+    // --- Sleep ---
+
+    @Test
+    fun sleep_permissionMissing_throwsPermissionDenied() {
+        sdkAvailable()
+        coEvery { permissionController.getGrantedPermissions() } returns emptySet()
+
+        assertThrows(PermissionDeniedException::class.java) {
+            runBlocking { sleepCollector().collect(0L, 100L) }
+        }
+    }
+
+    @Test
+    fun sleep_happyPath_mapsSessionAndStages() = runBlocking {
+        sdkAvailable()
+        coEvery { permissionController.getGrantedPermissions() } returns
+            setOf(HealthConnectSleepCollector.READ_SLEEP_PERMISSION)
+        // One night: fell asleep at t=0, woke 8h later, with deep + awake stages.
+        coEvery { client.readRecords(any<ReadRecordsRequest<SleepSessionRecord>>()) } returns
+            ReadRecordsResponse(
+                records = listOf(
+                    sleepRecord(
+                        start = 0L,
+                        end = HOUR * 8,
+                        stages = listOf(
+                            stage(0L, HOUR * 6, SleepSessionRecord.STAGE_TYPE_DEEP),
+                            stage(HOUR * 6, HOUR * 8, SleepSessionRecord.STAGE_TYPE_AWAKE)
+                        )
+                    )
+                ),
+                pageToken = null
+            )
+
+        val evidence = sleepCollector().collect(0L, HOUR * 8)
+
+        assertEquals(DataSource.HEALTH_CONNECT, evidence.source)
+        assertEquals(0.99f, evidence.confidence)
+        assertEquals(1, evidence.sessions.size)
+        val session = evidence.sessions[0]
+        assertEquals(0L, session.startTime)
+        assertEquals(HOUR * 8, session.endTime)
+        assertEquals(
+            listOf(SleepStageType.DEEP, SleepStageType.AWAKE),
+            session.stages.map { it.type }
+        )
+    }
+
+    @Test
+    fun sleep_sortsSessionsByStartTime() = runBlocking {
+        sdkAvailable()
+        coEvery { permissionController.getGrantedPermissions() } returns
+            setOf(HealthConnectSleepCollector.READ_SLEEP_PERMISSION)
+        coEvery { client.readRecords(any<ReadRecordsRequest<SleepSessionRecord>>()) } returns
+            ReadRecordsResponse(
+                records = listOf(
+                    sleepRecord(start = HOUR * 10, end = HOUR * 11, stages = emptyList()),
+                    sleepRecord(start = 0L, end = HOUR * 8, stages = emptyList())
+                ),
+                pageToken = null
+            )
+
+        val evidence = sleepCollector().collect(0L, HOUR * 24)
+
+        assertEquals(listOf(0L, HOUR * 10), evidence.sessions.map { it.startTime })
+    }
+
     // --- Exercise ---
 
     @Test
@@ -162,6 +230,7 @@ class HealthConnectCollectorsTest {
 
     private fun stepCollector() = HealthConnectStepCollector(context, Dispatchers.Unconfined)
     private fun distanceCollector() = HealthConnectDistanceCollector(context, Dispatchers.Unconfined)
+    private fun sleepCollector() = HealthConnectSleepCollector(context, Dispatchers.Unconfined)
     private fun exerciseCollector() = HealthConnectExerciseCollector(context, Dispatchers.Unconfined)
     private fun mindfulnessCollector() = HealthConnectMindfulnessCollector(context, Dispatchers.Unconfined)
 
@@ -181,6 +250,25 @@ class HealthConnectCollectorsTest {
         return group(start, end, agg)
     }
 
+    private fun sleepRecord(
+        start: Long,
+        end: Long,
+        stages: List<SleepSessionRecord.Stage>
+    ): SleepSessionRecord {
+        val record = mockk<SleepSessionRecord>()
+        every { record.startTime } returns Instant.ofEpochMilli(start)
+        every { record.endTime } returns Instant.ofEpochMilli(end)
+        every { record.stages } returns stages
+        return record
+    }
+
+    private fun stage(start: Long, end: Long, type: Int): SleepSessionRecord.Stage =
+        SleepSessionRecord.Stage(
+            startTime = Instant.ofEpochMilli(start),
+            endTime = Instant.ofEpochMilli(end),
+            stage = type
+        )
+
     private fun group(start: Long, end: Long, agg: AggregationResult): AggregationResultGroupedByDuration {
         val g = mockk<AggregationResultGroupedByDuration>()
         every { g.startTime } returns Instant.ofEpochMilli(start)
@@ -199,5 +287,6 @@ class HealthConnectCollectorsTest {
 
     private companion object {
         const val UNKNOWN_EXERCISE_TYPE = 9999 // not a real HC constant -> maps to "other"
+        const val HOUR = 3_600_000L
     }
 }

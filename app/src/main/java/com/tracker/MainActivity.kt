@@ -17,6 +17,7 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.MindfulnessSessionRecord
+import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.lifecycle.lifecycleScope
 import com.tracker.core.Tracker
@@ -29,6 +30,8 @@ import com.tracker.core.result.MeditationResult
 import com.tracker.core.result.MovieSession
 import com.tracker.core.result.MovieWatchingResult
 import com.tracker.core.result.ReadingResult
+import com.tracker.core.result.SleepResult
+import com.tracker.core.result.SleepSession
 import com.tracker.core.result.SocialMediaResult
 import com.tracker.core.result.StepCountingResult
 import com.tracker.core.result.StepSession
@@ -99,7 +102,7 @@ class MainActivity : AppCompatActivity() {
             val allGranted = missing.isEmpty()
 
             binding.tvHcStatus.text = when {
-                allGranted -> "Health Connect  ✓ (Steps + Mindfulness + Exercise + Distance)"
+                allGranted -> "Health Connect  ✓ (Steps + Mindfulness + Exercise + Distance + Sleep)"
                 missing.size == REQUIRED_HC_PERMISSIONS.size -> "Health Connect  ✗"
                 else -> {
                     val missingLabels = missing.mapNotNull { HC_PERMISSION_LABELS[it] }
@@ -153,8 +156,9 @@ class MainActivity : AppCompatActivity() {
             val distance   = runCatching { tracker.queryDistance() }.getOrNull()
             val meditation = runCatching { tracker.queryMeditation() }.getOrNull()
             val exercise   = runCatching { tracker.queryExercise() }.getOrNull()
+            val sleep      = runCatching { tracker.querySleep() }.getOrNull()
 
-            displayResults(language, reading, social, movies, steps, distance, meditation, exercise)
+            displayResults(language, reading, social, movies, steps, distance, meditation, exercise, sleep)
 
             binding.progressBar.isVisible = false
             binding.btnQuery.isEnabled = true
@@ -212,7 +216,8 @@ class MainActivity : AppCompatActivity() {
         steps: StepCountingResult?,
         distance: DistanceResult?,
         meditation: MeditationResult?,
-        exercise: ExerciseResult?
+        exercise: ExerciseResult?,
+        sleep: SleepResult?
     ) {
         binding.tvLanguage.text = language
             ?.let { "📚 Language    ${it.durationMinutes} min${sessionLines(it.sessions)}" }
@@ -258,6 +263,21 @@ class MainActivity : AppCompatActivity() {
                 "🏃 Exercise    ${it.durationMinutes} min · $sessionCount $sessionLabel$typesSuffix"
             }
             ?: "🏃 Exercise    —"
+
+        binding.tvSleep.text = sleep
+            ?.let {
+                val sessionCount = it.sessions.size
+                val sessionLabel = if (sessionCount == 1) "session" else "sessions"
+                "😴 Sleep    ${hoursMinutes(it.totalSleepMinutes)} · $sessionCount $sessionLabel${sleepSessionLines(it.sessions)}"
+            }
+            ?: "😴 Sleep    —"
+    }
+
+    /** Formats a minute count as `Xh Ym` (e.g. `452` → `"7h 32m"`, `45` → `"45m"`). */
+    private fun hoursMinutes(minutes: Long): String {
+        val h = minutes / 60
+        val m = minutes % 60
+        return if (h > 0) "${h}h ${m}m" else "${m}m"
     }
 
     /**
@@ -355,6 +375,43 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
+     * Renders the per-night sleep breakdown shown under the Sleep metric. Each [SleepSession] is
+     * one Health Connect `SleepSessionRecord`, so each entry shows when the user **fell asleep**
+     * and **woke**, how long they were **asleep**, the sleep **efficiency** and **quality** band,
+     * and — when the source recorded stages — a stage line (deep / REM / light / awake):
+     *
+     * ```
+     *     • asleep 23:15 → woke 07:02 · 7h 32m · 89% · GOOD
+     *         deep 1h05m · REM 1h40m · light 4h47m · awake 0h32m
+     * ```
+     *
+     * Efficiency and quality are omitted for sessions whose source wrote no stages (there is no
+     * awake data to measure). Returns an empty string when there are no sessions.
+     */
+    private fun sleepSessionLines(sessions: List<SleepSession>): String {
+        if (sessions.isEmpty()) return ""
+        return sessions.joinToString(separator = "\n", prefix = "\n") { session ->
+            val asleep = SESSION_TIME_FORMAT.format(Instant.ofEpochMilli(session.startTime))
+            val woke = SESSION_TIME_FORMAT.format(Instant.ofEpochMilli(session.endTime))
+            val efficiency = session.efficiency
+                ?.let { " · ${"%.0f%%".format(it * 100)} · ${session.quality}" }
+                ?: ""
+            val header = "    • asleep $asleep → woke $woke · ${hoursMinutes(session.asleepMinutes)}$efficiency"
+
+            val stageLine = if (session.stages.isEmpty()) "" else {
+                val parts = buildList {
+                    if (session.deepMinutes > 0) add("deep ${hoursMinutes(session.deepMinutes)}")
+                    if (session.remMinutes > 0) add("REM ${hoursMinutes(session.remMinutes)}")
+                    if (session.lightMinutes > 0) add("light ${hoursMinutes(session.lightMinutes)}")
+                    if (session.awakeMinutes > 0) add("awake ${hoursMinutes(session.awakeMinutes)}")
+                }
+                if (parts.isEmpty()) "" else "\n        ${parts.joinToString(" · ")}"
+            }
+            "$header$stageLine"
+        }
+    }
+
+    /**
      * Renders the per-film breakdown shown under the Movies metric. Each [MovieSession] becomes
      * its own indented line showing the **watched date**, the **title** with its **release year**
      * (when present), the **TMDB id** (when the feed provided one), the user's **star rating**, a
@@ -412,6 +469,8 @@ class MainActivity : AppCompatActivity() {
             HealthPermission.getReadPermission(ExerciseSessionRecord::class)
         private val HC_DISTANCE_PERMISSION =
             HealthPermission.getReadPermission(DistanceRecord::class)
+        private val HC_SLEEP_PERMISSION =
+            HealthPermission.getReadPermission(SleepSessionRecord::class)
 
         /**
          * Every Health Connect permission this sample app wants. Clicking the single
@@ -422,7 +481,8 @@ class MainActivity : AppCompatActivity() {
             HC_STEPS_PERMISSION,
             HC_MINDFULNESS_PERMISSION,
             HC_EXERCISE_PERMISSION,
-            HC_DISTANCE_PERMISSION
+            HC_DISTANCE_PERMISSION,
+            HC_SLEEP_PERMISSION
         )
 
         /**
@@ -433,7 +493,8 @@ class MainActivity : AppCompatActivity() {
             HC_STEPS_PERMISSION to "Steps",
             HC_MINDFULNESS_PERMISSION to "Mindfulness",
             HC_EXERCISE_PERMISSION to "Exercise",
-            HC_DISTANCE_PERMISSION to "Distance"
+            HC_DISTANCE_PERMISSION to "Distance",
+            HC_SLEEP_PERMISSION to "Sleep"
         )
     }
 }

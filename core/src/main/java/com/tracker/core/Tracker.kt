@@ -6,6 +6,7 @@ import com.tracker.core.collector.AndroidNetworkConnectivityChecker
 import com.tracker.core.collector.HealthConnectDistanceCollector
 import com.tracker.core.collector.HealthConnectExerciseCollector
 import com.tracker.core.collector.HealthConnectMindfulnessCollector
+import com.tracker.core.collector.HealthConnectSleepCollector
 import com.tracker.core.collector.HealthConnectStepCollector
 import com.tracker.core.collector.HttpRssFetcher
 import com.tracker.core.collector.LetterboxdCollector
@@ -19,6 +20,7 @@ import com.tracker.core.provider.LanguageLearningProvider
 import com.tracker.core.provider.MeditationProvider
 import com.tracker.core.provider.MovieWatchingProvider
 import com.tracker.core.provider.ReadingProvider
+import com.tracker.core.provider.SleepProvider
 import com.tracker.core.provider.SocialMediaProvider
 import com.tracker.core.provider.StepCountingProvider
 import com.tracker.core.result.DistanceResult
@@ -27,6 +29,7 @@ import com.tracker.core.result.LanguageLearningResult
 import com.tracker.core.result.MeditationResult
 import com.tracker.core.result.MovieWatchingResult
 import com.tracker.core.result.ReadingResult
+import com.tracker.core.result.SleepResult
 import com.tracker.core.result.SocialMediaResult
 import com.tracker.core.result.StepCountingResult
 
@@ -91,6 +94,12 @@ class Tracker private constructor(
     private val distanceProvider: DistanceProvider? by lazy {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             DistanceProvider(HealthConnectDistanceCollector(appContext))
+        } else null
+    }
+
+    private val sleepProvider: SleepProvider? by lazy {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            SleepProvider(HealthConnectSleepCollector(appContext))
         } else null
     }
 
@@ -250,6 +259,26 @@ class Tracker private constructor(
     suspend fun queryDistance(days: Int = 1): DistanceResult? {
         val (from, to) = queryWindow(days)
         return distanceProvider?.query(from, to)
+    }
+
+    /**
+     * Queries sleep from Health Connect `SleepSessionRecord`, returned as one
+     * [com.tracker.core.result.SleepSession] per night/nap. Each session exposes when the user
+     * fell asleep (`startTime`) and woke (`endTime`), the per-stage breakdown, minutes actually
+     * asleep, sleep efficiency, and a derived [com.tracker.core.types.SleepQuality] band.
+     *
+     * Requires Health Connect to be installed, API 26+, and
+     * [HealthConnectSleepCollector.READ_SLEEP_PERMISSION] to be granted at runtime via
+     * [androidx.health.connect.client.PermissionController.createRequestPermissionResultContract].
+     *
+     * @param days Number of days to include: 1 = today from midnight through now,
+     * 2 = yesterday midnight through now, etc. Must be >= 1.
+     * @return Sleep data for the requested window, or null if Health Connect is unavailable,
+     * the API level is below 26, or the permission has not been granted.
+     */
+    suspend fun querySleep(days: Int = 1): SleepResult? {
+        val (from, to) = queryWindow(days)
+        return sleepProvider?.query(from, to)
     }
 
     /**

@@ -17,6 +17,9 @@
     <!-- Health Connect: required to read DistanceRecord via HealthConnectDistanceCollector -->
     <uses-permission android:name="android.permission.health.READ_DISTANCE" />
 
+    <!-- Health Connect: required to read SleepSessionRecord via HealthConnectSleepCollector -->
+    <uses-permission android:name="android.permission.health.READ_SLEEP" />
+
     <!--
         Package visibility queries for Android 11+ (API 30+).
         Keep this list in sync with KnownApps.kt.
