@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-07-15
+
 ### Added
 - Sleep tracking via Health Connect: `Tracker.querySleep(days)` reads raw `SleepSessionRecord`s and returns a `SleepResult` with one `SleepSession` per night/nap. Each session exposes when the user fell asleep (`startTime`) and woke (`endTime`), minutes actually asleep (`asleepMinutes`), the stage breakdown (`deepMinutes`/`remMinutes`/`lightMinutes`/`awakeMinutes`, `timeInBedMinutes`, and the raw `stages: List<SleepStage>`), `efficiency` (asleep ÷ time in bed, `null` when the source wrote no stages), and a derived `quality` band. New public types: `SleepStage`, `SleepStageType`, and `SleepQuality` (a non-clinical band derived from sleep efficiency). `SleepResult.totalSleepMinutes`/`totalSleepHours` sum time asleep across sessions. Requires the `health.READ_SLEEP` permission and API 26+; returns `null` when Health Connect is unavailable or the permission is not granted. Sessions are read via `readRecords` (like exercise) with no cross-source deduplication.
 
@@ -15,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Simplified CI to use the Gradle build as the single verification entry point.
 
 ### Removed
-- **Breaking:** removed the `confidence` and `confidenceLevel` properties from `HabitResult` and all result types, along with the `ConfidenceLevel` enum and `Float.toConfidenceLevel()` extension. The scores were uncalibrated heuristics, computed inconsistently across providers, and largely redundant with `sources` (Health Connect / Letterboxd results were a constant tied 1:1 to the source). Use `sources: List<DataSource>` to distinguish authoritative sensor/log data from inferred app usage. Per-app base multipliers remain available as reference data via `AppMetadata.confidenceMultiplier` (`getTracked*Apps()`). Warrants a `2.0.0` release when the next batch of breaking changes ships.
+- **Breaking:** removed the `confidence` and `confidenceLevel` properties from `HabitResult` and all result types, along with the `ConfidenceLevel` enum and `Float.toConfidenceLevel()` extension. The scores were uncalibrated heuristics, computed inconsistently across providers, and largely redundant with `sources` (Health Connect / Letterboxd results were a constant tied 1:1 to the source). Use `sources: List<DataSource>` to distinguish authoritative sensor/log data from inferred app usage. Per-app base multipliers remain available as reference data via `AppMetadata.confidenceMultiplier` (`getTracked*Apps()`).
 
 ### Fixed
 - Removed sample-app hardcoded strings and the personal Letterboxd default from the demo.
@@ -93,7 +95,8 @@ val movies = tracker.queryMovieWatching()
 movies?.sessions?.forEach { show(it.title, it.watchedDate) }
 ```
 
-[Unreleased]: https://github.com/IrynaTsymbaliuk/Tracker/compare/v1.2.2...HEAD
+[Unreleased]: https://github.com/IrynaTsymbaliuk/Tracker/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/IrynaTsymbaliuk/Tracker/compare/v1.2.2...v1.3.0
 [1.2.2]: https://github.com/IrynaTsymbaliuk/Tracker/releases/tag/v1.2.2
 [1.2.1]: https://github.com/IrynaTsymbaliuk/Tracker/releases/tag/v1.2.1
 [1.2.0]: https://github.com/IrynaTsymbaliuk/Tracker/releases/tag/v1.2.0

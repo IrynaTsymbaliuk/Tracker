@@ -274,7 +274,7 @@ Then add the library dependency:
 
 ```kotlin
 dependencies {
-    implementation("com.github.IrynaTsymbaliuk:tracker:1.2.2")
+    implementation("com.github.IrynaTsymbaliuk:tracker:1.3.0")
 }
 ```
 

@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "com.github.IrynaTsymbaliuk"
-version = "1.2.2"
+version = "1.3.0"
 
 android {
     namespace = "com.tracker.core"
