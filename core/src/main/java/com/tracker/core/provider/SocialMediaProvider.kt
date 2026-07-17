@@ -11,10 +11,9 @@ import com.tracker.core.types.DataSource
 /**
  * Detects social media usage from app foreground sessions.
  *
- * The known-app catalogue keeps internal source weights for app categories
- * (for example, messaging apps are lower-confidence social signals than
- * dedicated social feeds), but public results expose sources and sessions
- * rather than result-level confidence scores.
+ * Public results expose sources and sessions; the known-app catalogue's optional
+ * [com.tracker.core.config.AppMetadata.confidenceMultiplier] is reference metadata only and
+ * does not affect collection or aggregation.
  */
 class SocialMediaProvider internal constructor(
     private val usageEventsCollector: UsageEventsCollector

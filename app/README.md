@@ -1,6 +1,6 @@
 # Tracker — Sample App
 
-This sample application demonstrates how to integrate and use the **Tracker** library to monitor language learning, reading, social media usage, movie watching, step counting, distance, meditation, and exercise.
+This sample application demonstrates how to integrate and use the **Tracker** library to monitor language learning, reading, social media usage, movie watching, step counting, distance, meditation, exercise, training plans, and sleep.
 
 ## Features Demonstrated
 
@@ -27,7 +27,7 @@ val mode = appOps.checkOpNoThrow(
 startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
 ```
 
-**Health Connect** — required for step counting (`health.READ_STEPS`), distance (`health.READ_DISTANCE`), the HealthConnect branch of meditation (`health.READ_MINDFULNESS`), exercise (`health.READ_EXERCISE`), and sleep (`health.READ_SLEEP`). All are requested in a single runtime prompt:
+**Health Connect** — required for step counting (`health.READ_STEPS`), distance (`health.READ_DISTANCE`), the HealthConnect branch of meditation (`health.READ_MINDFULNESS`), exercise (`health.READ_EXERCISE`), sleep (`health.READ_SLEEP`), and, where the installed Health Connect version supports planned exercise, training plans (`health.READ_PLANNED_EXERCISE`). All available permissions are requested in a single runtime prompt:
 ```kotlin
 val launcher = registerForActivityResult(
     PermissionController.createRequestPermissionResultContract()
@@ -37,6 +37,7 @@ launcher.launch(setOf(
     HealthPermission.getReadPermission(StepsRecord::class),
     HealthPermission.getReadPermission(MindfulnessSessionRecord::class),
     HealthPermission.getReadPermission(ExerciseSessionRecord::class),
+    HealthPermission.getReadPermission(PlannedExerciseSessionRecord::class),
     HealthPermission.getReadPermission(DistanceRecord::class),
     HealthPermission.getReadPermission(SleepSessionRecord::class)
 ))
@@ -58,8 +59,12 @@ lifecycleScope.launch {
     val distance   = runCatching { tracker.queryDistance() }.getOrNull()
     val meditation = runCatching { tracker.queryMeditation() }.getOrNull()
     val exercise   = runCatching { tracker.queryExercise() }.getOrNull()
+    val now = System.currentTimeMillis()
+    val training = runCatching {
+        tracker.queryTraining(now, now + 7 * 24 * 60 * 60 * 1000L)
+    }.getOrNull()
     val sleep      = runCatching { tracker.querySleep() }.getOrNull()
-    displayResults(language, reading, social, movies, steps, distance, meditation, exercise, sleep)
+    displayResults(language, reading, social, movies, steps, distance, meditation, exercise, training, sleep)
 }
 ```
 
@@ -77,6 +82,7 @@ Each metric is shown as a summary line:
 - **Distance**: `📏 Distance    5.42 km`
 - **Meditation**: `🧘 Meditation    15 min · 1 session · HC+Usage`
 - **Exercise**: `🏃 Exercise    45 min · 2 sessions · Running, Strength Training`
+- **Training**: `📋 Training    2 plans · 1h 30m` (expands into upcoming planned sessions)
 - **Sleep**: `😴 Sleep    7h 32m · 1 session` (expands into one line per night with fall-asleep/wake times, efficiency, quality, and a stage breakdown)
 
 **Per-session breakdown.** For the usage-based metrics (Language, Reading, Social), Steps, and
@@ -103,6 +109,10 @@ result's `sessions` list — the library always returns it; the app simply rende
 😴 Sleep    7h 32m · 1 session
     • asleep 23:15 → woke 07:02 · 7h 32m · 89% · GOOD
         deep 1h05m · REM 1h40m · light 4h47m · awake 0h32m
+
+📋 Training    2 plans · 1h 30m
+    • Fri, Jul 18 · 08:00 · Tempo Run · 45m
+    • Sun, Jul 20 · 10:00 · Strength Training · 45m
 ```
 
 `sessionLines()` formats `UsageSession`s (Language, Reading, Social) as `from–to · appName (N min)`;
@@ -141,6 +151,8 @@ For meditation, the sample renders the active data sources inline: `HC` for Heal
 
 For exercise, the sample lists the distinct exercise types that appeared in the window (title-cased, comma-separated), deduplicated across sessions.
 
+For training, the sample reads the next seven days through `queryTraining(fromMillis, toMillis)` and shows each plan's start, title (or exercise type when untitled), and planned duration. The full Health Connect plan remains available as `TrainingSession.record`, including notes, metadata, completion link, zone offsets, and complete blocks, steps, goals, and targets. The training permission is included only when Health Connect reports the planned-exercise feature as available, so older devices do not appear to have a permanently missing permission.
+
 ### 5. Listing tracked apps
 
 Below the results, a **Show tracked apps** button toggles the library's static app catalogue, built
@@ -174,10 +186,10 @@ sensors rather than a fixed app list.
    - Find "Tracker Demo" in the list and enable "Permit usage access"
    - Return to the app — metrics update automatically
 
-3. **Grant Health Connect** (optional, for step counting, distance, the HealthConnect branch of meditation, exercise, and sleep):
+3. **Grant Health Connect** (optional, for step counting, distance, the HealthConnect branch of meditation, exercise, sleep, and supported training plans):
    - Tap "Grant" next to the Health Connect row
-   - Approve `Steps`, `Distance`, `Mindfulness sessions`, `Exercise sessions`, and `Sleep sessions` in the Health Connect dialog
-   - Return to the app — step count, distance, meditation, exercise, and sleep results appear automatically
+   - Approve `Steps`, `Distance`, `Mindfulness sessions`, `Exercise sessions`, `Sleep sessions`, and (when offered) `Planned exercise sessions` in the Health Connect dialog
+   - Return to the app — step count, distance, meditation, exercise, upcoming training plans, and sleep results appear automatically
 
 4. **Enable Movie Watching** (optional):
    - Add `.setLetterboxdUsername("your_username")` when building `Tracker` in `MainActivity.kt`
@@ -196,8 +208,9 @@ MainActivity.kt
 ├── onResume()                  # Update permission UI, auto-query metrics
 ├── updateUsagePermissionUi()   # Show/hide Grant button based on AppOps check
 ├── hasUsageStatsPermission()   # AppOpsManager permission check
-├── updateHcPermissionUi()      # Show/hide Grant button based on HC permission state (steps + mindfulness + exercise + distance + sleep)
-├── queryMetrics()              # Query all nine metrics independently in one coroutine
+├── updateHcPermissionUi()      # Show/hide Grant button, including training when HC supports planned exercise
+├── requiredHcPermissions()     # Add READ_PLANNED_EXERCISE only when the HC feature is available
+├── queryMetrics()              # Query nine today metrics plus upcoming training in one coroutine
 ├── toggleTrackedApps()         # Show/hide the static tracked-apps catalogue (getTracked*Apps())
 ├── trackedAppsBlock()          # Format one habit's tracked apps as "package (multiplier)" lines
 ├── displayResults()            # Render the summary line per metric
@@ -205,6 +218,7 @@ MainActivity.kt
 ├── stepSessionLines()          # Expand StepSession list into "from–to · N steps" lines (hourly buckets)
 ├── distanceSessionLines()      # Expand DistanceSession list into "from–to · N km" lines (hourly buckets)
 ├── sleepSessionLines()         # Expand SleepSession list into "asleep→woke · duration · efficiency · quality" + stage lines (one per night)
+├── trainingSessionLines()      # Expand upcoming TrainingSession plans into "date · title/type · duration"
 ├── hoursMinutes()              # Format a minute count as "Xh Ym" for the Sleep summary
 ├── movieSessionLines()         # Expand MovieSession list into "watchedDate · title (year) (tmdb:id) · ★rating ♥ ↻ + poster + review" lines
 ├── starRating()                # Render a 0.5–5.0 rating as ★ glyphs (e.g. 4.5 → ★★★★½)
@@ -222,6 +236,7 @@ MainActivity.kt
 6. **Step counting & distance deduplication**: Use `queryStepCounting()` / `queryDistance()` rather than summing `StepsRecord` / `DistanceRecord` entries manually — Health Connect's aggregation API handles deduplication across Google Fit, the phone step counter, and other sources. Both use the same hourly-bucket shape, so `distanceSessionLines()` is a near-copy of `stepSessionLines()`
 7. **Multi-source fusion for meditation**: `queryMeditation()` merges HealthConnect `MindfulnessSessionRecord`s with foreground sessions of known meditation apps. Overlapping sessions are deduplicated, and the result's `sources` list reflects which sources contributed. If HealthConnect is unavailable, the call gracefully falls back to UsageStats-only.
 8. **Exercise from Health Connect**: `queryExercise()` reads `ExerciseSessionRecord`s written by any fitness app (Strava, Google Fit, Samsung Health, manual log, etc.). Each session exposes both `exerciseTypeId` (the raw HC int) and `exerciseType` (a snake_case string) so the app can choose programmatic or display-friendly treatment. The sample uses a title-case transform (`"strength_training"` → `"Strength Training"`) for display.
+9. **Training plans from Health Connect**: `queryTraining(fromMillis, toMillis)` reads `PlannedExerciseSessionRecord`s. The sample requests the next seven days so future-dated plans are useful immediately, preserves the complete record at `TrainingSession.record`, and avoids requesting this permission on Health Connect versions that do not support the planned-exercise feature.
 
 ## Testing
 
@@ -268,6 +283,11 @@ The app works best when you have supported apps installed and have used them tod
 - Grant the `Exercise sessions` permission when prompted
 - All exercise types recognised by Health Connect are supported (running, cycling, strength training, yoga, swimming, etc.)
 
+**Training:**
+- Have a fitness app that writes `PlannedExerciseSessionRecord`s (training plans) to Health Connect
+- Grant the `Planned exercise sessions` permission when it is offered; it requires a Health Connect version with the planned-exercise feature
+- The sample displays plans beginning in the next seven days; inspect `TrainingSession.record` for plan notes, blocks, steps, goals, and targets
+
 **Sleep:**
 - Have any app that writes `SleepSessionRecord`s to Health Connect (Fitbit, Samsung Health, Google Fit, Pixel Watch, etc.), or log sleep manually in the Health Connect app
 - Grant the `Sleep sessions` permission when prompted
@@ -282,4 +302,5 @@ The app works best when you have supported apps installed and have used them tod
 - On Android 10+, session times use precise `ACTIVITY_RESUMED`/`ACTIVITY_PAUSED` events
 - `MindfulnessSessionRecord` requires a recent `androidx.health.connect:connect-client` release. On older HC installations, the meditation query transparently falls back to UsageStats-only.
 - `ExerciseSessionRecord` is authoritative because these records are written by fitness apps or entered manually by the user. Sessions shorter than one minute still appear in `sessions` (rounded to `0 min`) so the session count remains accurate.
+- Planned training support requires Health Connect's planned-exercise feature. If it is unavailable, the sample leaves that permission out of its request and renders `📋 Training —`.
 - Sleep reads raw `SleepSessionRecord`s (via `readRecords`, like exercise — not the hourly aggregation used for steps/distance), so each night keeps its real fall-asleep/wake times and stage intervals. `quality` is a non-clinical band the library derives from **sleep efficiency** (time asleep ÷ time in bed); the sample shows it only when the source recorded stages, and apps wanting their own scoring can use the exposed `deepMinutes`/`remMinutes`/`lightMinutes`/`awakeMinutes` instead.

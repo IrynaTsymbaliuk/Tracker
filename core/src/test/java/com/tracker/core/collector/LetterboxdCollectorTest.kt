@@ -41,7 +41,6 @@ class LetterboxdCollectorTest {
         val titles = evidence.map { LetterboxdMetadata.fromMap(it.metadata)?.title }
         assertEquals(listOf("InRange"), titles)
         assertEquals(DataSource.LETTERBOXD_RSS, evidence.first().source)
-        assertEquals(0.95f, evidence.first().confidence)
     }
 
     @Test

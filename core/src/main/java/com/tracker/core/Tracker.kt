@@ -8,6 +8,7 @@ import com.tracker.core.collector.HealthConnectExerciseCollector
 import com.tracker.core.collector.HealthConnectMindfulnessCollector
 import com.tracker.core.collector.HealthConnectSleepCollector
 import com.tracker.core.collector.HealthConnectStepCollector
+import com.tracker.core.collector.HealthConnectTrainingCollector
 import com.tracker.core.collector.HttpRssFetcher
 import com.tracker.core.collector.LetterboxdCollector
 import com.tracker.core.collector.UsageEventsCollector
@@ -23,6 +24,7 @@ import com.tracker.core.provider.ReadingProvider
 import com.tracker.core.provider.SleepProvider
 import com.tracker.core.provider.SocialMediaProvider
 import com.tracker.core.provider.StepCountingProvider
+import com.tracker.core.provider.TrainingProvider
 import com.tracker.core.result.DistanceResult
 import com.tracker.core.result.ExerciseResult
 import com.tracker.core.result.LanguageLearningResult
@@ -32,6 +34,7 @@ import com.tracker.core.result.ReadingResult
 import com.tracker.core.result.SleepResult
 import com.tracker.core.result.SocialMediaResult
 import com.tracker.core.result.StepCountingResult
+import com.tracker.core.result.TrainingResult
 
 /**
  * Main entry point for the library. This is the only class the host app needs to interact with.
@@ -55,6 +58,7 @@ import com.tracker.core.result.StepCountingResult
  * val socialMedia = tracker.querySocialMedia()
  * val meditation = tracker.queryMeditation()
  * val exercise = tracker.queryExercise()
+ * val training = tracker.queryTraining()
  * ```
  */
 class Tracker private constructor(
@@ -116,6 +120,12 @@ class Tracker private constructor(
     private val exerciseProvider: ExerciseProvider? by lazy {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             ExerciseProvider(HealthConnectExerciseCollector(appContext))
+        } else null
+    }
+
+    private val trainingProvider: TrainingProvider? by lazy {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            TrainingProvider(HealthConnectTrainingCollector(appContext))
         } else null
     }
 
@@ -322,6 +332,35 @@ class Tracker private constructor(
     suspend fun queryExercise(days: Int = 1): ExerciseResult? {
         val (from, to) = queryWindow(days)
         return exerciseProvider?.query(from, to)
+    }
+
+    /**
+     * Queries Health Connect planned exercise sessions (training plans).
+     *
+     * Training plans can be scheduled in the future. This overload follows Tracker's usual
+     * day-window convention; use [queryTraining] with explicit timestamps to read a future range.
+     * Requires Health Connect, API 26+, the planned-exercise feature, and
+     * [HealthConnectTrainingCollector.READ_PLANNED_EXERCISE_PERMISSION] granted at runtime.
+     *
+     * @param days Number of days to include ending now; must be >= 1.
+     * @return Training plans in the window, or null when none exist or Health Connect is
+     * unavailable, unsupported, or not permitted.
+     */
+    suspend fun queryTraining(days: Int = 1): TrainingResult? {
+        val (from, to) = queryWindow(days)
+        return trainingProvider?.query(from, to)
+    }
+
+    /**
+     * Queries Health Connect planned exercise sessions in an explicit time range. This is useful
+     * for retrieving upcoming training plans.
+     *
+     * @param fromMillis Inclusive range start in milliseconds since epoch.
+     * @param toMillis Inclusive range end in milliseconds since epoch; must be after [fromMillis].
+     */
+    suspend fun queryTraining(fromMillis: Long, toMillis: Long): TrainingResult? {
+        require(fromMillis < toMillis) { "fromMillis must be before toMillis" }
+        return trainingProvider?.query(fromMillis, toMillis)
     }
 
     /**

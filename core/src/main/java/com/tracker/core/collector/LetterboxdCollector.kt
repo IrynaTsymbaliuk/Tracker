@@ -35,7 +35,6 @@ class LetterboxdCollector(
 
     companion object {
         private const val BASE_URL = "https://letterboxd.com"
-        private const val LETTERBOXD_CONFIDENCE = 0.95f
     }
 
     /**
@@ -100,7 +99,6 @@ class LetterboxdCollector(
 
             CounterEvidence(
                 source = DataSource.LETTERBOXD_RSS,
-                confidence = LETTERBOXD_CONFIDENCE,
                 metadata = metadata.toMap(),
                 counter = 1
             )

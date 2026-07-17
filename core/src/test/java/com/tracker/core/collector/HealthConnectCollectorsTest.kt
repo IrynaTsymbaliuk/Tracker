@@ -1,11 +1,13 @@
 package com.tracker.core.collector
 
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.HealthConnectFeatures
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.aggregate.AggregationResult
 import androidx.health.connect.client.aggregate.AggregationResultGroupedByDuration
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.PlannedExerciseSessionRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
@@ -43,12 +45,14 @@ class HealthConnectCollectorsTest {
     private val context = RuntimeEnvironment.getApplication()
     private val client = mockk<HealthConnectClient>()
     private val permissionController = mockk<PermissionController>()
+    private val features = mockk<HealthConnectFeatures>()
 
     @Before
     fun setUp() {
         mockkObject(HealthConnectClient.Companion)
         every { HealthConnectClient.getOrCreate(any(), any()) } returns client
         every { client.permissionController } returns permissionController
+        every { client.features } returns features
     }
 
     @After
@@ -93,7 +97,6 @@ class HealthConnectCollectorsTest {
         val evidence = stepCollector().collect(0L, 3_600_000L)
 
         assertEquals(DataSource.HEALTH_CONNECT, evidence.source)
-        assertEquals(0.99f, evidence.confidence)
         assertEquals(1, evidence.buckets.size)
         assertEquals(100L, evidence.buckets[0].steps)
     }
@@ -151,7 +154,6 @@ class HealthConnectCollectorsTest {
         val evidence = sleepCollector().collect(0L, HOUR * 8)
 
         assertEquals(DataSource.HEALTH_CONNECT, evidence.source)
-        assertEquals(0.99f, evidence.confidence)
         assertEquals(1, evidence.sessions.size)
         val session = evidence.sessions[0]
         assertEquals(0L, session.startTime)
@@ -216,6 +218,38 @@ class HealthConnectCollectorsTest {
 
     // --- Mindfulness (old-client path) ---
 
+    // --- Training ---
+
+    @Test
+    fun training_featureUnavailable_throwsSystemServiceUnavailable() {
+        sdkAvailable()
+        every {
+            features.getFeatureStatus(HealthConnectFeatures.FEATURE_PLANNED_EXERCISE)
+        } returns HealthConnectFeatures.FEATURE_STATUS_UNAVAILABLE
+
+        assertThrows(SystemServiceUnavailableException::class.java) {
+            runBlocking { trainingCollector().collect(0L, 100L) }
+        }
+    }
+
+    @Test
+    fun training_happyPath_preservesCompleteRecords() = runBlocking {
+        sdkAvailable()
+        every {
+            features.getFeatureStatus(HealthConnectFeatures.FEATURE_PLANNED_EXERCISE)
+        } returns HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
+        coEvery { permissionController.getGrantedPermissions() } returns
+            setOf(HealthConnectTrainingCollector.READ_PLANNED_EXERCISE_PERMISSION)
+        val record = trainingRecord(start = 0L, end = HOUR)
+        coEvery { client.readRecords(any<ReadRecordsRequest<PlannedExerciseSessionRecord>>()) } returns
+            ReadRecordsResponse(records = listOf(record), pageToken = null)
+
+        val evidence = trainingCollector().collect(0L, HOUR)
+
+        assertEquals(DataSource.HEALTH_CONNECT, evidence.source)
+        assertEquals(listOf(record), evidence.sessions)
+    }
+
     @Test
     fun mindfulness_missingApiOnOldClient_throwsSystemServiceUnavailable() {
         sdkAvailable()
@@ -232,6 +266,7 @@ class HealthConnectCollectorsTest {
     private fun distanceCollector() = HealthConnectDistanceCollector(context, Dispatchers.Unconfined)
     private fun sleepCollector() = HealthConnectSleepCollector(context, Dispatchers.Unconfined)
     private fun exerciseCollector() = HealthConnectExerciseCollector(context, Dispatchers.Unconfined)
+    private fun trainingCollector() = HealthConnectTrainingCollector(context, Dispatchers.Unconfined)
     private fun mindfulnessCollector() = HealthConnectMindfulnessCollector(context, Dispatchers.Unconfined)
 
     // --- fixtures ---
@@ -282,6 +317,13 @@ class HealthConnectCollectorsTest {
         every { record.startTime } returns Instant.ofEpochMilli(start)
         every { record.endTime } returns Instant.ofEpochMilli(end)
         every { record.exerciseType } returns type
+        return record
+    }
+
+    private fun trainingRecord(start: Long, end: Long): PlannedExerciseSessionRecord {
+        val record = mockk<PlannedExerciseSessionRecord>()
+        every { record.startTime } returns Instant.ofEpochMilli(start)
+        every { record.endTime } returns Instant.ofEpochMilli(end)
         return record
     }
 

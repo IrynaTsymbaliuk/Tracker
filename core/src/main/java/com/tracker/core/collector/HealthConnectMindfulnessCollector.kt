@@ -47,8 +47,6 @@ class HealthConnectMindfulnessCollector(
 ) {
 
     companion object {
-        internal const val HEALTH_CONNECT_CONFIDENCE = 0.99f
-
         val READ_MINDFULNESS_PERMISSION: String =
             HealthPermission.getReadPermission(MindfulnessSessionRecord::class)
     }
@@ -59,8 +57,7 @@ class HealthConnectMindfulnessCollector(
 
     /**
      * Returns one [DurationEvidence] per [MindfulnessSessionRecord] that overlaps
-     * `[fromMillis, toMillis]`, with [DataSource.HEALTH_CONNECT] and confidence
-     * [HEALTH_CONNECT_CONFIDENCE].
+     * `[fromMillis, toMillis]`, with [DataSource.HEALTH_CONNECT].
      *
      * @param fromMillis Start of time range (inclusive, milliseconds since epoch)
      * @param toMillis End of time range (inclusive, milliseconds since epoch)
@@ -116,7 +113,6 @@ class HealthConnectMindfulnessCollector(
 
                 DurationEvidence(
                     source = DataSource.HEALTH_CONNECT,
-                    confidence = HEALTH_CONNECT_CONFIDENCE,
                     metadata = emptyMap(),
                     durationMinutes = durationMinutes,
                     startTimeMillis = startMillis,

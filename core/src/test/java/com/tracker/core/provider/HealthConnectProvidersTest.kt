@@ -4,14 +4,17 @@ import com.tracker.core.collector.ExerciseMetadata
 import com.tracker.core.collector.HealthConnectDistanceCollector
 import com.tracker.core.collector.HealthConnectExerciseCollector
 import com.tracker.core.collector.HealthConnectStepCollector
+import com.tracker.core.collector.HealthConnectTrainingCollector
 import com.tracker.core.collector.SystemServiceUnavailableException
 import com.tracker.core.model.DistanceBucket
 import com.tracker.core.model.DistanceEvidence
 import com.tracker.core.model.DurationEvidence
 import com.tracker.core.model.StepBucket
 import com.tracker.core.model.StepEvidence
+import com.tracker.core.model.TrainingEvidence
 import com.tracker.core.types.DataSource
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -20,6 +23,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import androidx.health.connect.client.records.PlannedExerciseSessionRecord
+import java.time.Instant
 
 /** Covers the thin Health Connect provider wrappers (steps, distance, exercise). */
 @RunWith(RobolectricTestRunner::class)
@@ -33,7 +38,6 @@ class HealthConnectProvidersTest {
         val collector = mockk<HealthConnectStepCollector>()
         coEvery { collector.collect(FROM, TO) } returns StepEvidence(
             source = DataSource.HEALTH_CONNECT,
-            confidence = 0.99f,
             metadata = emptyMap(),
             buckets = listOf(
                 StepBucket(startTime = 0L, endTime = 10L, steps = 100L),
@@ -60,7 +64,7 @@ class HealthConnectProvidersTest {
     fun steps_emptyBuckets_returnsResultWithZeroTotal() = runBlocking {
         val collector = mockk<HealthConnectStepCollector>()
         coEvery { collector.collect(FROM, TO) } returns StepEvidence(
-            source = DataSource.HEALTH_CONNECT, confidence = 0.99f, metadata = emptyMap(), buckets = emptyList()
+            source = DataSource.HEALTH_CONNECT, metadata = emptyMap(), buckets = emptyList()
         )
 
         val result = StepCountingProvider(collector).query(FROM, TO) ?: error("expected result")
@@ -76,7 +80,6 @@ class HealthConnectProvidersTest {
         val collector = mockk<HealthConnectDistanceCollector>()
         coEvery { collector.collect(FROM, TO) } returns DistanceEvidence(
             source = DataSource.HEALTH_CONNECT,
-            confidence = 0.99f,
             metadata = emptyMap(),
             buckets = listOf(
                 DistanceBucket(startTime = 0L, endTime = 10L, meters = 1500.0),
@@ -137,7 +140,6 @@ class HealthConnectProvidersTest {
         coEvery { collector.collect(FROM, TO) } returns listOf(
             DurationEvidence(
                 source = DataSource.HEALTH_CONNECT,
-                confidence = 0.99f,
                 metadata = mapOf("garbage" to "value"), // fails ExerciseMetadata.fromMap
                 durationMinutes = 10,
                 startTimeMillis = 1_000L,
@@ -148,16 +150,52 @@ class HealthConnectProvidersTest {
         assertNull(ExerciseProvider(collector).query(FROM, TO))
     }
 
+    // --- Training ---
+
+    @Test
+    fun training_preservesRecords_sortsSessions_andSumsDuration() = runBlocking {
+        val collector = mockk<HealthConnectTrainingCollector>()
+        val later = trainingRecord(start = 5_000L, end = 125_000L, type = 56)
+        val earlier = trainingRecord(start = 1_000L, end = 61_000L, type = 70)
+        coEvery { collector.collect(FROM, TO) } returns TrainingEvidence(
+            source = DataSource.HEALTH_CONNECT,
+            metadata = emptyMap(),
+            sessions = listOf(later, earlier)
+        )
+
+        val result = TrainingProvider(collector).query(FROM, TO) ?: error("expected result")
+
+        assertEquals(listOf(1_000L, 5_000L), result.sessions.map { it.startTime })
+        assertEquals(listOf(earlier, later), result.sessions.map { it.record })
+        assertEquals(listOf("strength_training", "running"), result.sessions.map { it.exerciseType })
+        assertEquals(3L, result.durationMinutes)
+    }
+
+    @Test
+    fun training_collectorException_returnsNull() = runBlocking {
+        val collector = mockk<HealthConnectTrainingCollector>()
+        coEvery { collector.collect(FROM, TO) } throws SystemServiceUnavailableException("HC")
+
+        assertNull(TrainingProvider(collector).query(FROM, TO))
+    }
+
     private fun exerciseEvidence(
         start: Long, end: Long, minutes: Int, typeId: Int, type: String
     ): DurationEvidence = DurationEvidence(
         source = DataSource.HEALTH_CONNECT,
-        confidence = 0.99f,
         metadata = ExerciseMetadata(exerciseTypeId = typeId, exerciseType = type).toMap(),
         durationMinutes = minutes,
         startTimeMillis = start,
         endTimeMillis = end
     )
+
+    private fun trainingRecord(start: Long, end: Long, type: Int): PlannedExerciseSessionRecord {
+        val record = mockk<PlannedExerciseSessionRecord>()
+        every { record.startTime } returns Instant.ofEpochMilli(start)
+        every { record.endTime } returns Instant.ofEpochMilli(end)
+        every { record.exerciseType } returns type
+        return record
+    }
 
     private companion object {
         const val FROM = 0L

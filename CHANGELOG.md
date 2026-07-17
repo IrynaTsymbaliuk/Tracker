@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Training-plan tracking via Health Connect: `Tracker.queryTraining(days)` and
+  `Tracker.queryTraining(fromMillis, toMillis)` read `PlannedExerciseSessionRecord`s. The latter
+  supports upcoming plans. Results are returned as `TrainingResult` / `TrainingSession`; each
+  session preserves its complete Health Connect record in `TrainingSession.record`, including
+  title, notes, metadata, completion link, zone offsets, and the full block/step goal and target
+  hierarchy. Requires `health.READ_PLANNED_EXERCISE`, API 26+, and Health Connect's
+  planned-exercise feature. Unsupported or unavailable configurations return `null`.
+
+### Changed
+- Removed the unused `confidence` property from every internal `Evidence` type. Collectors no
+  longer calculate or carry a score that no provider reads; results continue to identify their
+  contributing `sources`. `AppMetadata.confidenceMultiplier` remains catalogue reference metadata
+  and does not affect collection or aggregation.
+
 ## [1.3.0] - 2026-07-15
 
 ### Added

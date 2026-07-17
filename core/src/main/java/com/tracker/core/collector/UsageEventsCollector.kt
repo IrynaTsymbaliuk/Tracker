@@ -194,7 +194,6 @@ class UsageEventsCollector(
         sessions.add(
             DurationEvidence(
                 source = DataSource.USAGE_STATS,
-                confidence = appMetadata.confidenceMultiplier,
                 durationMinutes = durationMinutes,
                 startTimeMillis = startTimeMillis,
                 endTimeMillis = endTimeMillis,

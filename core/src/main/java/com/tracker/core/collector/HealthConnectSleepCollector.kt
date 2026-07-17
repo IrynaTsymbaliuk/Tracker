@@ -47,8 +47,6 @@ class HealthConnectSleepCollector(
 ) {
 
     companion object {
-        internal const val HEALTH_CONNECT_CONFIDENCE = 0.99f
-
         val READ_SLEEP_PERMISSION: String =
             HealthPermission.getReadPermission(SleepSessionRecord::class)
 
@@ -130,7 +128,6 @@ class HealthConnectSleepCollector(
 
             SleepEvidence(
                 source = DataSource.HEALTH_CONNECT,
-                confidence = HEALTH_CONNECT_CONFIDENCE,
                 metadata = emptyMap(),
                 sessions = sessions
             )

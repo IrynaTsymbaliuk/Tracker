@@ -11,12 +11,14 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.HealthConnectFeatures
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.MindfulnessSessionRecord
+import androidx.health.connect.client.records.PlannedExerciseSessionRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.lifecycle.lifecycleScope
@@ -35,6 +37,8 @@ import com.tracker.core.result.SleepSession
 import com.tracker.core.result.SocialMediaResult
 import com.tracker.core.result.StepCountingResult
 import com.tracker.core.result.StepSession
+import com.tracker.core.result.TrainingResult
+import com.tracker.core.result.TrainingSession
 import com.tracker.core.result.UsageSession
 import com.tracker.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
@@ -98,12 +102,13 @@ class MainActivity : AppCompatActivity() {
 
         if (sdkAvailable) {
             val granted = grantedHcPermissions()
-            val missing = REQUIRED_HC_PERMISSIONS - granted
+            val required = requiredHcPermissions()
+            val missing = required - granted
             val allGranted = missing.isEmpty()
 
             binding.tvHcStatus.text = when {
-                allGranted -> "Health Connect  ✓ (Steps + Mindfulness + Exercise + Distance + Sleep)"
-                missing.size == REQUIRED_HC_PERMISSIONS.size -> "Health Connect  ✗"
+                allGranted -> "Health Connect  ✓ (${required.joinToString(" + ") { HC_PERMISSION_LABELS.getValue(it) }})"
+                missing.size == required.size -> "Health Connect  ✗"
                 else -> {
                     val missingLabels = missing.mapNotNull { HC_PERMISSION_LABELS[it] }
                     "Health Connect  ◐ (missing: ${missingLabels.joinToString(", ")})"
@@ -118,7 +123,7 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Launches a single Health Connect permission prompt covering every item in
-     * [REQUIRED_HC_PERMISSIONS] that has not already been granted. A single user
+     * [requiredHcPermissions] that has not already been granted. A single user
      * tap on "Grant" therefore covers both Steps and Mindfulness in one dialog.
      *
      * Safe to call even if Health Connect is unavailable or nothing is missing:
@@ -130,7 +135,7 @@ class MainActivity : AppCompatActivity() {
                 != HealthConnectClient.SDK_AVAILABLE
             ) return@launch
 
-            val missing = REQUIRED_HC_PERMISSIONS - grantedHcPermissions()
+            val missing = requiredHcPermissions() - grantedHcPermissions()
             if (missing.isEmpty()) {
                 updateHcPermissionUi()
                 return@launch
@@ -142,6 +147,24 @@ class MainActivity : AppCompatActivity() {
     private suspend fun grantedHcPermissions(): Set<String> =
         HealthConnectClient.getOrCreate(this)
             .permissionController.getGrantedPermissions()
+
+    /**
+     * Adds the planned-exercise permission only when the installed Health Connect implementation
+     * supports training plans. This keeps the sample's all-granted state accurate on older
+     * devices, where PlannedExerciseSessionRecord cannot be queried.
+     */
+    private suspend fun requiredHcPermissions(): Set<String> {
+        val client = HealthConnectClient.getOrCreate(this)
+        val trainingAvailable = runCatching {
+            client.features.getFeatureStatus(HealthConnectFeatures.FEATURE_PLANNED_EXERCISE) ==
+                HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
+        }.getOrDefault(false)
+        return if (trainingAvailable) {
+            BASE_HC_PERMISSIONS + HC_PLANNED_EXERCISE_PERMISSION
+        } else {
+            BASE_HC_PERMISSIONS
+        }
+    }
 
     private fun queryMetrics() {
         binding.progressBar.isVisible = true
@@ -156,9 +179,15 @@ class MainActivity : AppCompatActivity() {
             val distance   = runCatching { tracker.queryDistance() }.getOrNull()
             val meditation = runCatching { tracker.queryMeditation() }.getOrNull()
             val exercise   = runCatching { tracker.queryExercise() }.getOrNull()
+            val now = System.currentTimeMillis()
+            val training = runCatching {
+                tracker.queryTraining(now, now + UPCOMING_TRAINING_WINDOW_MILLIS)
+            }.getOrNull()
             val sleep      = runCatching { tracker.querySleep() }.getOrNull()
 
-            displayResults(language, reading, social, movies, steps, distance, meditation, exercise, sleep)
+            displayResults(
+                language, reading, social, movies, steps, distance, meditation, exercise, training, sleep
+            )
 
             binding.progressBar.isVisible = false
             binding.btnQuery.isEnabled = true
@@ -217,6 +246,7 @@ class MainActivity : AppCompatActivity() {
         distance: DistanceResult?,
         meditation: MeditationResult?,
         exercise: ExerciseResult?,
+        training: TrainingResult?,
         sleep: SleepResult?
     ) {
         binding.tvLanguage.text = language
@@ -263,6 +293,14 @@ class MainActivity : AppCompatActivity() {
                 "🏃 Exercise    ${it.durationMinutes} min · $sessionCount $sessionLabel$typesSuffix"
             }
             ?: "🏃 Exercise    —"
+
+        binding.tvTraining.text = training
+            ?.let {
+                val planCount = it.sessions.size
+                val planLabel = if (planCount == 1) "plan" else "plans"
+                "📋 Training    $planCount $planLabel · ${hoursMinutes(it.durationMinutes)}${trainingSessionLines(it.sessions)}"
+            }
+            ?: "📋 Training    —"
 
         binding.tvSleep.text = sleep
             ?.let {
@@ -412,6 +450,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
+     * Renders upcoming Health Connect planned exercise sessions. The complete plan remains
+     * available through [TrainingSession.record]; the sample shows its date, title/type, and
+     * planned duration without attempting to flatten nested blocks and goals into the UI.
+     */
+    private fun trainingSessionLines(sessions: List<TrainingSession>): String {
+        if (sessions.isEmpty()) return ""
+        return sessions.joinToString(separator = "\n", prefix = "\n") { session ->
+            val start = TRAINING_TIME_FORMAT.format(Instant.ofEpochMilli(session.startTime))
+            val title = session.record.title ?: titleCase(session.exerciseType)
+            "    • $start · $title · ${hoursMinutes(session.durationMinutes)}"
+        }
+    }
+
+    /**
      * Renders the per-film breakdown shown under the Movies metric. Each [MovieSession] becomes
      * its own indented line showing the **watched date**, the **title** with its **release year**
      * (when present), the **TMDB id** (when the feed provided one), the user's **star rating**, a
@@ -461,6 +513,12 @@ class MainActivity : AppCompatActivity() {
         private val MOVIE_DATE_FORMAT: DateTimeFormatter =
             DateTimeFormatter.ofPattern("MMM d").withZone(ZoneId.systemDefault())
 
+        /** Formats planned training start times with their local date and time. */
+        private val TRAINING_TIME_FORMAT: DateTimeFormatter =
+            DateTimeFormatter.ofPattern("EEE, MMM d · HH:mm").withZone(ZoneId.systemDefault())
+
+        private const val UPCOMING_TRAINING_WINDOW_MILLIS = 7 * 24 * 60 * 60 * 1000L
+
         private val HC_STEPS_PERMISSION =
             HealthPermission.getReadPermission(StepsRecord::class)
         private val HC_MINDFULNESS_PERMISSION =
@@ -471,13 +529,15 @@ class MainActivity : AppCompatActivity() {
             HealthPermission.getReadPermission(DistanceRecord::class)
         private val HC_SLEEP_PERMISSION =
             HealthPermission.getReadPermission(SleepSessionRecord::class)
+        private val HC_PLANNED_EXERCISE_PERMISSION =
+            HealthPermission.getReadPermission(PlannedExerciseSessionRecord::class)
 
         /**
          * Every Health Connect permission this sample app wants. Clicking the single
          * "Grant" row in the UI launches one prompt for every item here that is not
          * already granted.
          */
-        private val REQUIRED_HC_PERMISSIONS: Set<String> = setOf(
+        private val BASE_HC_PERMISSIONS: Set<String> = linkedSetOf(
             HC_STEPS_PERMISSION,
             HC_MINDFULNESS_PERMISSION,
             HC_EXERCISE_PERMISSION,
@@ -494,7 +554,8 @@ class MainActivity : AppCompatActivity() {
             HC_MINDFULNESS_PERMISSION to "Mindfulness",
             HC_EXERCISE_PERMISSION to "Exercise",
             HC_DISTANCE_PERMISSION to "Distance",
-            HC_SLEEP_PERMISSION to "Sleep"
+            HC_SLEEP_PERMISSION to "Sleep",
+            HC_PLANNED_EXERCISE_PERMISSION to "Training"
         )
     }
 }

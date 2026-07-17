@@ -8,19 +8,15 @@ import com.tracker.core.types.SleepStageType
  * Collectors return Evidence objects, which are then aggregated to produce final results.
  *
  * @property source Where the data came from
- * @property confidence Internal source weight for this evidence (0.0 to 1.0);
- * public result types expose [DataSource] values rather than result-level scores.
  * @property metadata Source-specific additional data (app name, package, language, etc.)
  */
 sealed class Evidence {
     abstract val source: DataSource
-    abstract val confidence: Float
     abstract val metadata: Map<String, Any>
 }
 
 data class DurationEvidence(
     override val source: DataSource,
-    override val confidence: Float,
     override val metadata: Map<String, Any>,
     val durationMinutes: Int,
     val startTimeMillis: Long,
@@ -29,14 +25,12 @@ data class DurationEvidence(
 
 data class CounterEvidence(
     override val source: DataSource,
-    override val confidence: Float,
     override val metadata: Map<String, Any>,
     val counter: Int
 ) : Evidence()
 
 data class StepEvidence(
     override val source: DataSource,
-    override val confidence: Float,
     override val metadata: Map<String, Any>,
     val buckets: List<StepBucket>
 ) : Evidence()
@@ -49,7 +43,6 @@ data class StepBucket(
 
 data class DistanceEvidence(
     override val source: DataSource,
-    override val confidence: Float,
     override val metadata: Map<String, Any>,
     val buckets: List<DistanceBucket>
 ) : Evidence()
@@ -62,7 +55,6 @@ data class DistanceBucket(
 
 data class SleepEvidence(
     override val source: DataSource,
-    override val confidence: Float,
     override val metadata: Map<String, Any>,
     val sessions: List<SleepSessionData>
 ) : Evidence()

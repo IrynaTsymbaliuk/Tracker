@@ -55,7 +55,6 @@ class MovieWatchingProviderTest {
             movieEvidence(title = "Good", watchedDate = 1_000L),
             CounterEvidence(
                 source = DataSource.LETTERBOXD_RSS,
-                confidence = 0.95f,
                 metadata = mapOf("garbage" to "value"), // fails LetterboxdMetadata.fromMap
                 counter = 1
             )
@@ -70,7 +69,6 @@ class MovieWatchingProviderTest {
     private fun movieEvidence(title: String, watchedDate: Long): CounterEvidence =
         CounterEvidence(
             source = DataSource.LETTERBOXD_RSS,
-            confidence = 0.95f,
             metadata = LetterboxdMetadata(
                 title = title,
                 publishedDate = watchedDate,

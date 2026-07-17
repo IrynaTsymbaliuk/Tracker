@@ -16,9 +16,9 @@ import com.tracker.core.types.DataSource
  * Detects meditation activity by fusing two sources:
  *
  * 1. Health Connect [androidx.health.connect.client.records.MindfulnessSessionRecord] via
- *    [HealthConnectMindfulnessCollector] (confidence 0.99).
+ *    [HealthConnectMindfulnessCollector].
  * 2. Foreground sessions of known meditation apps (Calm, Headspace, Insight Timer, etc.)
- *    via [UsageEventsCollector] against [KnownApps.meditation] (confidence 0.85–0.95).
+ *    via [UsageEventsCollector] against [KnownApps.meditation].
  *
  * Behavior:
  * - If both sources return data, sessions that overlap significantly (≥ 50% of the

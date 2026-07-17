@@ -41,8 +41,6 @@ class HealthConnectStepCollector(
 ) {
 
     companion object {
-        internal const val HEALTH_CONNECT_CONFIDENCE = 0.99f
-
         val READ_STEPS_PERMISSION: String =
             HealthPermission.getReadPermission(StepsRecord::class)
     }
@@ -99,7 +97,6 @@ class HealthConnectStepCollector(
 
         StepEvidence(
             source = DataSource.HEALTH_CONNECT,
-            confidence = HEALTH_CONNECT_CONFIDENCE,
             metadata = emptyMap(),
             buckets = buckets
         )

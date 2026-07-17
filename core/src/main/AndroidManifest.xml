@@ -14,6 +14,9 @@
     <!-- Health Connect: required to read ExerciseSessionRecord via HealthConnectExerciseCollector -->
     <uses-permission android:name="android.permission.health.READ_EXERCISE" />
 
+    <!-- Health Connect: required to read PlannedExerciseSessionRecord via HealthConnectTrainingCollector -->
+    <uses-permission android:name="android.permission.health.READ_PLANNED_EXERCISE" />
+
     <!-- Health Connect: required to read DistanceRecord via HealthConnectDistanceCollector -->
     <uses-permission android:name="android.permission.health.READ_DISTANCE" />
 

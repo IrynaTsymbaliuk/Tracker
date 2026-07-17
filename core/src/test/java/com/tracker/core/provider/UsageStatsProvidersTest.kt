@@ -90,7 +90,6 @@ class UsageStatsProvidersTest {
         pkg: String, appName: String, start: Long, end: Long, minutes: Int
     ): DurationEvidence = DurationEvidence(
         source = DataSource.USAGE_STATS,
-        confidence = 0.9f,
         metadata = UsageStatsMetadata(pkg, appName).toMap(),
         durationMinutes = minutes,
         startTimeMillis = start,

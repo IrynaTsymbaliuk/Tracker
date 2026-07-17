@@ -41,8 +41,6 @@ class HealthConnectExerciseCollector(
 ) {
 
     companion object {
-        internal const val HEALTH_CONNECT_CONFIDENCE = 0.99f
-
         val READ_EXERCISE_PERMISSION: String =
             HealthPermission.getReadPermission(ExerciseSessionRecord::class)
 
@@ -120,6 +118,14 @@ class HealthConnectExerciseCollector(
             ExerciseSessionRecord.EXERCISE_TYPE_WHEELCHAIR to "wheelchair",
             ExerciseSessionRecord.EXERCISE_TYPE_YOGA to "yoga"
         )
+
+        /**
+         * Maps an ExerciseSessionRecord exercise type to a stable display name.
+         * Shared with planned training sessions so the two Health Connect exercise APIs
+         * use exactly the same names and unknown-type behaviour.
+         */
+        internal fun exerciseTypeName(typeId: Int): String =
+            EXERCISE_TYPE_NAMES[typeId] ?: "other"
     }
 
     private val client: HealthConnectClient by lazy {
@@ -128,8 +134,7 @@ class HealthConnectExerciseCollector(
 
     /**
      * Returns one [DurationEvidence] per [ExerciseSessionRecord] that overlaps
-     * `[fromMillis, toMillis]`, with [DataSource.HEALTH_CONNECT] and confidence
-     * [HEALTH_CONNECT_CONFIDENCE]. Exercise type is carried in the evidence
+     * `[fromMillis, toMillis]`, with [DataSource.HEALTH_CONNECT]. Exercise type is carried in the evidence
      * metadata bag via [ExerciseMetadata].
      *
      * @param fromMillis Start of time range (inclusive, milliseconds since epoch)
@@ -170,7 +175,7 @@ class HealthConnectExerciseCollector(
                     TimeUnit.MILLISECONDS.toMinutes(endMillis - startMillis).toInt()
 
                 val typeId = record.exerciseType
-                val typeName = EXERCISE_TYPE_NAMES[typeId] ?: "other"
+                val typeName = exerciseTypeName(typeId)
 
                 val metadata = ExerciseMetadata(
                     exerciseTypeId = typeId,
@@ -179,7 +184,6 @@ class HealthConnectExerciseCollector(
 
                 DurationEvidence(
                     source = DataSource.HEALTH_CONNECT,
-                    confidence = HEALTH_CONNECT_CONFIDENCE,
                     metadata = metadata.toMap(),
                     durationMinutes = durationMinutes,
                     startTimeMillis = startMillis,

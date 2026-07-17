@@ -188,6 +188,15 @@
             tools:text="🏃 Exercise    45 min · 2 sessions · Running, Strength Training · 99%" />
 
         <TextView
+            android:id="@+id/tvTraining"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="?android:textColorSecondary"
+            android:layout_marginBottom="10dp"
+            tools:text="📋 Training    2 plans · 1h 30m" />
+
+        <TextView
             android:id="@+id/tvSleep"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

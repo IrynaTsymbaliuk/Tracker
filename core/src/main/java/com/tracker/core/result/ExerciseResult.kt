@@ -5,9 +5,8 @@ import com.tracker.core.types.DataSource
 /**
  * Result for exercise habit detection.
  *
- * Sourced exclusively from Health Connect `ExerciseSessionRecord`. Confidence is
- * fixed at `0.99` — Health Connect exercise records are authoritative entries
- * written by fitness apps or logged manually by the user.
+ * Sourced exclusively from Health Connect `ExerciseSessionRecord`, whose entries are written by
+ * fitness apps or logged manually by the user.
  *
  * Callers can derive per-type breakdowns directly from [sessions]:
  *

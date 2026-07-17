@@ -8,10 +8,9 @@ import com.tracker.core.types.DataSource
  * Meditation is detected from two sources that are merged into one result:
  *
  * - **HealthConnect** `MindfulnessSessionRecord` — authoritative entries written by meditation
- *   apps (Calm, Headspace, etc.) or manually logged by the user. Confidence 0.99.
+ *   apps (Calm, Headspace, etc.) or manually logged by the user.
  * - **UsageStats** foreground sessions — time spent in known meditation apps
- *   (see [com.tracker.core.config.KnownApps.meditation]). Confidence per app as configured
- *   in [com.tracker.core.config.AppMetadata.confidenceMultiplier] (0.85–0.95).
+ *   (see [com.tracker.core.config.KnownApps.meditation]).
  *
  * When both sources report the same session, they are deduplicated into a single
  * [MeditationSession] whose [MeditationSession.sources] contains both sources.

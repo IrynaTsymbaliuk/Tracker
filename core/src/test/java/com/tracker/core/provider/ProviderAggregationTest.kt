@@ -28,24 +28,21 @@ class ProviderAggregationTest {
                 appName = "Late",
                 start = 3_000,
                 end = 9_000,
-                durationMinutes = 6,
-                confidence = 0.90f
+                durationMinutes = 6
             ),
             usageEvidence(
                 packageName = "com.example.zero",
                 appName = "Zero",
                 start = 2_000,
                 end = 2_000,
-                durationMinutes = 0,
-                confidence = 1.00f
+                durationMinutes = 0
             ),
             usageEvidence(
                 packageName = "com.example.early",
                 appName = "Early",
                 start = 1_000,
                 end = 5_000,
-                durationMinutes = 4,
-                confidence = 0.50f
+                durationMinutes = 4
             )
         )
 
@@ -68,24 +65,21 @@ class ProviderAggregationTest {
                 appName = "Reader",
                 start = 2_000,
                 end = 12_000,
-                durationMinutes = 10,
-                confidence = 0.80f
+                durationMinutes = 10
             ),
             usageEvidence(
                 packageName = "com.example.reader",
                 appName = "Reader",
                 start = 1_000,
                 end = 6_000,
-                durationMinutes = 5,
-                confidence = 0.80f
+                durationMinutes = 5
             ),
             usageEvidence(
                 packageName = "com.example.audio",
                 appName = "Audio",
                 start = 20_000,
                 end = 35_000,
-                durationMinutes = 15,
-                confidence = 0.50f
+                durationMinutes = 15
             )
         )
 
@@ -113,16 +107,14 @@ class ProviderAggregationTest {
                 appName = "Calm",
                 start = minutes(5),
                 end = minutes(15),
-                durationMinutes = 10,
-                confidence = 0.95f
+                durationMinutes = 10
             ),
             usageEvidence(
                 packageName = "com.example.timer",
                 appName = "Timer",
                 start = minutes(30),
                 end = minutes(40),
-                durationMinutes = 10,
-                confidence = 0.90f
+                durationMinutes = 10
             )
         )
 
@@ -147,11 +139,9 @@ class ProviderAggregationTest {
         appName: String,
         start: Long,
         end: Long,
-        durationMinutes: Int,
-        confidence: Float
+        durationMinutes: Int
     ): DurationEvidence = DurationEvidence(
         source = DataSource.USAGE_STATS,
-        confidence = confidence,
         metadata = UsageStatsMetadata(packageName, appName).toMap(),
         durationMinutes = durationMinutes,
         startTimeMillis = start,
@@ -164,7 +154,6 @@ class ProviderAggregationTest {
         durationMinutes: Int
     ): DurationEvidence = DurationEvidence(
         source = DataSource.HEALTH_CONNECT,
-        confidence = 0.99f,
         metadata = emptyMap(),
         durationMinutes = durationMinutes,
         startTimeMillis = start,

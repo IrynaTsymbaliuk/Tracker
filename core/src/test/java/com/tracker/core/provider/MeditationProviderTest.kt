@@ -147,7 +147,6 @@ class MeditationProviderTest {
     private fun hcEvidence(start: Long, end: Long, minutes: Int): DurationEvidence =
         DurationEvidence(
             source = DataSource.HEALTH_CONNECT,
-            confidence = 0.99f,
             metadata = emptyMap(),
             durationMinutes = minutes,
             startTimeMillis = start,
@@ -158,7 +157,6 @@ class MeditationProviderTest {
         pkg: String, appName: String, start: Long, end: Long, minutes: Int
     ): DurationEvidence = DurationEvidence(
         source = DataSource.USAGE_STATS,
-        confidence = 0.9f,
         metadata = UsageStatsMetadata(pkg, appName).toMap(),
         durationMinutes = minutes,
         startTimeMillis = start,

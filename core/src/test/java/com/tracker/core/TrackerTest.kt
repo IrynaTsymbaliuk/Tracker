@@ -68,6 +68,7 @@ class TrackerTest {
         assertNull(tracker.queryStepCounting())
         assertNull(tracker.queryDistance())
         assertNull(tracker.queryExercise())
+        assertNull(tracker.queryTraining())
         assertNull(tracker.queryMeditation())
     }
 }
