@@ -67,6 +67,7 @@ class TrackerTest {
         // Health Connect is unavailable under Robolectric, so these degrade to null.
         assertNull(tracker.queryStepCounting())
         assertNull(tracker.queryDistance())
+        assertNull(tracker.queryBodyMeasurements())
         assertNull(tracker.queryExercise())
         assertNull(tracker.queryTraining())
         assertNull(tracker.queryMeditation())

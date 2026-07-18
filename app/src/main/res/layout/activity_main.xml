@@ -170,6 +170,15 @@
             tools:text="📏 Distance    5.42 km · HIGH · 99%" />
 
         <TextView
+            android:id="@+id/tvBodyMeasurements"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="?android:textColorSecondary"
+            android:layout_marginBottom="10dp"
+            tools:text="⚖️ Body    70.2 kg · 21.5% fat · 54.0 kg lean" />
+
+        <TextView
             android:id="@+id/tvMeditation"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

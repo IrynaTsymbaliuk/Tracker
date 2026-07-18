@@ -3,6 +3,7 @@ package com.tracker.core
 import android.content.Context
 import android.os.Build
 import com.tracker.core.collector.AndroidNetworkConnectivityChecker
+import com.tracker.core.collector.HealthConnectBodyMeasurementsCollector
 import com.tracker.core.collector.HealthConnectDistanceCollector
 import com.tracker.core.collector.HealthConnectExerciseCollector
 import com.tracker.core.collector.HealthConnectMindfulnessCollector
@@ -15,6 +16,7 @@ import com.tracker.core.collector.UsageEventsCollector
 import com.tracker.core.config.AppMetadata
 import com.tracker.core.config.KnownApps
 import com.tracker.core.permission.PermissionManager
+import com.tracker.core.provider.BodyMeasurementsProvider
 import com.tracker.core.provider.DistanceProvider
 import com.tracker.core.provider.ExerciseProvider
 import com.tracker.core.provider.LanguageLearningProvider
@@ -25,6 +27,7 @@ import com.tracker.core.provider.SleepProvider
 import com.tracker.core.provider.SocialMediaProvider
 import com.tracker.core.provider.StepCountingProvider
 import com.tracker.core.provider.TrainingProvider
+import com.tracker.core.result.BodyMeasurementsResult
 import com.tracker.core.result.DistanceResult
 import com.tracker.core.result.ExerciseResult
 import com.tracker.core.result.LanguageLearningResult
@@ -98,6 +101,12 @@ class Tracker private constructor(
     private val distanceProvider: DistanceProvider? by lazy {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             DistanceProvider(HealthConnectDistanceCollector(appContext))
+        } else null
+    }
+
+    private val bodyMeasurementsProvider: BodyMeasurementsProvider? by lazy {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            BodyMeasurementsProvider(HealthConnectBodyMeasurementsCollector(appContext))
         } else null
     }
 
@@ -269,6 +278,31 @@ class Tracker private constructor(
     suspend fun queryDistance(days: Int = 1): DistanceResult? {
         val (from, to) = queryWindow(days)
         return distanceProvider?.query(from, to)
+    }
+
+    /**
+     * Queries body measurements from Health Connect: weight, body-fat percentage, lean body mass,
+     * bone mass, body-water mass, basal metabolic rate, and height.
+     *
+     * Health Connect stores these as independent instantaneous records. [BodyMeasurementsResult]
+     * therefore preserves each complete record stream instead of pairing records that happen to
+     * be close in time. A granted subset of the related permissions is supported; only data types
+     * whose read permission has been granted are returned.
+     *
+     * Requires Health Connect, API 26+, and at least one permission from
+     * [HealthConnectBodyMeasurementsCollector.READ_BODY_MEASUREMENTS_PERMISSIONS] granted at
+     * runtime via
+     * [androidx.health.connect.client.PermissionController.createRequestPermissionResultContract].
+     *
+     * @param days Number of days to include: 1 = today from midnight through now,
+     * 2 = yesterday midnight through now, etc. Must be >= 1.
+     * @return Body measurements in the requested window, or null if no accessible measurements
+     * exist, Health Connect is unavailable, the API level is below 26, or none of the related
+     * permissions has been granted.
+     */
+    suspend fun queryBodyMeasurements(days: Int = 1): BodyMeasurementsResult? {
+        val (from, to) = queryWindow(days)
+        return bodyMeasurementsProvider?.query(from, to)
     }
 
     /**

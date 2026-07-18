@@ -15,15 +15,23 @@ import androidx.health.connect.client.HealthConnectFeatures
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.feature.ExperimentalMindfulnessSessionApi
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.BasalMetabolicRateRecord
+import androidx.health.connect.client.records.BodyFatRecord
+import androidx.health.connect.client.records.BodyWaterMassRecord
+import androidx.health.connect.client.records.BoneMassRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.HeightRecord
+import androidx.health.connect.client.records.LeanBodyMassRecord
 import androidx.health.connect.client.records.MindfulnessSessionRecord
 import androidx.health.connect.client.records.PlannedExerciseSessionRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.WeightRecord
 import androidx.lifecycle.lifecycleScope
 import com.tracker.core.Tracker
 import com.tracker.core.config.AppMetadata
+import com.tracker.core.result.BodyMeasurementsResult
 import com.tracker.core.result.DistanceResult
 import com.tracker.core.result.DistanceSession
 import com.tracker.core.result.ExerciseResult
@@ -177,6 +185,7 @@ class MainActivity : AppCompatActivity() {
             val movies     = runCatching { tracker.queryMovieWatching() }.getOrNull()
             val steps      = runCatching { tracker.queryStepCounting() }.getOrNull()
             val distance   = runCatching { tracker.queryDistance() }.getOrNull()
+            val bodyMeasurements = runCatching { tracker.queryBodyMeasurements() }.getOrNull()
             val meditation = runCatching { tracker.queryMeditation() }.getOrNull()
             val exercise   = runCatching { tracker.queryExercise() }.getOrNull()
             val now = System.currentTimeMillis()
@@ -186,7 +195,8 @@ class MainActivity : AppCompatActivity() {
             val sleep      = runCatching { tracker.querySleep() }.getOrNull()
 
             displayResults(
-                language, reading, social, movies, steps, distance, meditation, exercise, training, sleep
+                language, reading, social, movies, steps, distance, bodyMeasurements, meditation,
+                exercise, training, sleep
             )
 
             binding.progressBar.isVisible = false
@@ -244,6 +254,7 @@ class MainActivity : AppCompatActivity() {
         movies: MovieWatchingResult?,
         steps: StepCountingResult?,
         distance: DistanceResult?,
+        bodyMeasurements: BodyMeasurementsResult?,
         meditation: MeditationResult?,
         exercise: ExerciseResult?,
         training: TrainingResult?,
@@ -272,6 +283,10 @@ class MainActivity : AppCompatActivity() {
         binding.tvDistance.text = distance
             ?.let { "📏 Distance    ${"%.2f".format(it.totalKilometers)} km${distanceSessionLines(it.sessions)}" }
             ?: "📏 Distance    —"
+
+        binding.tvBodyMeasurements.text = bodyMeasurements
+            ?.let { "⚖️ Body    ${latestBodyMeasurementSummary(it)} · ${it.recordCount} records" }
+            ?: "⚖️ Body    —"
 
         binding.tvMeditation.text = meditation
             ?.let {
@@ -413,6 +428,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
+     * Shows the newest record of each independent Health Connect body-measurement stream. The
+     * values are not a synthetic one-time scale reading: each source record can have its own time.
+     */
+    private fun latestBodyMeasurementSummary(result: BodyMeasurementsResult): String = buildList {
+        result.weightRecords.lastOrNull()?.let { add("%.1f kg".format(it.weight.inKilograms)) }
+        result.bodyFatRecords.lastOrNull()?.let { add("%.1f%% fat".format(it.percentage.value)) }
+        result.leanBodyMassRecords.lastOrNull()?.let { add("%.1f kg lean".format(it.mass.inKilograms)) }
+        result.boneMassRecords.lastOrNull()?.let { add("%.1f kg bone".format(it.mass.inKilograms)) }
+        result.bodyWaterMassRecords.lastOrNull()?.let { add("%.1f kg water".format(it.mass.inKilograms)) }
+        result.basalMetabolicRateRecords.lastOrNull()?.let {
+            add("%.0f kcal/day BMR".format(it.basalMetabolicRate.inKilocaloriesPerDay))
+        }
+        result.heightRecords.lastOrNull()?.let { add("%.0f cm".format(it.height.inMeters * 100)) }
+    }.joinToString(" · ")
+
+    /**
      * Renders the per-night sleep breakdown shown under the Sleep metric. Each [SleepSession] is
      * one Health Connect `SleepSessionRecord`, so each entry shows when the user **fell asleep**
      * and **woke**, how long they were **asleep**, the sleep **efficiency** and **quality** band,
@@ -531,6 +562,16 @@ class MainActivity : AppCompatActivity() {
             HealthPermission.getReadPermission(SleepSessionRecord::class)
         private val HC_PLANNED_EXERCISE_PERMISSION =
             HealthPermission.getReadPermission(PlannedExerciseSessionRecord::class)
+        private val HC_WEIGHT_PERMISSION = HealthPermission.getReadPermission(WeightRecord::class)
+        private val HC_BODY_FAT_PERMISSION = HealthPermission.getReadPermission(BodyFatRecord::class)
+        private val HC_LEAN_BODY_MASS_PERMISSION =
+            HealthPermission.getReadPermission(LeanBodyMassRecord::class)
+        private val HC_BONE_MASS_PERMISSION = HealthPermission.getReadPermission(BoneMassRecord::class)
+        private val HC_BODY_WATER_MASS_PERMISSION =
+            HealthPermission.getReadPermission(BodyWaterMassRecord::class)
+        private val HC_BASAL_METABOLIC_RATE_PERMISSION =
+            HealthPermission.getReadPermission(BasalMetabolicRateRecord::class)
+        private val HC_HEIGHT_PERMISSION = HealthPermission.getReadPermission(HeightRecord::class)
 
         /**
          * Every Health Connect permission this sample app wants. Clicking the single
@@ -542,7 +583,14 @@ class MainActivity : AppCompatActivity() {
             HC_MINDFULNESS_PERMISSION,
             HC_EXERCISE_PERMISSION,
             HC_DISTANCE_PERMISSION,
-            HC_SLEEP_PERMISSION
+            HC_SLEEP_PERMISSION,
+            HC_WEIGHT_PERMISSION,
+            HC_BODY_FAT_PERMISSION,
+            HC_LEAN_BODY_MASS_PERMISSION,
+            HC_BONE_MASS_PERMISSION,
+            HC_BODY_WATER_MASS_PERMISSION,
+            HC_BASAL_METABOLIC_RATE_PERMISSION,
+            HC_HEIGHT_PERMISSION
         )
 
         /**
@@ -555,7 +603,14 @@ class MainActivity : AppCompatActivity() {
             HC_EXERCISE_PERMISSION to "Exercise",
             HC_DISTANCE_PERMISSION to "Distance",
             HC_SLEEP_PERMISSION to "Sleep",
-            HC_PLANNED_EXERCISE_PERMISSION to "Training"
+            HC_PLANNED_EXERCISE_PERMISSION to "Training",
+            HC_WEIGHT_PERMISSION to "Weight",
+            HC_BODY_FAT_PERMISSION to "Body fat",
+            HC_LEAN_BODY_MASS_PERMISSION to "Lean mass",
+            HC_BONE_MASS_PERMISSION to "Bone mass",
+            HC_BODY_WATER_MASS_PERMISSION to "Body water",
+            HC_BASAL_METABOLIC_RATE_PERMISSION to "BMR",
+            HC_HEIGHT_PERMISSION to "Height"
         )
     }
 }

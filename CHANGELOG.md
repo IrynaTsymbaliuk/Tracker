@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Body-measurement tracking via Health Connect: `Tracker.queryBodyMeasurements(days)` returns a
+  `BodyMeasurementsResult` containing complete, independently timestamped records for weight,
+  body fat, lean body mass, bone mass, body-water mass, basal metabolic rate, and height. It
+  supports any granted subset of the related `health.READ_*` permissions and never invents a
+  combined scale reading from records that merely occurred near one another. Health Connect has no
+  muscle-percentage record; lean body mass is exposed as the closest available measurement.
 - Training-plan tracking via Health Connect: `Tracker.queryTraining(days)` and
   `Tracker.queryTraining(fromMillis, toMillis)` read `PlannedExerciseSessionRecord`s. The latter
   supports upcoming plans. Results are returned as `TrainingResult` / `TrainingSession`; each

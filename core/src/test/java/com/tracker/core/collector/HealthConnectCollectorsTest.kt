@@ -6,6 +6,7 @@ import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.aggregate.AggregationResult
 import androidx.health.connect.client.aggregate.AggregationResultGroupedByDuration
 import androidx.health.connect.client.records.DistanceRecord
+import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.PlannedExerciseSessionRecord
 import androidx.health.connect.client.records.SleepSessionRecord
@@ -99,6 +100,33 @@ class HealthConnectCollectorsTest {
         assertEquals(DataSource.HEALTH_CONNECT, evidence.source)
         assertEquals(1, evidence.buckets.size)
         assertEquals(100L, evidence.buckets[0].steps)
+    }
+
+    // --- Body measurements ---
+
+    @Test
+    fun bodyMeasurements_permissionMissing_throwsPermissionDenied() {
+        sdkAvailable()
+        coEvery { permissionController.getGrantedPermissions() } returns emptySet()
+
+        assertThrows(PermissionDeniedException::class.java) {
+            runBlocking { bodyMeasurementsCollector().collect(0L, 100L) }
+        }
+    }
+
+    @Test
+    fun bodyMeasurements_readsGrantedTypesAndPreservesTheirRecords() = runBlocking {
+        sdkAvailable()
+        coEvery { permissionController.getGrantedPermissions() } returns
+            setOf(HealthConnectBodyMeasurementsCollector.READ_WEIGHT_PERMISSION)
+        val record = bodyWeightRecord(time = 10L)
+        coEvery { client.readRecords(any<ReadRecordsRequest<WeightRecord>>()) } returns
+            ReadRecordsResponse(records = listOf(record), pageToken = null)
+
+        val evidence = bodyMeasurementsCollector().collect(0L, 100L)
+
+        assertEquals(listOf(record), evidence.weightRecords)
+        assertEquals(emptyList<Any>(), evidence.bodyFatRecords)
     }
 
     // --- Distance ---
@@ -267,6 +295,8 @@ class HealthConnectCollectorsTest {
     private fun sleepCollector() = HealthConnectSleepCollector(context, Dispatchers.Unconfined)
     private fun exerciseCollector() = HealthConnectExerciseCollector(context, Dispatchers.Unconfined)
     private fun trainingCollector() = HealthConnectTrainingCollector(context, Dispatchers.Unconfined)
+    private fun bodyMeasurementsCollector() =
+        HealthConnectBodyMeasurementsCollector(context, Dispatchers.Unconfined)
     private fun mindfulnessCollector() = HealthConnectMindfulnessCollector(context, Dispatchers.Unconfined)
 
     // --- fixtures ---
@@ -324,6 +354,12 @@ class HealthConnectCollectorsTest {
         val record = mockk<PlannedExerciseSessionRecord>()
         every { record.startTime } returns Instant.ofEpochMilli(start)
         every { record.endTime } returns Instant.ofEpochMilli(end)
+        return record
+    }
+
+    private fun bodyWeightRecord(time: Long): WeightRecord {
+        val record = mockk<WeightRecord>()
+        every { record.time } returns Instant.ofEpochMilli(time)
         return record
     }
 

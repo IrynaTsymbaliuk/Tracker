@@ -1,12 +1,14 @@
 package com.tracker.core.provider
 
 import com.tracker.core.collector.ExerciseMetadata
+import com.tracker.core.collector.HealthConnectBodyMeasurementsCollector
 import com.tracker.core.collector.HealthConnectDistanceCollector
 import com.tracker.core.collector.HealthConnectExerciseCollector
 import com.tracker.core.collector.HealthConnectStepCollector
 import com.tracker.core.collector.HealthConnectTrainingCollector
 import com.tracker.core.collector.SystemServiceUnavailableException
 import com.tracker.core.model.DistanceBucket
+import com.tracker.core.model.BodyMeasurementsEvidence
 import com.tracker.core.model.DistanceEvidence
 import com.tracker.core.model.DurationEvidence
 import com.tracker.core.model.StepBucket
@@ -24,12 +26,57 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import androidx.health.connect.client.records.PlannedExerciseSessionRecord
+import androidx.health.connect.client.records.WeightRecord
 import java.time.Instant
 
 /** Covers the thin Health Connect provider wrappers (steps, distance, exercise). */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
 class HealthConnectProvidersTest {
+
+    // --- Body measurements ---
+
+    @Test
+    fun bodyMeasurements_preservesSeparateRecordStreams() = runBlocking {
+        val collector = mockk<HealthConnectBodyMeasurementsCollector>()
+        val earlierWeight = bodyWeightRecord(time = 1_000L)
+        val laterWeight = bodyWeightRecord(time = 5_000L)
+        coEvery { collector.collect(FROM, TO) } returns BodyMeasurementsEvidence(
+            source = DataSource.HEALTH_CONNECT,
+            metadata = emptyMap(),
+            weightRecords = listOf(earlierWeight, laterWeight),
+            bodyFatRecords = emptyList(),
+            leanBodyMassRecords = emptyList(),
+            boneMassRecords = emptyList(),
+            bodyWaterMassRecords = emptyList(),
+            basalMetabolicRateRecords = emptyList(),
+            heightRecords = emptyList()
+        )
+
+        val result = BodyMeasurementsProvider(collector).query(FROM, TO) ?: error("expected result")
+
+        assertEquals(listOf(earlierWeight, laterWeight), result.weightRecords)
+        assertEquals(2, result.recordCount)
+        assertEquals(listOf(DataSource.HEALTH_CONNECT), result.sources)
+    }
+
+    @Test
+    fun bodyMeasurements_emptyEvidence_returnsNull() = runBlocking {
+        val collector = mockk<HealthConnectBodyMeasurementsCollector>()
+        coEvery { collector.collect(FROM, TO) } returns BodyMeasurementsEvidence(
+            source = DataSource.HEALTH_CONNECT,
+            metadata = emptyMap(),
+            weightRecords = emptyList(),
+            bodyFatRecords = emptyList(),
+            leanBodyMassRecords = emptyList(),
+            boneMassRecords = emptyList(),
+            bodyWaterMassRecords = emptyList(),
+            basalMetabolicRateRecords = emptyList(),
+            heightRecords = emptyList()
+        )
+
+        assertNull(BodyMeasurementsProvider(collector).query(FROM, TO))
+    }
 
     // --- Steps ---
 
@@ -194,6 +241,12 @@ class HealthConnectProvidersTest {
         every { record.startTime } returns Instant.ofEpochMilli(start)
         every { record.endTime } returns Instant.ofEpochMilli(end)
         every { record.exerciseType } returns type
+        return record
+    }
+
+    private fun bodyWeightRecord(time: Long): WeightRecord {
+        val record = mockk<WeightRecord>()
+        every { record.time } returns Instant.ofEpochMilli(time)
         return record
     }
 

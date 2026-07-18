@@ -93,6 +93,18 @@ lifecycleScope.launch {
     distance?.totalKilometers   // Double — convenience accessor (totalMeters / 1000)
     distance?.sessions          // List<DistanceSession> — one hourly bucket per non-empty hour
 
+    // Body measurements via Health Connect. Each list preserves complete records sorted by time;
+    // related scale values are intentionally not combined by timestamp.
+    val body = tracker.queryBodyMeasurements(days = 30)
+    body?.weightRecords?.lastOrNull()?.weight?.inKilograms              // e.g. 70.2
+    body?.bodyFatRecords?.lastOrNull()?.percentage?.value               // e.g. 21.5 (percent)
+    body?.leanBodyMassRecords?.lastOrNull()?.mass?.inKilograms          // closest HC muscle value
+    body?.boneMassRecords?.lastOrNull()?.mass?.inKilograms
+    body?.bodyWaterMassRecords?.lastOrNull()?.mass?.inKilograms
+    body?.basalMetabolicRateRecords?.lastOrNull()?.basalMetabolicRate
+        ?.inKilocaloriesPerDay
+    body?.heightRecords?.lastOrNull()?.height?.inMeters
+
     // Sleep via Health Connect SleepSessionRecord — one entry per night/nap. Returns null if
     // HC unavailable, API < 26, or READ_SLEEP not granted.
     val sleep = tracker.querySleep(days = 2)
@@ -169,6 +181,7 @@ lifecycleScope.launch {
 - Social Media: 120 min · 23 sessions · Instagram, Reddit, WhatsApp
 - Steps: 7,622 steps
 - Distance: 5.42 km
+- Body: 70.2 kg · 21.5% fat · 54.0 kg lean
 - Meditation: 15 min · 1 session · Calm (HealthConnect + UsageStats merged)
 - Exercise: 45 min · 2 sessions · Running, Strength Training
 - Sleep: 7h 32m asleep · fell asleep 23:15, woke 07:02 · 89% efficiency · GOOD
@@ -231,6 +244,7 @@ days = 7  │ ████████ ████████ █████�
 | **SOCIAL_MEDIA** | Foreground session events | Expanded known-app catalog including Facebook, Instagram, X/Twitter, TikTok, Reddit, WhatsApp, Telegram, LINE, Discord, Bluesky, Mastodon, and other social/messaging apps | `PACKAGE_USAGE_STATS` |
 | **STEP_COUNTING** | Health Connect | Aggregated across all step sources, deduped by HC | `health.READ_STEPS` · API 26+ |
 | **DISTANCE** | Health Connect | `DistanceRecord` aggregated across all sources (walking, running, cycling, etc.), deduped by HC | `health.READ_DISTANCE` · API 26+ |
+| **BODY_MEASUREMENTS** | Health Connect | Complete, independent `WeightRecord`, `BodyFatRecord`, `LeanBodyMassRecord`, `BoneMassRecord`, `BodyWaterMassRecord`, `BasalMetabolicRateRecord`, and `HeightRecord` streams | related `health.READ_*` body permissions · API 26+ |
 | **MEDITATION** | Health Connect + Foreground session events (fused) | `MindfulnessSessionRecord`s plus Calm, Headspace, Insight Timer, Balance, Waking Up, Smiling Mind, Ten Percent Happier, Medito, MEISOON, Mindvalley | `health.READ_MINDFULNESS` (optional, API 26+) · `PACKAGE_USAGE_STATS` |
 | **EXERCISE** | Health Connect | `ExerciseSessionRecord`s written by any fitness app (Strava, Google Fit, Samsung Health, Peloton, etc.) or logged manually | `health.READ_EXERCISE` · API 26+ |
 | **TRAINING** | Health Connect | `PlannedExerciseSessionRecord`s (training plans), including titles, notes, completion links, metadata, and complete block/step goals and targets | `health.READ_PLANNED_EXERCISE` · API 26+ · planned-exercise feature |
@@ -247,6 +261,8 @@ days = 7  │ ████████ ████████ █████�
 **Note on step counting**: `queryStepCounting(days)` uses Health Connect's `aggregateGroupByDuration` API with a 1-hour slice, which deduplicates across all contributing apps (e.g. Google Fit, phone step counter) before returning each bucket's count. The result exposes hourly `StepSession` buckets in `sessions` (so callers can separate today's steps from yesterday's) and a convenience `totalSteps` sum. Hours with no recorded steps are omitted. Returns `null` if Health Connect is unavailable or the `READ_STEPS` permission has not been granted.
 
 **Note on distance**: `queryDistance(days)` reads Health Connect `DistanceRecord` via the same `aggregateGroupByDuration` 1-hour slicing as step counting, so it deduplicates across all writing apps (Google Fit, Pixel, Fitbit, etc.) by the user's data-source priority before returning each bucket. The result exposes hourly `DistanceSession` buckets in `sessions` plus convenience `totalMeters`/`totalKilometers` sums. Distance is in **meters** (a `Double`, since records are fractional). Hours with no recorded distance are omitted. Returns `null` if Health Connect is unavailable, the API level is below 26, or the `READ_DISTANCE` permission has not been granted.
+
+**Note on body measurements**: `queryBodyMeasurements(days)` reads the raw Health Connect body-measurement record types: weight, body-fat percentage, lean body mass, bone mass, body-water mass, basal metabolic rate, and height. `BodyMeasurementsResult` exposes one complete, time-sorted list per type, including each record's metadata and zone offset. Tracker deliberately does **not** pair records into artificial scale readings: a device can write weight and body fat seconds apart, or omit one entirely. Health Connect does not provide a muscle-percentage record; `leanBodyMassRecords` is the closest available muscle-related value and is a mass measurement. The query accepts any granted subset of the seven body permissions and returns accessible records; it returns `null` if no records exist, none of those permissions is granted, Health Connect is unavailable, or the API level is below 26.
 
 **Note on sleep**: `querySleep(days)` reads raw Health Connect `SleepSessionRecord`s (via `readRecords`, like exercise — **not** the hourly aggregation used for steps/distance), returning one `SleepSession` per night or nap in the window, sorted by start time. Each session exposes:
 
@@ -323,11 +339,20 @@ Add to `AndroidManifest.xml`:
 
 <!-- Required for sleep sessions via Health Connect -->
 <uses-permission android:name="android.permission.health.READ_SLEEP" />
+
+<!-- Required for the corresponding body-measurement streams via Health Connect -->
+<uses-permission android:name="android.permission.health.READ_WEIGHT" />
+<uses-permission android:name="android.permission.health.READ_BODY_FAT" />
+<uses-permission android:name="android.permission.health.READ_LEAN_BODY_MASS" />
+<uses-permission android:name="android.permission.health.READ_BONE_MASS" />
+<uses-permission android:name="android.permission.health.READ_BODY_WATER_MASS" />
+<uses-permission android:name="android.permission.health.READ_BASAL_METABOLIC_RATE" />
+<uses-permission android:name="android.permission.health.READ_HEIGHT" />
 ```
 
 `PACKAGE_USAGE_STATS` is a protected permission — the user must grant it manually via **Settings → Apps → Special app access → Usage access**.
 
-Health Connect permissions (`health.READ_STEPS`, `health.READ_MINDFULNESS`, `health.READ_EXERCISE`, `health.READ_PLANNED_EXERCISE`, `health.READ_DISTANCE`, `health.READ_SLEEP`) must be requested at runtime using `PermissionController.createRequestPermissionResultContract()`. You can request all of them in a single prompt:
+Health Connect permissions (including the selected body-measurement permissions below) must be requested at runtime using `PermissionController.createRequestPermissionResultContract()`. You can request all of them in a single prompt:
 
 ```kotlin
 val launcher = registerForActivityResult(
@@ -340,7 +365,14 @@ launcher.launch(setOf(
     HealthPermission.getReadPermission(ExerciseSessionRecord::class),
     HealthPermission.getReadPermission(PlannedExerciseSessionRecord::class),
     HealthPermission.getReadPermission(DistanceRecord::class),
-    HealthPermission.getReadPermission(SleepSessionRecord::class)
+    HealthPermission.getReadPermission(SleepSessionRecord::class),
+    HealthPermission.getReadPermission(WeightRecord::class),
+    HealthPermission.getReadPermission(BodyFatRecord::class),
+    HealthPermission.getReadPermission(LeanBodyMassRecord::class),
+    HealthPermission.getReadPermission(BoneMassRecord::class),
+    HealthPermission.getReadPermission(BodyWaterMassRecord::class),
+    HealthPermission.getReadPermission(BasalMetabolicRateRecord::class),
+    HealthPermission.getReadPermission(HeightRecord::class)
 ))
 ```
 
@@ -380,7 +412,7 @@ Add the following to the activity that handles the permission result:
 - **Min SDK**: 21 (Android 5.0)
 - **Target SDK**: 36
 - **Kotlin**: 2.0.21
-- **Step counting, distance, meditation (HealthConnect branch), exercise**: require API 26+ and Health Connect
+- **Step counting, distance, body measurements, meditation (HealthConnect branch), exercise**: require API 26+ and Health Connect
 
 ## Sample App
 
@@ -388,7 +420,7 @@ Add the following to the activity that handles the permission result:
 ./gradlew :app:installDebug
 ```
 
-Demonstrates the full flow: permission setup for `PACKAGE_USAGE_STATS` and Health Connect (steps, mindfulness, exercise, distance, sleep, and supported training plans in one prompt), querying nine current-day metrics (language learning, reading, social media, movie watching, step counting, distance, meditation, exercise, sleep) plus training plans in the next seven days, and displaying results. For the usage-based metrics (language learning, reading, social media), step counting, and distance, the sample expands each result's `sessions` list into a per-session breakdown — one indented line per session showing **time from – time to** and the **app name** (or step count / distance for hourly buckets). The movie watching row expands into one line per film showing the **watched date**, **title**, and **TMDB id** (`tmdb:<id>`) when present. The meditation row shows which sources contributed (`HC`, `Usage`, or `HC+Usage`); the exercise row lists the distinct exercise types detected (e.g. `Running, Strength Training`); the training row shows each plan's start, title/type, and duration while preserving the full record. Movie watching is disabled by default in the sample; to enable it, add `.setLetterboxdUsername("your_username")` when building `Tracker` in `MainActivity.kt`.
+Demonstrates the full flow: permission setup for `PACKAGE_USAGE_STATS` and Health Connect (steps, mindfulness, exercise, distance, body measurements, sleep, and supported training plans in one prompt), querying ten current-day metrics (language learning, reading, social media, movie watching, step counting, distance, body measurements, meditation, exercise, sleep) plus training plans in the next seven days, and displaying results. The Body row renders the newest accessible value from each independent record stream without pretending they were written at the same time. For the usage-based metrics (language learning, reading, social media), step counting, and distance, the sample expands each result's `sessions` list into a per-session breakdown — one indented line per session showing **time from – time to** and the **app name** (or step count / distance for hourly buckets). The movie watching row expands into one line per film showing the **watched date**, **title**, and **TMDB id** (`tmdb:<id>`) when present. The meditation row shows which sources contributed (`HC`, `Usage`, or `HC+Usage`); the exercise row lists the distinct exercise types detected (e.g. `Running, Strength Training`); the training row shows each plan's start, title/type, and duration while preserving the full record. Movie watching is disabled by default in the sample; to enable it, add `.setLetterboxdUsername("your_username")` when building `Tracker` in `MainActivity.kt`.
 
 ## License
 
