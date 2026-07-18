@@ -34,7 +34,7 @@ val reading = tracker.queryReading(days = 1)
 
 ## Environment
 
-- **Library Version**: 1.2.2
+- **Library Version**: 1.4.0
 - **Android Version**: (e.g., Android 13)
 - **Device**: (e.g., Pixel 6)
 - **Min SDK**: (e.g., 21)

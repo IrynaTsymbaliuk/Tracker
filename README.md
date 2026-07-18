@@ -307,7 +307,7 @@ Then add the library dependency:
 
 ```kotlin
 dependencies {
-    implementation("com.github.IrynaTsymbaliuk:tracker:1.3.0")
+    implementation("com.github.IrynaTsymbaliuk:tracker:1.4.0")
 }
 ```
 

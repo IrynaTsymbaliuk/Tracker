@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-07-18
+
 ### Added
 - Body-measurement tracking via Health Connect: `Tracker.queryBodyMeasurements(days)` returns a
   `BodyMeasurementsResult` containing complete, independently timestamped records for weight,
@@ -116,7 +118,8 @@ val movies = tracker.queryMovieWatching()
 movies?.sessions?.forEach { show(it.title, it.watchedDate) }
 ```
 
-[Unreleased]: https://github.com/IrynaTsymbaliuk/Tracker/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/IrynaTsymbaliuk/Tracker/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/IrynaTsymbaliuk/Tracker/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/IrynaTsymbaliuk/Tracker/compare/v1.2.2...v1.3.0
 [1.2.2]: https://github.com/IrynaTsymbaliuk/Tracker/releases/tag/v1.2.2
 [1.2.1]: https://github.com/IrynaTsymbaliuk/Tracker/releases/tag/v1.2.1
